@@ -1,0 +1,16 @@
+server:
+  port: 8085
+  shutdown: graceful
+
+spring:
+  application:
+    name: notification-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
+    listener:
+      ack-mode: record
