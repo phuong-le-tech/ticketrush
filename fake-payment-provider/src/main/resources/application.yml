@@ -1,0 +1,9 @@
+server:
+  port: 8083
+  shutdown: graceful
+
+spring:
+  application:
+    name: fake-payment-provider
+  lifecycle:
+    timeout-per-shutdown-phase: 30s

@@ -1,0 +1,22 @@
+server:
+  port: 8082
+  shutdown: graceful
+
+spring:
+  application:
+    name: payment-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: payment-service
+      enable-auto-commit: false
+      auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
+    listener:
+      ack-mode: manual
+
+payment:
+  provider:
+    url: ${PAYMENT_PROVIDER_URL:http://localhost:8083}
+    timeout-ms: ${PAYMENT_PROVIDER_TIMEOUT_MS:2000}
