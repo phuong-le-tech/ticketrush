@@ -55,6 +55,22 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring-boot.version}</version>
+        <configuration>
+          <!-- Jar executable a part: le jar principal reste lisible par failsafe (classes a la racine). -->
+          <classifier>exec</classifier>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <!-- Les *IT (Testcontainers) tournent en phase verify via failsafe; surefire garde les *Test. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
