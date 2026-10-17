@@ -1,0 +1,22 @@
+# Maven / Java
+target/
+*.class
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Node / Angular (M7)
+node_modules/
+dist/
+.angular/
+
+# OS
+.DS_Store
