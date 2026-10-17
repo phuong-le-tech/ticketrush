@@ -3,7 +3,7 @@ package com.ticketrush.payment;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-/** STUB (test-writer): le code-writer ajoute le consumer tickets.reserved, le client HTTP et le producer. */
+/** Paiement: consomme tickets.reserved, appelle le provider, publie payments.result. */
 @SpringBootApplication
 public class PaymentApplication {
 
