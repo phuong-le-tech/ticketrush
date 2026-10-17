@@ -62,6 +62,8 @@ Rationale:
 | `spring-boot-starter-jdbc` + `flyway` | Plain SQL access and versioned schema migrations. |
 | Testcontainers | Real Kafka/Postgres/Redis in integration tests. |
 | `awaitility` (test only) | Wait for async Kafka results without `Thread.sleep`. |
+| `tools.jackson.core:jackson-databind` | Jackson 3 mapper; required by `JacksonJsonSerializer`, which is optional in spring-kafka. Used in `common`, BOM-managed. |
+| `spring-boot-starter-test` (test only) | JUnit 5 and AssertJ for unit tests. |
 
 Any new dependency must be added to this table with a reason.
 
