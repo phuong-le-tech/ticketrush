@@ -1,5 +1,6 @@
 package com.ticketrush.gateway;
 
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -54,6 +55,9 @@ class OrderValidationTest {
         if (idempotencyKey != null) {
             request.header("Idempotency-Key", idempotencyKey);
         }
+
+        // Le contexte Spring appelle le mock au demarrage (preInstantiateSingletons): on l'ignore.
+        clearInvocations(kafkaTemplate);
 
         mockMvc.perform(request).andExpect(status().isBadRequest());
 
