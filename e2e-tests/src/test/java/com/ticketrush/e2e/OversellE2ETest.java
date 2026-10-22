@@ -99,10 +99,10 @@ class OversellE2ETest {
                 .collect(Collectors.groupingBy(PaymentResult::orderId,
                         Collectors.mapping(PaymentResult::providerChargeId, Collectors.toSet())));
         assertThat(chargeIdsByOrder.keySet()).containsExactlyInAnyOrderElementsOf(confirmed);
-        assertThat(chargeIdsByOrder.values()).allSatisfy(ids -> assertThat(ids).hasSize(1));
+        assertThat(chargeIdsByOrder.values()).isNotEmpty().allSatisfy(ids -> assertThat(ids).hasSize(1));
         assertThat(chargeIdsByOrder.values().stream().flatMap(Set::stream).distinct().count())
                 .as("distinct provider chargeIds").isEqualTo(STOCK);
-        assertThat(providerChargeCounts(confirmed)).allSatisfy(count -> assertThat(count).isEqualTo(1));
+        assertThat(providerChargeCounts(confirmed)).isNotEmpty().allSatisfy(count -> assertThat(count).isEqualTo(1));
     }
 
     private static E2EStack.Accepted buy(int i) throws InterruptedException {

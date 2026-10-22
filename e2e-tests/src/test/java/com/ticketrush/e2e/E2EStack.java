@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.OffsetSpec;
@@ -198,12 +199,7 @@ final class E2EStack implements AutoCloseable {
             assertThat(retryable).as("POST /orders status %s for key %s", attempt.status(), idempotencyKey).isTrue();
             assertThat(System.nanoTime()).as("gave up retrying key " + idempotencyKey).isLessThan(deadline);
             retries++;
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException("interrupted during retry backoff", ie);
-            }
+            LockSupport.parkNanos(Duration.ofMillis(50).toNanos());
         }
     }
 
