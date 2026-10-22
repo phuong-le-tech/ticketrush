@@ -141,7 +141,7 @@ class PurchaseFlowE2ETest {
 
         // Assert
         assertThat(response.statusCode()).isEqualTo(202);
-        UUID orderId = UUID.fromString(response.body().replaceAll(".*\"orderId\"\\s*:\\s*\"([^\"]+)\".*", "$1"));
+        UUID orderId = UUID.fromString(EventJson.mapper().readTree(response.body()).get("orderId").asString());
 
         try (KafkaConsumer<String, Object> confirmedTopic = confirmedConsumer()) {
             List<ConsumerRecord<String, Object>> seen = new ArrayList<>();
