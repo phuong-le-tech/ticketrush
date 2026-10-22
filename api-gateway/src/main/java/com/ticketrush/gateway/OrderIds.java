@@ -35,6 +35,7 @@ final class OrderIds {
     }
 
     private static MessageDigest sha1() {
+        // UUIDv5 (RFC 9562) requires SHA-1 by spec; NOT a security/auth context (non-sensitive deterministic id).
         try {
             return MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {

@@ -143,9 +143,9 @@ class PaymentFlowIT {
 
         send(event);
 
-        ConsumerRecord<String, Object> record = awaitResults(orderId, 1).get(0);
-        PaymentResult result = (PaymentResult) record.value();
-        assertThat(record.key()).isEqualTo(orderId.toString());
+        ConsumerRecord<String, Object> resultRecord = awaitResults(orderId, 1).get(0);
+        PaymentResult result = (PaymentResult) resultRecord.value();
+        assertThat(resultRecord.key()).isEqualTo(orderId.toString());
         assertThat(result.status()).isEqualTo(Status.SUCCEEDED);
         assertThat(result.providerChargeId()).isEqualTo("ch_1");
         assertThat(result.failureReason()).isNull();
