@@ -50,7 +50,7 @@ import org.testcontainers.utility.MountableFile;
  * Real Kafka, Postgres and Redis (Testcontainers); each service's Spring context runs in this JVM
  * with its own configuration. Nothing is mocked.
  */
-class PurchaseFlowE2E {
+class PurchaseFlowE2ETest {
 
     private static final String EVENT_ID = "concert-1";
     private static final String ORDER_GROUP = "order-service";
