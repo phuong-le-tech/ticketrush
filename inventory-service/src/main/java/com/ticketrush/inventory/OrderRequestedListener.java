@@ -16,7 +16,9 @@ import org.springframework.stereotype.Component;
 /**
  * Consomme orders.requested, reserve le stock dans Redis, publie le resultat (cle = orderId).
  * L'offset n'est valide qu'apres confirmation d'envoi par Kafka: en cas d'echec le message est rejoue.
- * Dedup (meme commande rejouee) hors scope M1.3.
+ * A replayed or duplicate order gets its stored outcome from Redis and that outcome is published
+ * again: this covers a crash between the Lua script and the send, and downstream consumers already
+ * ignore the extra copy (provider key = orderId, conditional upserts in order-service).
  */
 @Component
 public class OrderRequestedListener {
@@ -37,13 +39,14 @@ public class OrderRequestedListener {
     @KafkaListener(topics = Topics.ORDERS_REQUESTED)
     void onOrderRequested(OrderRequested order, Acknowledgment ack)
             throws ExecutionException, InterruptedException {
-        ReservationResult result = repository.reserve(order.eventId(), order.quantity());
         Instant now = Instant.now();
+        ReservationResult result = repository.reserve(order.eventId(), order.orderId(), order.quantity(),
+                now.plusSeconds(reservationTtlSeconds));
         String key = order.orderId().toString();
         if (result.reserved()) {
             TicketsReserved event = new TicketsReserved(UUID.randomUUID(), order.orderId(), order.eventId(),
-                    order.quantity(), Pricing.amountCents(result.priceCents(), order.quantity()),
-                    result.currency(), now.plusSeconds(reservationTtlSeconds), now);
+                    result.quantity(), Pricing.amountCents(result.priceCents(), result.quantity()),
+                    result.currency(), result.reservedUntil(), now);
             kafka.send(Topics.TICKETS_RESERVED, key, event).get();
         } else {
             ReservationRejected event = new ReservationRejected(UUID.randomUUID(), order.orderId(),

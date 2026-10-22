@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderController {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
+    private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 255;
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final long sendTimeoutMs;
@@ -34,10 +35,12 @@ public class OrderController {
     @PostMapping("/orders")
     ResponseEntity<Map<String, String>> create(@RequestHeader("Idempotency-Key") String idempotencyKey,
                                                @RequestBody CreateOrderRequest request) {
-        if (idempotencyKey.isBlank() || !request.isValid()) {
+        if (!isValidIdempotencyKey(idempotencyKey) || !request.isValid()) {
             return ResponseEntity.badRequest().build();
         }
-        UUID orderId = UUID.randomUUID();
+        // Same customer + key = same orderId, so a retried or duplicated POST is the same order
+        // downstream (first write wins there, even if the retry carries a different body).
+        UUID orderId = OrderIds.fromIdempotencyKey(request.customerId(), idempotencyKey);
         OrderRequested event = new OrderRequested(UUID.randomUUID(), orderId, idempotencyKey,
                 request.eventId(), request.customerId(), request.quantity(), Instant.now());
         try {
@@ -52,5 +55,9 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
         return ResponseEntity.accepted().body(Map.of("orderId", orderId.toString()));
+    }
+
+    private static boolean isValidIdempotencyKey(String idempotencyKey) {
+        return !idempotencyKey.isBlank() && idempotencyKey.length() <= MAX_IDEMPOTENCY_KEY_LENGTH;
     }
 }

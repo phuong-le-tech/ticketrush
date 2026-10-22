@@ -2,6 +2,7 @@ package com.ticketrush.inventory;
 
 import com.ticketrush.common.EventJson;
 import jakarta.annotation.PostConstruct;
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.kafka.autoconfigure.DefaultKafkaConsumerFactoryCustomizer;
 import org.springframework.boot.kafka.autoconfigure.DefaultKafkaProducerFactoryCustomizer;
@@ -12,9 +13,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @Configuration
 public class InventoryConfig {
 
+    /** 7 days. Also the fallback for contexts that skip application.yml (the in-process e2e boot). */
+    private static final String DEFAULT_DEDUP_TTL_SECONDS = "604800";
+
     @Bean
-    InventoryRepository inventoryRepository(StringRedisTemplate redis) {
-        return new InventoryRepository(redis);
+    InventoryRepository inventoryRepository(StringRedisTemplate redis,
+            @Value("${inventory.dedup-ttl-seconds:" + DEFAULT_DEDUP_TTL_SECONDS + "}") long dedupTtlSeconds) {
+        return new InventoryRepository(redis, Duration.ofSeconds(dedupTtlSeconds));
     }
 
     /** Serde partage (en-tete __TypeId__ logique) pour que tous les services parlent le meme JSON. */

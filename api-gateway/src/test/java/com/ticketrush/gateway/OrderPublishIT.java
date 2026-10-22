@@ -114,13 +114,13 @@ class OrderPublishIT {
     void validPostReturns202AndPublishesOrderRequestedKeyedByEventId() throws Exception {
         String orderId = postValid("pub-event", "customer-7", 2, "key-123");
 
-        ConsumerRecord<String, byte[]> record = awaitRecordFor("pub-event");
-        assertThat(record.key()).isEqualTo("pub-event");
-        assertThat(record.headers().lastHeader("__TypeId__")).isNotNull();
-        assertThat(new String(record.headers().lastHeader("__TypeId__").value(), StandardCharsets.UTF_8))
+        ConsumerRecord<String, byte[]> msg = awaitRecordFor("pub-event");
+        assertThat(msg.key()).isEqualTo("pub-event");
+        assertThat(msg.headers().lastHeader("__TypeId__")).isNotNull();
+        assertThat(new String(msg.headers().lastHeader("__TypeId__").value(), StandardCharsets.UTF_8))
                 .isEqualTo("OrderRequested");
 
-        OrderRequested event = decode(record);
+        OrderRequested event = decode(msg);
         assertThat(event.orderId()).hasToString(orderId);
         assertThat(event.idempotencyKey()).isEqualTo("key-123");
         assertThat(event.eventId()).isEqualTo("pub-event");
