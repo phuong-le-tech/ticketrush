@@ -141,12 +141,12 @@ class OrderSagaIT {
         OrderTestInfra.awaitIdle();
         List<ConsumerRecord<String, Object>> published = OrderTestInfra.confirmedFor(orderId);
         assertThat(published).hasSize(1);
-        ConsumerRecord<String, Object> record = published.get(0);
-        assertThat(record.key()).isEqualTo(orderId.toString());
-        assertThat(new String(record.headers().lastHeader("__TypeId__").value(), StandardCharsets.UTF_8))
+        ConsumerRecord<String, Object> msg = published.get(0);
+        assertThat(msg.key()).isEqualTo(orderId.toString());
+        assertThat(new String(msg.headers().lastHeader("__TypeId__").value(), StandardCharsets.UTF_8))
                 .isEqualTo("OrderConfirmed");
-        assertThat(record.value()).isInstanceOf(OrderConfirmed.class);
-        OrderConfirmed event = (OrderConfirmed) record.value();
+        assertThat(msg.value()).isInstanceOf(OrderConfirmed.class);
+        OrderConfirmed event = (OrderConfirmed) msg.value();
         assertThat(event.orderId()).isEqualTo(orderId);
         assertThat(event.eventId()).isEqualTo("event-1");
         assertThat(event.customerId()).isEqualTo("customer-1");
