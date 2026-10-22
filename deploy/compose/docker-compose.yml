@@ -70,3 +70,81 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+
+  # ---- application services (built from the repo root with each module Dockerfile) ----
+  # Inside the compose network Kafka is reached on the INTERNAL listener (kafka:19092).
+
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: api-gateway/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+
+  inventory-service:
+    build:
+      context: ../..
+      dockerfile: inventory-service/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      INVENTORY_SEED_EVENT_ID: ${INVENTORY_SEED_EVENT_ID:-concert-1}
+      INVENTORY_SEED_STOCK: ${INVENTORY_SEED_STOCK:-1000}
+      INVENTORY_SEED_PRICE_CENTS: ${INVENTORY_SEED_PRICE_CENTS:-5000}
+      INVENTORY_SEED_CURRENCY: ${INVENTORY_SEED_CURRENCY:-EUR}
+      RESERVATION_TTL_SECONDS: ${RESERVATION_TTL_SECONDS:-300}
+
+  fake-payment-provider:
+    build:
+      context: ../..
+      dockerfile: fake-payment-provider/Dockerfile
+
+  payment-service:
+    build:
+      context: ../..
+      dockerfile: payment-service/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      fake-payment-provider:
+        condition: service_started
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      PAYMENT_PROVIDER_URL: http://fake-payment-provider:8083
+      PAYMENT_PROVIDER_TIMEOUT_MS: ${PAYMENT_PROVIDER_TIMEOUT_MS:-2000}
+
+  order-service:
+    build:
+      context: ../..
+      dockerfile: order-service/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      ORDER_DB_URL: jdbc:postgresql://postgres:5432/ticketrush
+      ORDER_DB_USER: ${POSTGRES_USER:-ticketrush}
+      ORDER_DB_PASSWORD: ${POSTGRES_PASSWORD:-ticketrush-local}
+
+  notification-service:
+    build:
+      context: ../..
+      dockerfile: notification-service/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
