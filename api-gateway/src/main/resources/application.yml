@@ -19,3 +19,10 @@ spring:
 
 gateway:
   send-timeout-ms: ${GATEWAY_SEND_TIMEOUT_MS:6000}
+        # Timeouts courts: un Kafka en panne doit donner un 503 rapide, pas une requete pendue.
+        max.block.ms: ${KAFKA_MAX_BLOCK_MS:3000}
+        request.timeout.ms: ${KAFKA_REQUEST_TIMEOUT_MS:2000}
+        delivery.timeout.ms: ${KAFKA_DELIVERY_TIMEOUT_MS:5000}
+
+gateway:
+  publish-timeout-ms: ${GATEWAY_PUBLISH_TIMEOUT_MS:5000}

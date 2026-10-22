@@ -1,0 +1,24 @@
+server:
+  port: 8084
+  shutdown: graceful
+
+spring:
+  application:
+    name: order-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    url: ${ORDER_DB_URL:jdbc:postgresql://localhost:5432/ticketrush}
+    username: ${ORDER_DB_USER:ticketrush}
+    password: ${ORDER_DB_PASSWORD:ticketrush}
+  flyway:
+    schemas: orders
+    default-schema: orders
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: order-service
+      enable-auto-commit: false
+      auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
+    listener:
+      ack-mode: manual
