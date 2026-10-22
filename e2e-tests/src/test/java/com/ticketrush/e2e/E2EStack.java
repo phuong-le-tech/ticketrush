@@ -198,7 +198,12 @@ final class E2EStack implements AutoCloseable {
             assertThat(retryable).as("POST /orders status %s for key %s", attempt.status(), idempotencyKey).isTrue();
             assertThat(System.nanoTime()).as("gave up retrying key " + idempotencyKey).isLessThan(deadline);
             retries++;
-            Thread.sleep(50);
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("interrupted during retry backoff", ie);
+            }
         }
     }
 
@@ -302,8 +307,8 @@ final class E2EStack implements AutoCloseable {
     }
 
     /** The orderId carried in a record value (every event has one). */
-    static UUID orderIdOf(ConsumerRecord<String, byte[]> record) {
-        JsonNode node = EventJson.mapper().readTree(record.value());
+    static UUID orderIdOf(ConsumerRecord<String, byte[]> msg) {
+        JsonNode node = EventJson.mapper().readTree(msg.value());
         return UUID.fromString(node.get("orderId").asString());
     }
 

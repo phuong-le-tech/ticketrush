@@ -37,7 +37,7 @@ final class OrderIds {
     private static MessageDigest sha1() {
         // UUIDv5 (RFC 9562) requires SHA-1 by spec; NOT a security/auth context (non-sensitive deterministic id).
         try {
-            return MessageDigest.getInstance("SHA-1");
+            return MessageDigest.getInstance("SHA-1"); // NOSONAR java:S4790 - UUIDv5 mandates SHA-1, not a security context
         } catch (NoSuchAlgorithmException e) {
             // Every Java SE runtime must provide SHA-1, so this is a broken JVM, not a request error.
             throw new IllegalStateException("SHA-1 not available", e);

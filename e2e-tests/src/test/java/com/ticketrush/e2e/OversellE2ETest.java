@@ -20,7 +20,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -78,6 +77,7 @@ class OversellE2ETest {
         // Assert AC2: within 120 s of the first request the saga has settled on 500 / 9,500 / 0.
         Duration remaining = SETTLE_BUDGET.minus(Duration.ofNanos(System.nanoTime() - startedAt));
         assertThat(remaining).as("time left of the 120 s budget after sending").isPositive();
+        assertThat(stack.statusCounts(EVENT_ID)).isNotEmpty(); // guard before containsOnly
         await().atMost(remaining).pollInterval(Duration.ofSeconds(1)).untilAsserted(() ->
                 assertThat(stack.statusCounts(EVENT_ID)).containsOnly(
                         Map.entry("CONFIRMED", (long) STOCK), Map.entry("REJECTED", (long) (BUYERS - STOCK))));
