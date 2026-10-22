@@ -194,4 +194,80 @@ class ReservationFlowIT {
         assertThat(reserved).isEmpty();
         assertThat(redis.opsForHash().get("inventory:event:flow-empty", "stock")).isEqualTo("0");
     }
+
+    // ---- Milestone 2: the same OrderRequested replayed must not touch stock again ----
+
+    private List<ConsumerRecord<String, Object>> awaitReservedFor(OrderRequested order, int expected) {
+        List<ConsumerRecord<String, Object>> received = new ArrayList<>();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            poll(reservedConsumer, Duration.ofMillis(500)).stream()
+                    .filter(r -> r.value() instanceof TicketsReserved t && t.orderId().equals(order.orderId()))
+                    .forEach(received::add);
+            assertThat(received).hasSize(expected);
+        });
+        return received;
+    }
+
+    private List<ConsumerRecord<String, Object>> awaitRejectedFor(OrderRequested order, int expected) {
+        List<ConsumerRecord<String, Object>> received = new ArrayList<>();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            poll(rejectedConsumer, Duration.ofMillis(500)).stream()
+                    .filter(r -> r.value() instanceof ReservationRejected x && x.orderId().equals(order.orderId()))
+                    .forEach(received::add);
+            assertThat(received).hasSize(expected);
+        });
+        return received;
+    }
+
+    @Test
+    void duplicateOrderRequestedAC3DecrementsStockOnce() throws Exception {
+        seedRedis("dup-ok", 10, 1000, "EUR");
+        OrderRequested order = order("dup-ok", 1);
+
+        send(order);
+        send(order);
+        send(order);
+
+        List<ConsumerRecord<String, Object>> received = awaitReservedFor(order, 3);
+        List<TicketsReserved> outcomes = received.stream().map(r -> (TicketsReserved) r.value()).toList();
+        assertThat(redis.opsForHash().get("inventory:event:dup-ok", "stock")).isEqualTo("9");
+        assertThat(outcomes).extracting(TicketsReserved::amountCents).containsOnly(1000L);
+        assertThat(outcomes).extracting(TicketsReserved::currency).containsOnly("EUR");
+        assertThat(outcomes).extracting(TicketsReserved::reservedUntil).containsOnly(outcomes.get(0).reservedUntil());
+        assertThat(received).extracting(ConsumerRecord::key).containsOnly(order.orderId().toString());
+        String dedupKey = "inventory:order:" + order.orderId();
+        assertThat(redis.hasKey(dedupKey)).isTrue();
+        assertThat(redis.getExpire(dedupKey)).isPositive().isLessThanOrEqualTo(604800L);
+    }
+
+    @Test
+    void duplicateRejectedAC3StaysRejected() throws Exception {
+        seedRedis("dup-empty", 0, 1000, "EUR");
+        OrderRequested order = order("dup-empty", 1);
+
+        send(order);
+        send(order);
+
+        List<ConsumerRecord<String, Object>> rejected = awaitRejectedFor(order, 2);
+        assertThat(rejected).extracting(r -> ((ReservationRejected) r.value()).reason()).containsOnly("SOLD_OUT");
+        assertThat(poll(reservedConsumer, Duration.ofMillis(500)))
+                .noneMatch(r -> r.value() instanceof TicketsReserved t && t.orderId().equals(order.orderId()));
+        assertThat(redis.opsForHash().get("inventory:event:dup-empty", "stock")).isEqualTo("0");
+    }
+
+    @Test
+    void duplicateAfterRestockAC2ReturnsStoredOutcome() throws Exception {
+        seedRedis("dup-restock", 0, 1000, "EUR");
+        OrderRequested order = order("dup-restock", 1);
+        send(order);
+        awaitRejectedFor(order, 1);
+        seedRedis("dup-restock", 5, 1000, "EUR");
+
+        send(order);
+
+        awaitRejectedFor(order, 1);
+        assertThat(poll(reservedConsumer, Duration.ofMillis(500)))
+                .noneMatch(r -> r.value() instanceof TicketsReserved t && t.orderId().equals(order.orderId()));
+        assertThat(redis.opsForHash().get("inventory:event:dup-restock", "stock")).isEqualTo("5");
+    }
 }
