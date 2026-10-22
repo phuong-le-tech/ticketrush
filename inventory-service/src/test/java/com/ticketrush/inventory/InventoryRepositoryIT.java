@@ -2,8 +2,11 @@ package com.ticketrush.inventory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -24,6 +27,7 @@ class InventoryRepositoryIT {
 
     private static final GenericContainer<?> REDIS =
             new GenericContainer<>("redis:8.10.2").withExposedPorts(6379);
+    private static final Duration DEDUP_TTL = Duration.ofDays(7);
 
     private static LettuceConnectionFactory factory;
     private static StringRedisTemplate redis;
@@ -51,11 +55,16 @@ class InventoryRepositoryIT {
             c.serverCommands().flushAll();
             return null;
         });
-        repository = new InventoryRepository(redis);
+        repository = new InventoryRepository(redis, DEDUP_TTL);
     }
 
     private static String key(String eventId) {
         return "inventory:event:" + eventId;
+    }
+
+    /** Each call is a distinct order (fresh orderId), so the per-order dedupe never kicks in here. */
+    private ReservationResult reserveNewOrder(String eventId, int quantity) {
+        return repository.reserve(eventId, UUID.randomUUID(), quantity, Instant.now().plusSeconds(300));
     }
 
     private static void putEvent(String eventId, long stock, long priceCents, String currency) {
@@ -72,7 +81,7 @@ class InventoryRepositoryIT {
     void reserveDecrementsStockAndReturnsPriceAndCurrency() {
         putEvent("e1", 3, 12550, "EUR");
 
-        ReservationResult result = repository.reserve("e1", 2);
+        ReservationResult result = reserveNewOrder("e1", 2);
 
         assertThat(result.reserved()).isTrue();
         assertThat(result.priceCents()).isEqualTo(12550L);
@@ -83,9 +92,9 @@ class InventoryRepositoryIT {
     @Test
     void reserveIsAllOrNothingWhenStockIsInsufficient() {
         putEvent("e1", 3, 12550, "EUR");
-        assertThat(repository.reserve("e1", 2).reserved()).isTrue();
+        assertThat(reserveNewOrder("e1", 2).reserved()).isTrue();
 
-        ReservationResult second = repository.reserve("e1", 2);
+        ReservationResult second = reserveNewOrder("e1", 2);
 
         assertThat(second.reserved()).isFalse();
         assertThat(field("e1", "stock")).isEqualTo("1");
@@ -95,16 +104,16 @@ class InventoryRepositoryIT {
     void reservingExactlyTheRemainingStockSucceedsThenStockNeverGoesNegative() {
         putEvent("e1", 2, 12550, "EUR");
 
-        assertThat(repository.reserve("e1", 2).reserved()).isTrue();
+        assertThat(reserveNewOrder("e1", 2).reserved()).isTrue();
         assertThat(field("e1", "stock")).isEqualTo("0");
 
-        assertThat(repository.reserve("e1", 1).reserved()).isFalse();
+        assertThat(reserveNewOrder("e1", 1).reserved()).isFalse();
         assertThat(field("e1", "stock")).isEqualTo("0");
     }
 
     @Test
     void unknownEventIsRejectedAndNoKeyIsCreated() {
-        ReservationResult result = repository.reserve("ghost", 1);
+        ReservationResult result = reserveNewOrder("ghost", 1);
 
         assertThat(result.reserved()).isFalse();
         assertThat(redis.keys("*")).isEmpty();
@@ -141,7 +150,7 @@ class InventoryRepositoryIT {
         for (int i = 0; i < threads; i++) {
             Callable<Boolean> task = () -> {
                 start.await();
-                return repository.reserve("e1", 1).reserved();
+                return reserveNewOrder("e1", 1).reserved();
             };
             futures.add(pool.submit(task));
         }
