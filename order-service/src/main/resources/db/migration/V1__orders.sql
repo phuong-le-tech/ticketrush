@@ -8,7 +8,7 @@ CREATE TABLE orders.orders (
     quantity        int CHECK (quantity BETWEEN 1 AND 4),
     status          text NOT NULL CHECK (status IN ('PENDING', 'CONFIRMED', 'PAYMENT_FAILED', 'REJECTED')),
     amount_cents    bigint,
-    currency        char(3),
+    currency        varchar(3),
     failure_reason  text,
     created_at      timestamptz NOT NULL DEFAULT now(),
     updated_at      timestamptz NOT NULL DEFAULT now()
