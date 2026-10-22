@@ -160,7 +160,7 @@ final class OrderTestInfra {
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers(),
                 ConsumerConfig.GROUP_ID_CONFIG, "test-collector-" + UUID.randomUUID(),
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"),
-                new StringDeserializer(), EventJson.deserializer());
+                new StringDeserializer(), EventJson.deserializer().dontRemoveTypeHeaders());
         consumer.subscribe(List.of(Topics.ORDERS_CONFIRMED));
         AtomicBoolean running = new AtomicBoolean(true);
         Thread t = new Thread(() -> {
