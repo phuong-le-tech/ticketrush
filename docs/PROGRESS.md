@@ -6,7 +6,7 @@ result, and what is NOT done or not verified.
 | # | Milestone | Branch | Status |
 |---|---|---|---|
 | 1 | Happy path locally | `feat/t_4d7a08e4-m1-finish` | Done (pending owner go-ahead) |
-| 2 | Correctness under contention | `milestone-2` | Not started |
+| 2 | Correctness under contention | `milestone-2` | Done (pending owner go-ahead) |
 | 3 | Kubernetes | `milestone-3` | Not started |
 | 4 | Failure handling | `milestone-4` | Not started |
 | 5 | Observability and autoscaling | `milestone-5` | Not started |
@@ -59,3 +59,52 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   - Compose was run once on a developer machine; the stack was not tested under load, nor restarted mid-flow.
   - The app containers have no healthcheck (images have no curl); `--wait` only proves they started.
 - Bottlenecks or surprises: JacksonJsonDeserializer strips the `__TypeId__` header by default, so test consumers must call `dontRemoveTypeHeaders()` to assert on it (test fix commit in this PR).
+
+### Milestone 2 - 2026-10-22
+- Verified with: `scripts/m2-acceptance.sh` (builds once with `mvn install -DskipTests`, then runs
+  `OversellE2ETest` + `ReplayE2ETest` in 10 separate Maven runs, fresh JVM and containers each) -> 10/10:
+  ```
+  Building once (mvn install -DskipTests)...
+  run 1/10: PASS in 135s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-1.log)
+  run 2/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-2.log)
+  run 3/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-3.log)
+  run 4/10: PASS in 137s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-4.log)
+  run 5/10: PASS in 144s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-5.log)
+  run 6/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-6.log)
+  run 7/10: PASS in 124s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-7.log)
+  run 8/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-8.log)
+  run 9/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-9.log)
+  run 10/10: PASS in 127s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-10.log)
+  RESULT: 10/10 runs passed
+  ```
+  Per run, surefire time (includes booting containers and the 6 services): OversellE2ETest
+  104.8 / 97.5 / 99.5 / 104.4 / 111.7 / 98.1 / 95.5 / 98.6 / 98.4 / 97.5 s; ReplayE2ETest (2 tests)
+  28.3 / 27.2 / 29.6 / 29.2 / 28.1 / 27.9 / 25.4 / 27.2 / 26.9 / 27.1 s.
+- Verified with: `mvn verify` (repo root, all modules) -> BUILD SUCCESS, 80 tests, 0 failures
+  (OversellE2ETest 102.8 s, ReplayE2ETest 29.2 s, PurchaseFlowE2ETest 10.1 s in that run).
+- What exists:
+  - Gateway: `orderId` = UUIDv5 of (customerId, Idempotency-Key), see DESIGN.md section 5. Same key
+    and customer -> same orderId; key over 255 chars or blank -> 400.
+  - Inventory: `reserve.lua` dedupes by `inventory:order:{orderId}` in the same atomic script as the
+    stock check, stores the first outcome (TTL `INVENTORY_DEDUP_TTL_SECONDS`, 7 days) and the
+    listener re-publishes it on a replay.
+  - Payment and order saga unchanged: their M1 dedupe (provider key = orderId, conditional upserts)
+    holds under the M2 tests.
+  - Tests: OversellE2ETest (10,000 buyers, 1,000 concurrent duplicate POSTs, stock 500 -> exactly
+    500 CONFIRMED, 9,500 REJECTED, 0 PENDING, stock 0, 500 distinct OrderConfirmed, 1 charge each,
+    settled within 120 s of the first request), ReplayE2ETest (3 byte-identical replays of
+    OrderRequested / TicketsReserved / PaymentResult change nothing; re-POST after confirmation
+    returns the same orderId), OrderIdempotencyTest, ReservationFlowIT dedupe cases.
+- NOT done / not verified:
+  - A reused key with a different `eventId` lands on another `orders.requested` partition, so which
+    copy inventory and order-service see first is not deterministic. Not tested; same-event reuse
+    is deterministic (first write wins, stored quantity and amount are reused).
+  - A rejection for an unknown event is not stored (no key is created), so a replay after that event
+    is seeded could reserve. A replay older than the 7 day dedupe TTL would reserve again.
+  - Redis durability is not configured (no AOF, no volume in Compose): losing Redis data loses stock
+    and dedupe state alike.
+  - Compose stack was not re-run for M2; the 10 runs are in-process e2e on one developer laptop.
+  - Still no outbox (M4); notification-service does not dedupe (log only, out of scope).
+- Bottlenecks or surprises: under the 11,000 request burst Tomcat logs a few
+  `NioEndpoint: Error setting socket options`; the test client treats connection failures like a
+  503 and retries with the same key, and every run still reached 202 for every buyer.
