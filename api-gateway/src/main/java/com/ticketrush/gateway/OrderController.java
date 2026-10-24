@@ -38,9 +38,9 @@ public class OrderController {
         if (!isValidIdempotencyKey(idempotencyKey) || !request.isValid()) {
             return ResponseEntity.badRequest().build();
         }
-        // Same customer + key = same orderId, so a retried or duplicated POST is the same order
-        // downstream (first write wins there, even if the retry carries a different body).
-        UUID orderId = OrderIds.fromIdempotencyKey(request.customerId(), idempotencyKey);
+        // Same customer + event + key = same orderId, so a retried or duplicated POST is the same order
+        // downstream (first write wins there, even if the retry carries a different quantity).
+        UUID orderId = OrderIds.fromIdempotencyKey(request.customerId(), request.eventId(), idempotencyKey);
         OrderRequested event = new OrderRequested(UUID.randomUUID(), orderId, idempotencyKey,
                 request.eventId(), request.customerId(), request.quantity(), Instant.now());
         try {
