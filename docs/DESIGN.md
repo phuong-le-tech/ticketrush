@@ -131,14 +131,17 @@ Rationale:
 - `POST /orders`, header `Idempotency-Key`, body `{ "eventId", "customerId", "quantity" }`
   -> `202 { "orderId" }` after Kafka acks `OrderRequested`.
 - M2: `orderId` = UUIDv5 (SHA-1, namespace `3fc18c52-d4b9-4f65-81fe-4ce095a8f1cc`) of
-  `customerId.length() + ":" + customerId + ":" + Idempotency-Key`. A retry or duplicate POST with
-  the same key and customer gets the same `orderId` (202). A reused key with a different body is
-  treated as a retry of the first request: first write wins downstream. Key longer than 255 chars,
+  `customerId.length() + ":" + customerId + ":" + eventId.length() + ":" + eventId + ":" + Idempotency-Key`.
+  A retry or duplicate POST with the same key, customer and event gets the same `orderId` (202). The
+  same key with a different `eventId` is a different order. A reused key with a different quantity
+  is treated as a retry of the first request: first write wins downstream. Key longer than 255 chars,
   or blank -> 400. The gateway stores nothing; dedupe happens where state lives:
   - inventory: `reserve.lua` checks `inventory:order:{orderId}` (Redis hash: `reserved`,
     `priceCents`, `quantity`, `currency`, `reservedUntil`) in the same script as the stock check.
     Seen order -> the stored outcome is returned and re-published, stock is not touched. TTL
-    `INVENTORY_DEDUP_TTL_SECONDS` (default 604800 = 7 days). Unknown events store nothing.
+    `INVENTORY_DEDUP_TTL_SECONDS` (default 604800 = 7 days). An unknown event stores the rejection
+    (`reserved=0`, same TTL) on the order key, so that orderId stays rejected if the event is seeded
+    later; no `inventory:event:*` key is created.
   - payment: provider idempotency key = `orderId`; order-service: conditional upserts (M1).
 - 429 + `Retry-After` arrives with overload handling.
 
@@ -155,3 +158,4 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-10-16 | JSON events, no schema registry | Fewer moving parts; trade-off is no enforced schema evolution. |
 | 2026-10-22 | orderId = UUIDv5(namespace, length-prefixed customerId + Idempotency-Key), SHA-1 via `MessageDigest`, key max 255 chars | Retries map to the same order with no gateway state and no new dependency; the length prefix makes the name unambiguous. |
 | 2026-10-22 | Inventory dedupe in `reserve.lua`: `inventory:order:{orderId}` hash holds the first outcome, TTL `INVENTORY_DEDUP_TTL_SECONDS` (7 days) | Check, decrement and record in one atomic script, so a replay can never reserve twice; re-publishing the stored outcome covers a crash between Lua and send. |
+| 2026-10-24 | eventId added to the orderId UUIDv5 name (length-prefixed, after customerId); unknown-event rejection stored as `reserved=0` with the dedupe TTL (option a) | `orders.requested` is keyed by eventId, so a key reused across events split one orderId across partitions and could reserve it twice; storing the unknown-event rejection keeps a rejected orderId rejected after the event is seeded. |
