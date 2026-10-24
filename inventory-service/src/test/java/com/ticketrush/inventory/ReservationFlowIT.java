@@ -274,12 +274,12 @@ class ReservationFlowIT {
     @Test
     void unknownThenSeededEventAC6BothRejectedStockUnchanged() throws Exception {
         UUID orderId = UUID.randomUUID();
-        OrderRequested onUnknown = new OrderRequested(orderId, UUID.randomUUID(), "idem-" + UUID.randomUUID(),
+        OrderRequested onUnknown = new OrderRequested(UUID.randomUUID(), orderId, "idem-" + UUID.randomUUID(),
                 "ghost-flow", "customer-1", 1, Instant.now());
         send(onUnknown);
         List<ConsumerRecord<String, Object>> first = awaitRejectedFor(onUnknown, 1);
         seedRedis("flow-seeded", 5, 1000, "EUR");
-        OrderRequested onSeeded = new OrderRequested(orderId, UUID.randomUUID(), "idem-" + UUID.randomUUID(),
+        OrderRequested onSeeded = new OrderRequested(UUID.randomUUID(), orderId, "idem-" + UUID.randomUUID(),
                 "flow-seeded", "customer-1", 1, Instant.now());
 
         send(onSeeded);
