@@ -111,12 +111,57 @@ class InventoryRepositoryIT {
         assertThat(field("e1", "stock")).isEqualTo("0");
     }
 
+    private ReservationResult reserveOrder(String eventId, UUID orderId) {
+        return repository.reserve(eventId, orderId, 1, Instant.now().plusSeconds(300));
+    }
+
     @Test
-    void unknownEventIsRejectedAndNoKeyIsCreated() {
-        ReservationResult result = reserveNewOrder("ghost", 1);
+    void unknownEventAC5StoresRejectionWithTtlAndCreatesNoEventKey() {
+        UUID o1 = UUID.randomUUID();
+        String orderKey = "inventory:order:" + o1;
+
+        ReservationResult result = reserveOrder("ghost", o1);
 
         assertThat(result.reserved()).isFalse();
-        assertThat(redis.keys("*")).isEmpty();
+        assertThat(redis.keys("*")).containsExactly(orderKey);
+        assertThat(redis.opsForHash().get(orderKey, "reserved")).isEqualTo("0");
+        assertThat(redis.getExpire(orderKey)).isPositive().isLessThanOrEqualTo(604800L);
+        assertThat(redis.hasKey(key("ghost"))).isFalse();
+    }
+
+    @Test
+    void rejectedOrderAC5StaysRejectedAfterEventIsSeeded() {
+        UUID o1 = UUID.randomUUID();
+        reserveOrder("ghost", o1);
+        putEvent("ghost", 5, 1000, "EUR");
+
+        ReservationResult replay = reserveOrder("ghost", o1);
+
+        assertThat(replay.reserved()).isFalse();
+        assertThat(field("ghost", "stock")).isEqualTo("5");
+    }
+
+    @Test
+    void freshOrderAC5CanStillReserveAfterRejectedOrderOnSeededEvent() {
+        reserveOrder("ghost", UUID.randomUUID());
+        putEvent("ghost", 5, 1000, "EUR");
+
+        ReservationResult fresh = reserveOrder("ghost", UUID.randomUUID());
+
+        assertThat(fresh.reserved()).isTrue();
+        assertThat(field("ghost", "stock")).isEqualTo("4");
+    }
+
+    @Test
+    void unknownEventReplayAC5IsIdempotent() {
+        UUID o1 = UUID.randomUUID();
+
+        ReservationResult first = reserveOrder("ghost", o1);
+        ReservationResult second = reserveOrder("ghost", o1);
+
+        assertThat(first.reserved()).isFalse();
+        assertThat(second.reserved()).isFalse();
+        assertThat(redis.keys("*")).containsExactly("inventory:order:" + o1);
     }
 
     @Test
