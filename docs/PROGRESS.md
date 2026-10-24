@@ -83,11 +83,12 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - Verified with: `mvn verify` (repo root, all modules) -> BUILD SUCCESS, 80 tests, 0 failures
   (OversellE2ETest 102.8 s, ReplayE2ETest 29.2 s, PurchaseFlowE2ETest 10.1 s in that run).
 - What exists:
-  - Gateway: `orderId` = UUIDv5 of (customerId, Idempotency-Key), see DESIGN.md section 5. Same key
-    and customer -> same orderId; key over 255 chars or blank -> 400.
+  - Gateway: `orderId` = UUIDv5 of (customerId, eventId, Idempotency-Key), see DESIGN.md section 5.
+    Same key, customer and event -> same orderId; same key on another event -> another orderId; key
+    over 255 chars or blank -> 400.
   - Inventory: `reserve.lua` dedupes by `inventory:order:{orderId}` in the same atomic script as the
     stock check, stores the first outcome (TTL `INVENTORY_DEDUP_TTL_SECONDS`, 7 days) and the
-    listener re-publishes it on a replay.
+    listener re-publishes it on a replay. An unknown-event rejection is stored too (`reserved=0`).
   - Payment and order saga unchanged: their M1 dedupe (provider key = orderId, conditional upserts)
     holds under the M2 tests.
   - Tests: OversellE2ETest (10,000 buyers, 1,000 concurrent duplicate POSTs, stock 500 -> exactly
@@ -96,11 +97,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
     OrderRequested / TicketsReserved / PaymentResult change nothing; re-POST after confirmation
     returns the same orderId), OrderIdempotencyTest, ReservationFlowIT dedupe cases.
 - NOT done / not verified:
-  - A reused key with a different `eventId` lands on another `orders.requested` partition, so which
-    copy inventory and order-service see first is not deterministic. Not tested; same-event reuse
-    is deterministic (first write wins, stored quantity and amount are reused).
-  - A rejection for an unknown event is not stored (no key is created), so a replay after that event
-    is seeded could reserve. A replay older than the 7 day dedupe TTL would reserve again.
+  - A replay older than the 7 day dedupe TTL would reserve again.
   - Redis durability is not configured (no AOF, no volume in Compose): losing Redis data loses stock
     and dedupe state alike.
   - Compose stack was not re-run for M2; the 10 runs are in-process e2e on one developer laptop.
@@ -108,3 +105,37 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - Bottlenecks or surprises: under the 11,000 request burst Tomcat logs a few
   `NioEndpoint: Error setting socket options`; the test client treats connection failures like a
   503 and retries with the same key, and every run still reached 202 for every buyer.
+
+### Milestone 2 blockers closed - 2026-10-24
+- Closed the two PR #13 review blockers (approved option a, see DESIGN.md decision log):
+  - Same Idempotency-Key reused on another event: eventId is now in the orderId name, so it is a
+    different order. Before, one orderId sat on two `orders.requested` partitions (key = eventId)
+    and could be reserved on both.
+  - Unknown event: the rejection is now stored on `inventory:order:{orderId}` (`reserved=0`, dedupe
+    TTL), so that orderId stays rejected after the event is seeded. No event key is created.
+- Tests: OrderIdempotencyTest (AC1-AC4: exact name format, different event, different quantity,
+  customer/event boundary), InventoryRepositoryIT (stored rejection, TTL, rejected after seeding,
+  replay), ReservationFlowIT `unknownThenSeededEventAC6BothRejectedStockUnchanged` (Kafka path).
+- Verified with: `mvn verify` (repo root) -> BUILD SUCCESS, 86 tests, 0 failures (OversellE2ETest
+  98.2 s, ReplayE2ETest 27.5 s, PurchaseFlowE2ETest 9.6 s).
+- Verified with: `scripts/m2-acceptance.sh` -> 10/10:
+  ```
+  Building once (mvn install -DskipTests)...
+  run 1/10: PASS in 139s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-1.log)
+  run 2/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-2.log)
+  run 3/10: PASS in 127s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-3.log)
+  run 4/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-4.log)
+  run 5/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-5.log)
+  run 6/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-6.log)
+  run 7/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-7.log)
+  run 8/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-8.log)
+  run 9/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-9.log)
+  run 10/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-10.log)
+  RESULT: 10/10 runs passed
+  ```
+  Per run, surefire time: OversellE2ETest 108.7 / 98.5 / 96.5 / 95.9 / 100.3 / 100.7 / 101.5 / 98.2 /
+  96.3 / 101.5 s; ReplayE2ETest (2 tests) 28.1 / 27.4 / 27.2 / 29.5 / 29.2 / 29.3 / 28.0 / 27.2 /
+  28.2 / 28.2 s.
+- NOT done / not verified: in-flight retries across the deploy get a new orderId (name changed; no
+  production data). SonarCloud gate is checked on the PR, not locally. The other M2 items above
+  still stand (TTL, Redis durability, Compose not re-run, no outbox).
