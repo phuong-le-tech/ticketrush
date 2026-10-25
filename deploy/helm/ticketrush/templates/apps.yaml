@@ -34,6 +34,20 @@ spec:
         runAsUser: {{ $.Values.app.runAsUser }}
         seccompProfile:
           type: RuntimeDefault
+      {{- if $svc.waitForPostgres }}
+      # Flyway fails fast when Postgres is not reachable yet, which would crash-loop the pod on a cold start.
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ $.Values.postgres.image }}
+          command: ["sh", "-c", "until pg_isready -h postgres -p 5432; do sleep 2; done"]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      {{- end }}
       containers:
         - name: {{ $name }}
           image: {{ $.Values.image.repository }}/{{ $name }}:{{ default $.Values.image.tag $svc.tag }}

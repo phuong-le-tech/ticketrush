@@ -87,6 +87,7 @@ services:
   order-service:
     port: 8084
     kafka: true
+    waitForPostgres: true
     env:
       ORDER_DB_URL: jdbc:postgresql://postgres:5432/ticketrush
     secretEnv:
