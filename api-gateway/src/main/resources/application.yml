@@ -19,3 +19,9 @@ spring:
 
 gateway:
   send-timeout-ms: ${GATEWAY_SEND_TIMEOUT_MS:6000}
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true

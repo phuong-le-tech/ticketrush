@@ -20,3 +20,9 @@ payment:
   provider:
     url: ${PAYMENT_PROVIDER_URL:http://localhost:8083}
     timeout-ms: ${PAYMENT_PROVIDER_TIMEOUT_MS:2000}
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true

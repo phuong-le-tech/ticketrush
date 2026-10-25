@@ -22,3 +22,9 @@ spring:
       auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
     listener:
       ack-mode: manual
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true

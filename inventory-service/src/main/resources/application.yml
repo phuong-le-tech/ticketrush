@@ -29,3 +29,9 @@ inventory:
   reservation-ttl-seconds: ${RESERVATION_TTL_SECONDS:300}
   # How long an order's reservation outcome is remembered for dedupe (default 7 days).
   dedup-ttl-seconds: ${INVENTORY_DEDUP_TTL_SECONDS:604800}
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
