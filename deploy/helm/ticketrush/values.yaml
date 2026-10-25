@@ -17,6 +17,10 @@ kafka:
   resources:
     requests: {cpu: 250m, memory: 768Mi}
     limits: {cpu: "1", memory: 1Gi}
+  # The Strimzi default (256Mi) gets the topic operator OOM-killed while it creates the topics.
+  topicOperatorResources:
+    requests: {cpu: 100m, memory: 384Mi}
+    limits: {cpu: 500m, memory: 768Mi}
 
 # Names, partitions and replication follow DESIGN.md section 4.
 topics:

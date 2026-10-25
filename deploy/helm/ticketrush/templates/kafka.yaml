@@ -44,4 +44,6 @@ spec:
       transaction.state.log.min.isr: {{ .Values.kafka.minInsyncReplicas }}
       auto.create.topics.enable: false
   entityOperator:
-    topicOperator: {}
+    topicOperator:
+      resources:
+        {{- toYaml .Values.kafka.topicOperatorResources | nindent 8 }}
