@@ -31,7 +31,8 @@ done
 # The tag is the image id, so an unchanged build keeps the same tag and helm sees no change.
 build_image() {
   local service="$1" id tag
-  id="$(docker build -q -f "${service}/Dockerfile" -t "${IMAGE_REPOSITORY}/${service}:build" .)"
+  # No provenance or SBOM attestation: they embed build time in the image id, which would change the tag on every run.
+  id="$(docker build -q --provenance=false --sbom=false -f "${service}/Dockerfile" -t "${IMAGE_REPOSITORY}/${service}:build" .)"
   tag="$(echo "${id#sha256:}" | cut -c1-12)"
   docker tag "${IMAGE_REPOSITORY}/${service}:build" "${IMAGE_REPOSITORY}/${service}:${tag}"
   echo "$tag" > "${SCRATCH}/${service}.tag"
