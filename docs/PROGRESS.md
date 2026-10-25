@@ -139,3 +139,28 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - NOT done / not verified: in-flight retries across the deploy get a new orderId (name changed; no
   production data). SonarCloud gate is checked on the PR, not locally. The other M2 items above
   still stand (TTL, Redis durability, Compose not re-run, no outbox).
+
+### Milestone 3 - 2026-10-25
+- What exists: Helm chart `deploy/helm/ticketrush` (Strimzi Kafka KRaft with 3 brokers, 6 KafkaTopic CRs
+  with 12 partitions and RF 3, Postgres and Redis StatefulSets, 6 service Deployments with startup,
+  readiness and liveness probes, requests and limits, non-root, grace period 60 s, credentials from a
+  chart-generated Secret); `scripts/m3-up.sh` (idempotent), `scripts/m3-chart-check.sh`,
+  `scripts/m3-acceptance.sh`; actuator probes in every service.
+- Restart cause found: on a cold start order-service (Flyway) and inventory-service (Redis seeding)
+  exited 1 because Postgres and Redis were not reachable yet (7-8 restarts each). Fixed with init
+  containers (`waitFor`). The Docker VM was also restarted by the host during that session (uptime
+  10 min), which restarted the control plane pods; not a chart problem.
+- Verified with `scripts/m3-chart-check.sh` and `--selftest`: both pass.
+- Verified with `mvn verify` (repo root): BUILD SUCCESS, 98 tests, 0 failures, 6 ActuatorProbesIT included.
+- Verified with `scripts/m3-acceptance.sh` (deletes the cluster first), exit 0:
+  ```
+  PASS AC4_clean_up - 13 pods Ready
+  PASS AC4_second_run - same node, 0 restarts
+  PASS AC5_order_confirmed - POST 202, 0d47129f-400a-5583-8484-2b823ae56800 CONFIRMED in Postgres and on orders.confirmed
+  PASS AC6_graceful_restart - old pod logged 'Graceful shutdown complete', rollout completed
+  RESULT: m3-acceptance passed
+  ```
+  Cold start to all Ready took about 2.5 min (images built from cache).
+- NOT done / not verified: Compose stack not re-run (files untouched); a first run with an empty
+  Docker build cache and empty image cache (long Maven and image pulls) was not timed; no HA for
+  Postgres/Redis; secrets are dummy local defaults; only one laptop (Docker VM 8 GB, 6 CPU) tried.

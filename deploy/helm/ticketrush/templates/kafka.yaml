@@ -1,0 +1,49 @@
+# One KRaft pool where every node is both broker and controller: three brokers with a three-node
+# controller quorum, without three more pods on a laptop.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: broker
+  labels:
+    strimzi.io/cluster: {{ .Values.kafka.name }}
+spec:
+  replicas: {{ .Values.kafka.brokers }}
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: {{ .Values.kafka.storageSize }}
+        deleteClaim: true
+  resources:
+    {{- toYaml .Values.kafka.resources | nindent 4 }}
+  jvmOptions:
+    -Xms: {{ .Values.kafka.jvmXms }}
+    -Xmx: {{ .Values.kafka.jvmXmx }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: {{ .Values.kafka.name }}
+spec:
+  kafka:
+    version: {{ .Values.kafka.version }}
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+    config:
+      default.replication.factor: {{ .Values.kafka.replicationFactor }}
+      min.insync.replicas: {{ .Values.kafka.minInsyncReplicas }}
+      offsets.topic.replication.factor: {{ .Values.kafka.replicationFactor }}
+      transaction.state.log.replication.factor: {{ .Values.kafka.replicationFactor }}
+      transaction.state.log.min.isr: {{ .Values.kafka.minInsyncReplicas }}
+      auto.create.topics.enable: false
+  entityOperator:
+    topicOperator:
+      resources:
+        {{- toYaml .Values.kafka.topicOperatorResources | nindent 8 }}

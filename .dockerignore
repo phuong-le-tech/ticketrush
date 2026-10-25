@@ -1,0 +1,7 @@
+# Keeps the build context small and the `COPY . .` layer cache stable between runs.
+.git
+.worktrees
+**/target
+docs
+deploy
+scripts

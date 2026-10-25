@@ -18,6 +18,10 @@ Checked against Maven Central and Docker Hub on 2026-10-16. Re-check tools for l
 | PostgreSQL | 18.6 | |
 | Redis | 8.10.2 | Fall back to 8.8.3 if 8.10.2 proves unstable. |
 | Testcontainers | 2.0.5 | Managed by the Boot BOM. 2.x module names: `testcontainers-kafka`, `testcontainers-postgresql`. |
+| Strimzi operator | 1.3.0 | M3. Installed by its Helm chart (`oci://quay.io/strimzi-helm/strimzi-kafka-operator`), version pinned in `scripts/m3-up.sh`. Supports Kafka 4.3.1; CR API `kafka.strimzi.io/v1`. |
+| Helm | 4.x (local tool) | M3. Chart in `deploy/helm/ticketrush`. Installed with `brew install helm`. |
+| kind | 0.33 (local tool) | M3. Local cluster `ticketrush`. Installed with `brew install kind`. |
+| PostgreSQL / Redis in Kubernetes | 18.6 / 8.10.2 | M3. Same images as Compose, as plain single-replica StatefulSets with a PVC (no Bitnami, no HA). |
 
 ## 2. Repo layout
 
@@ -33,6 +37,10 @@ ticketrush/
   notification-service/       consumes orders.confirmed, logs a notification
   e2e-tests/                  Testcontainers test that runs every service in one JVM
   deploy/compose/docker-compose.yml
+  deploy/helm/ticketrush/     M3 chart: Strimzi Kafka + topics, Postgres, Redis, 6 services
+  scripts/m3-up.sh            kind cluster + Strimzi + images + chart, idempotent
+  scripts/m3-chart-check.sh   static chart checks (helm lint + template assertions)
+  scripts/m3-acceptance.sh    m3-up.sh twice, order to CONFIRMED, graceful rollout restart
   .env.example
 ```
 
@@ -63,6 +71,8 @@ Rationale:
 | Testcontainers | Real Kafka/Postgres/Redis in integration tests. |
 | `awaitility` (test only) | Wait for async Kafka results without `Thread.sleep`. |
 | `tools.jackson.core:jackson-databind` | Jackson 3 mapper; required by `JacksonJsonSerializer`, which is optional in spring-kafka. Used in `common`, BOM-managed. |
+| `spring-boot-starter-actuator` (every service) | M3. Readiness and liveness endpoints (`/actuator/health/readiness`, `/actuator/health/liveness`) for the Kubernetes probes. Only the health endpoint is exposed (Boot default). |
+| `spring-boot-starter-webmvc` (inventory, order, notification) | M3. These three had no web server; the probes need an HTTP port. Same starter as the gateway. |
 | `spring-boot-starter-test` (test only) | JUnit 5 and AssertJ for unit tests. |
 
 Any new dependency must be added to this table with a reason.
@@ -159,3 +169,9 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-10-22 | orderId = UUIDv5(namespace, length-prefixed customerId + Idempotency-Key), SHA-1 via `MessageDigest`, key max 255 chars | Retries map to the same order with no gateway state and no new dependency; the length prefix makes the name unambiguous. |
 | 2026-10-22 | Inventory dedupe in `reserve.lua`: `inventory:order:{orderId}` hash holds the first outcome, TTL `INVENTORY_DEDUP_TTL_SECONDS` (7 days) | Check, decrement and record in one atomic script, so a replay can never reserve twice; re-publishing the stored outcome covers a crash between Lua and send. |
 | 2026-10-24 | eventId added to the orderId UUIDv5 name (length-prefixed, after customerId); unknown-event rejection stored as `reserved=0` with the dedupe TTL (option a) | `orders.requested` is keyed by eventId, so a key reused across events split one orderId across partitions and could reserve it twice; storing the unknown-event rejection keeps a rejected orderId rejected after the event is seeded. |
+| 2026-10-25 | M3 on kind with Helm (not Kustomize); Strimzi 1.3.0 via its Helm chart; Postgres 18.6 and Redis 8.10.2 as plain single-replica StatefulSets with PVCs | Owner decision. Helm values give one place for sizes and credentials; no Bitnami charts to track. |
+| 2026-10-25 | Kafka on Kubernetes: one KafkaNodePool of 3 nodes with roles broker+controller (KRaft), RF 3, `min.insync.replicas=2`, transaction state log ISR 2, auto-create off, topics as `KafkaTopic` CRs (12 partitions) | 3 brokers with a 3-node quorum without 3 extra controller pods on a laptop; the topic operator replaces the Compose `kafka-init` container. |
+| 2026-10-25 | `spring-boot-starter-actuator` in every service, `management.endpoint.health.probes.enabled=true`; inventory, order and notification get `spring-boot-starter-webmvc` | Kubernetes probes need HTTP endpoints; these three had no web server. |
+| 2026-10-25 | Credentials come from a chart-generated Secret (`ticketrush-credentials`) built from `values.yaml` dummy defaults; Deployments only reference it with `secretKeyRef` | No plaintext credential in a rendered Deployment; real values are supplied with `--set-string` and never committed. |
+| 2026-10-25 | Image tag = first 12 hex of the Docker image id; `.dockerignore` keeps `.git`, `target`, docs and scripts out of the build context | An unchanged build gives the same tag, so a second `m3-up.sh` changes nothing. |
+| 2026-10-25 | order-service and inventory-service get init containers that wait for Postgres or Redis (`waitFor` in values.yaml) | Both fail fast at startup when the dependency is not reachable yet; on a cold start that crash-looped them (7-8 restarts). Kafka needs no wait: the clients retry. |
