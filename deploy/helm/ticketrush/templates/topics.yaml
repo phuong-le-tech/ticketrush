@@ -1,0 +1,13 @@
+{{- range .Values.topics.names }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: {{ . }}
+  labels:
+    strimzi.io/cluster: {{ $.Values.kafka.name }}
+spec:
+  topicName: {{ . }}
+  partitions: {{ $.Values.topics.partitions }}
+  replicas: {{ $.Values.kafka.replicationFactor }}
+{{- end }}

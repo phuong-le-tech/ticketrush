@@ -1,0 +1,93 @@
+# Local kind defaults. The credentials below are dummy values for a throwaway cluster; override them
+# (for example with --set-string credentials.postgresPassword=...) for anything else. They only
+# ever reach the pods through the chart-generated Secret.
+credentials:
+  postgresUser: ticketrush_app
+  postgresPassword: ticketrush-local
+
+kafka:
+  name: ticketrush
+  version: 4.3.1
+  brokers: 3
+  replicationFactor: 3
+  minInsyncReplicas: 2
+  storageSize: 2Gi
+  jvmXms: 256m
+  jvmXmx: 512m
+  resources:
+    requests: {cpu: 250m, memory: 768Mi}
+    limits: {cpu: "1", memory: 1Gi}
+
+# Names, partitions and replication follow DESIGN.md section 4.
+topics:
+  partitions: 12
+  names:
+    - orders.requested
+    - tickets.reserved
+    - orders.rejected
+    - payments.result
+    - orders.confirmed
+    - tickets.released
+
+postgres:
+  image: postgres:18.6
+  database: ticketrush
+  storageSize: 1Gi
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+redis:
+  image: redis:8.10.2
+  storageSize: 256Mi
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 250m, memory: 256Mi}
+
+# Images are built and loaded into kind by scripts/m3-up.sh, which overrides each tag with the image id.
+image:
+  repository: ticketrush
+  tag: dev
+  pullPolicy: IfNotPresent
+
+app:
+  # Above the 30 s Spring shutdown phase (spring.lifecycle.timeout-per-shutdown-phase).
+  terminationGracePeriodSeconds: 60
+  runAsUser: 10001
+  resources:
+    requests: {cpu: 100m, memory: 384Mi}
+    limits: {cpu: "1", memory: 512Mi}
+
+# kafka: true adds KAFKA_BOOTSTRAP_SERVERS. secretEnv maps an env var to a key of the credentials Secret.
+services:
+  api-gateway:
+    port: 8080
+    kafka: true
+  fake-payment-provider:
+    port: 8083
+  inventory-service:
+    port: 8081
+    kafka: true
+    env:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      INVENTORY_SEED_EVENT_ID: concert-1
+      INVENTORY_SEED_STOCK: "1000"
+      INVENTORY_SEED_PRICE_CENTS: "5000"
+      INVENTORY_SEED_CURRENCY: EUR
+  notification-service:
+    port: 8085
+    kafka: true
+  order-service:
+    port: 8084
+    kafka: true
+    env:
+      ORDER_DB_URL: jdbc:postgresql://postgres:5432/ticketrush
+    secretEnv:
+      ORDER_DB_USER: postgres-user
+      ORDER_DB_PASSWORD: postgres-password
+  payment-service:
+    port: 8082
+    kafka: true
+    env:
+      PAYMENT_PROVIDER_URL: http://fake-payment-provider:8083
