@@ -34,12 +34,21 @@ spec:
         runAsUser: {{ $.Values.app.runAsUser }}
         seccompProfile:
           type: RuntimeDefault
-      {{- if $svc.waitForPostgres }}
-      # Flyway fails fast when Postgres is not reachable yet, which would crash-loop the pod on a cold start.
+      {{- if $svc.waitFor }}
+      # Services fail fast at startup when Postgres or Redis is not reachable yet, which would crash-loop the pod on a
+      # cold start. pg_isready needs -U because the pod uid has no passwd entry.
       initContainers:
-        - name: wait-for-postgres
+        {{- range $dependency := $svc.waitFor }}
+        - name: wait-for-{{ $dependency }}
+          {{- if eq $dependency "postgres" }}
           image: {{ $.Values.postgres.image }}
-          command: ["sh", "-c", "until pg_isready -h postgres -p 5432; do sleep 2; done"]
+          command: ["sh", "-c", "until pg_isready -h postgres -p 5432 -U postgres -d postgres; do sleep 2; done"]
+          {{- else if eq $dependency "redis" }}
+          image: {{ $.Values.redis.image }}
+          command: ["sh", "-c", "until redis-cli -h redis ping | grep -q PONG; do sleep 2; done"]
+          {{- else }}
+          {{- fail (printf "unknown waitFor dependency %q" $dependency) }}
+          {{- end }}
           resources:
             requests: {cpu: 10m, memory: 16Mi}
             limits: {cpu: 100m, memory: 64Mi}
@@ -47,6 +56,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+        {{- end }}
       {{- end }}
       containers:
         - name: {{ $name }}

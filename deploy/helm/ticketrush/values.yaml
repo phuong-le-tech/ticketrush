@@ -74,6 +74,7 @@ services:
   inventory-service:
     port: 8081
     kafka: true
+    waitFor: [redis]
     env:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
@@ -87,7 +88,7 @@ services:
   order-service:
     port: 8084
     kafka: true
-    waitForPostgres: true
+    waitFor: [postgres]
     env:
       ORDER_DB_URL: jdbc:postgresql://postgres:5432/ticketrush
     secretEnv:
