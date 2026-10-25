@@ -12,11 +12,11 @@ kafka:
   replicationFactor: 3
   minInsyncReplicas: 2
   storageSize: 2Gi
-  jvmXms: 256m
-  jvmXmx: 512m
+  jvmXms: 128m
+  jvmXmx: 384m
   resources:
-    requests: {cpu: 250m, memory: 768Mi}
-    limits: {cpu: "1", memory: 1Gi}
+    requests: {cpu: 250m, memory: 640Mi}
+    limits: {cpu: "1", memory: 896Mi}
   # The Strimzi default (256Mi) gets the topic operator OOM-killed while it creates the topics.
   topicOperatorResources:
     requests: {cpu: 100m, memory: 384Mi}
@@ -58,6 +58,8 @@ app:
   # Above the 30 s Spring shutdown phase (spring.lifecycle.timeout-per-shutdown-phase).
   terminationGracePeriodSeconds: 60
   runAsUser: 10001
+  # SerialGC and a heap share of the container limit keep six JVMs small on a laptop-sized Docker VM.
+  javaOpts: "-XX:+UseSerialGC -XX:MaxRAMPercentage=60"
   resources:
     requests: {cpu: 100m, memory: 384Mi}
     limits: {cpu: "1", memory: 512Mi}
