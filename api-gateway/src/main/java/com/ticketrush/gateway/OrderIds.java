@@ -7,8 +7,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 /**
- * Deterministic orderId: UUIDv5 (RFC 9562, SHA-1) of (customerId, Idempotency-Key). A client retry
- * with the same key therefore maps to the same order, without the gateway storing anything.
+ * Deterministic orderId: UUIDv5 (RFC 9562, SHA-1) of (customerId, eventId, Idempotency-Key). A client
+ * retry with the same key therefore maps to the same order, without the gateway storing anything.
+ * eventId is part of the name because orders.requested is keyed by eventId: the same key reused on
+ * another event lands on another partition, so sharing one orderId there could reserve it twice.
  */
 final class OrderIds {
 
@@ -19,9 +21,10 @@ final class OrderIds {
     private OrderIds() {
     }
 
-    /** The length prefix keeps the name unambiguous: ("a:b", "c") and ("a", "b:c") never collide. */
-    static UUID fromIdempotencyKey(String customerId, String idempotencyKey) {
-        String name = customerId.length() + ":" + customerId + ":" + idempotencyKey;
+    /** Length prefixes keep the name unambiguous: ("a:b", "c") and ("a", "b:c") never collide. */
+    static UUID fromIdempotencyKey(String customerId, String eventId, String idempotencyKey) {
+        String name = customerId.length() + ":" + customerId + ":" + eventId.length() + ":" + eventId + ":"
+                + idempotencyKey;
         MessageDigest sha1 = sha1();
         sha1.update(ByteBuffer.allocate(16)
                 .putLong(NAMESPACE.getMostSignificantBits())

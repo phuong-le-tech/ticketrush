@@ -61,10 +61,11 @@ class OrderIdempotencyTest {
     }
 
     /** Independent UUIDv5 (SHA-1) so the test pins the exact name format of the approved decision. */
-    private static UUID expectedUuidV5(String customerId, String key) throws Exception {
+    private static UUID expectedUuidV5(String customerId, String eventId, String key) throws Exception {
         MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
         sha1.update(toBytes(NAMESPACE));
-        sha1.update((customerId.length() + ":" + customerId + ":" + key).getBytes(StandardCharsets.UTF_8));
+        sha1.update((customerId.length() + ":" + customerId + ":" + eventId.length() + ":" + eventId + ":" + key)
+                .getBytes(StandardCharsets.UTF_8));
         byte[] hash = sha1.digest();
         hash[6] = (byte) ((hash[6] & 0x0f) | 0x50);
         hash[8] = (byte) ((hash[8] & 0x3f) | 0x80);
@@ -91,14 +92,14 @@ class OrderIdempotencyTest {
     }
 
     @Test
-    void sameCustomerAndKeyAC5GiveSameOrderId() throws Exception {
+    void sameCustomerEventAndKeyAC1GiveSameOrderId() throws Exception {
         MvcResult first = postOrder("key-same", body("concert-1", "cust-1", 1));
         MvcResult second = postOrder("key-same", body("concert-1", "cust-1", 1));
 
         assertThat(first.getResponse().getStatus()).isEqualTo(202);
         assertThat(second.getResponse().getStatus()).isEqualTo(202);
         assertThat(orderIdOf(second)).isEqualTo(orderIdOf(first));
-        assertThat(orderIdOf(first)).isEqualTo(expectedUuidV5("cust-1", "key-same"));
+        assertThat(orderIdOf(first)).isEqualTo(expectedUuidV5("cust-1", "concert-1", "key-same"));
         assertThat(orderIdOf(first).version()).isEqualTo(5);
     }
 
@@ -153,13 +154,33 @@ class OrderIdempotencyTest {
     }
 
     @Test
-    void differentBodySameKeyAC4ReturnsFirstOrderId() throws Exception {
-        UUID first = orderIdOf(postOrder("key-body", body("concert-1", "cust-1", 1)));
+    void differentEventSameKeyAC2GivesDifferentOrderId() throws Exception {
+        MvcResult first = postOrder("key-event", body("concert-1", "cust-1", 1));
 
-        MvcResult retry = postOrder("key-body", body("concert-2", "cust-1", 3));
+        MvcResult second = postOrder("key-event", body("concert-2", "cust-1", 1));
+
+        assertThat(first.getResponse().getStatus()).isEqualTo(202);
+        assertThat(second.getResponse().getStatus()).isEqualTo(202);
+        assertThat(orderIdOf(second)).isNotEqualTo(orderIdOf(first));
+    }
+
+    @Test
+    void differentQuantitySameKeyAC3ReturnsFirstOrderId() throws Exception {
+        UUID first = orderIdOf(postOrder("key-qty", body("concert-1", "cust-1", 1)));
+
+        MvcResult retry = postOrder("key-qty", body("concert-1", "cust-1", 3));
 
         assertThat(retry.getResponse().getStatus()).isEqualTo(202);
         assertThat(orderIdOf(retry)).isEqualTo(first);
+    }
+
+    @Test
+    void customerEventBoundaryIsUnambiguousAC4() throws Exception {
+        UUID first = orderIdOf(postOrder("k", body("e:1", "c", 1)));
+
+        UUID second = orderIdOf(postOrder("k", body("1", "c:e", 1)));
+
+        assertThat(second).isNotEqualTo(first);
     }
 
     @Test
@@ -175,6 +196,6 @@ class OrderIdempotencyTest {
 
         assertThat(unavailable.getResponse().getStatus()).isEqualTo(503);
         assertThat(retry.getResponse().getStatus()).isEqualTo(202);
-        assertThat(orderIdOf(retry)).isEqualTo(expectedUuidV5("cust-1", "key-retry"));
+        assertThat(orderIdOf(retry)).isEqualTo(expectedUuidV5("cust-1", "concert-1", "key-retry"));
     }
 }

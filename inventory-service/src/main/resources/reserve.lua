@@ -12,14 +12,12 @@ elseif seen[1] == '0' then
   return {0}
 end
 
--- Unknown event: rejected and nothing stored, so no key is created for an event that does not exist.
+-- Unknown event (no stock field) is rejected like a sold-out one. The rejection is stored too, so this
+-- orderId stays rejected even if the event is seeded later (a rejected order is never charged).
+-- No key is created under KEYS[1] for an event that does not exist.
 local stock = tonumber(redis.call('HGET', KEYS[1], 'stock'))
-if stock == nil then
-  return {0}
-end
-
 local quantity = tonumber(ARGV[1])
-if quantity == nil or quantity <= 0 or stock < quantity then
+if stock == nil or quantity == nil or quantity <= 0 or stock < quantity then
   redis.call('HSET', KEYS[2], 'reserved', '0')
   redis.call('EXPIRE', KEYS[2], ARGV[3])
   return {0}
