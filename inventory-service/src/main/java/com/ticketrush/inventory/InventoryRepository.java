@@ -12,6 +12,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
  * Stock dans Redis. Hash inventory:event:{eventId}, champs stock, priceCents, currency.
  * Chaque operation est un script Lua unique: verifier puis decrementer sans fenetre de course.
  * Hash inventory:order:{orderId}: outcome of the first reservation attempt for that order (dedupe).
+ * Its "released" field marks a reservation already given back (release dedupe).
  */
 public class InventoryRepository {
 
@@ -22,6 +23,7 @@ public class InventoryRepository {
     private final StringRedisTemplate redis;
     private final Duration dedupTtl;
     private final DefaultRedisScript<Long> seedScript = new DefaultRedisScript<>();
+    private final DefaultRedisScript<Long> releaseScript = new DefaultRedisScript<>();
     @SuppressWarnings("rawtypes")
     private final DefaultRedisScript<List> reserveScript = new DefaultRedisScript<>();
 
@@ -33,6 +35,8 @@ public class InventoryRepository {
         seedScript.setResultType(Long.class);
         reserveScript.setLocation(new ClassPathResource("reserve.lua"));
         reserveScript.setResultType(List.class);
+        releaseScript.setLocation(new ClassPathResource("release.lua"));
+        releaseScript.setResultType(Long.class);
     }
 
     /** Ecrit les 3 champs seulement si la cle n'existe pas (atomique). */
@@ -57,5 +61,15 @@ public class InventoryRepository {
         return new ReservationResult(true, Long.parseLong(String.valueOf(result.get(1))),
                 Integer.parseInt(String.valueOf(result.get(2))), String.valueOf(result.get(3)),
                 Instant.ofEpochMilli(Long.parseLong(String.valueOf(result.get(4)))));
+    }
+
+    /**
+     * Gives back the quantity this order reserved, once. Unknown, rejected or already released
+     * orders are no-ops. Returns the restocked quantity (0 for a no-op).
+     */
+    public long release(String eventId, UUID orderId) {
+        Long restocked = redis.execute(releaseScript,
+                List.of(EVENT_KEY_PREFIX + eventId, ORDER_KEY_PREFIX + orderId));
+        return restocked == null ? 0L : restocked;
     }
 }
