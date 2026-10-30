@@ -1,46 +1,43 @@
 package com.ticketrush.order;
 
-import com.ticketrush.common.OrderConfirmed;
 import com.ticketrush.common.OrderRequested;
 import com.ticketrush.common.PaymentResult;
 import com.ticketrush.common.ReservationRejected;
+import com.ticketrush.common.Status;
 import com.ticketrush.common.Topics;
-import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 /**
- * Consomme les trois topics d'entree. Ordre: ecriture DB (autocommit, un seul upsert), puis send
- * synchrone, puis ack. Limite M1 connue: pas d'outbox, donc un crash entre l'ecriture DB et le send
- * perd l'OrderConfirmed (corrige en M4).
+ * Consomme les trois topics d'entree. Each message is one DB transaction (status change plus its
+ * outbox row), then ack. Publishing is the OutboxRelay's job, so a crash after the commit loses
+ * nothing: the outbox row is still there.
  */
 @Component
 public class OrderSagaListener {
 
-    private final OrderRepository repository;
-    private final KafkaTemplate<String, Object> kafka;
+    private static final Logger log = LoggerFactory.getLogger(OrderSagaListener.class);
 
-    OrderSagaListener(OrderRepository repository, KafkaTemplate<String, Object> kafka) {
+    private final OrderRepository repository;
+
+    OrderSagaListener(OrderRepository repository) {
         this.repository = repository;
-        this.kafka = kafka;
     }
 
     @KafkaListener(topics = Topics.ORDERS_REQUESTED)
-    void onRequested(OrderRequested event, Acknowledgment ack)
-            throws ExecutionException, InterruptedException {
-        publishIfConfirmed(event.orderId(), repository.onRequested(event));
+    void onRequested(OrderRequested event, Acknowledgment ack) {
+        repository.onRequested(event);
         ack.acknowledge();
     }
 
     @KafkaListener(topics = Topics.PAYMENTS_RESULT)
-    void onPayment(PaymentResult event, Acknowledgment ack)
-            throws ExecutionException, InterruptedException {
-        publishIfConfirmed(event.orderId(), repository.onPayment(event));
+    void onPayment(PaymentResult event, Acknowledgment ack) {
+        if (repository.onPayment(event).isEmpty() && event.status() == Status.SUCCEEDED) {
+            warnIfChargedAfterFailure(event);
+        }
         ack.acknowledge();
     }
 
@@ -50,14 +47,15 @@ public class OrderSagaListener {
         ack.acknowledge();
     }
 
-    private void publishIfConfirmed(UUID orderId, Optional<OrderRepository.Saga> transition)
-            throws ExecutionException, InterruptedException {
-        if (transition.isEmpty() || !transition.get().readyToConfirm()) {
-            return;
+    /**
+     * Known M4 limitation: a charge that succeeds after the order already FAILED (saga timeout) is
+     * not confirmed, its tickets are already released. The PaymentResult stays on payments.result
+     * and this log names the charge, for a refund (not built yet).
+     */
+    private void warnIfChargedAfterFailure(PaymentResult event) {
+        if (repository.statusOf(event.orderId()).filter(OrderRepository.FAILED::equals).isPresent()) {
+            log.warn("Charge {} succeeded for order {} after the order FAILED; needs a refund",
+                    event.providerChargeId(), event.orderId());
         }
-        OrderRepository.Saga s = transition.get();
-        OrderConfirmed confirmed = new OrderConfirmed(UUID.randomUUID(), orderId, s.eventId(),
-                s.customerId(), s.quantity(), s.amountCents(), s.currency(), Instant.now());
-        kafka.send(Topics.ORDERS_CONFIRMED, orderId.toString(), confirmed).get();
     }
 }
