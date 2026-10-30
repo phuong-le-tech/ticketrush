@@ -11,7 +11,8 @@
 # Checks (a failing check prints "FAIL <name>: <reason>" and the script exits non-zero):
 #   check_AC1_kafka      Kafka CR: 3 brokers (KafkaNodePool), min.insync.replicas=2, default.replication.factor=3,
 #                        offsets and transaction-state RF 3, transaction-state min ISR 2, auto-create off
-#   check_AC1_topics     exactly the 6 DESIGN.md section 4 topics, each 12 partitions and RF 3
+#   check_AC1_topics     exactly 12 topics: six sources and their .DLT topics, partitions 12 and RF 3
+#   check_AC8_dltTopology  Helm DLT topology plus Compose init: the same 12 topics, partitions 12 and RF 1
 #   check_AC2_hardening  every app Deployment: readiness and liveness probe paths, cpu/memory requests and
 #                        limits, runAsNonRoot, terminationGracePeriodSeconds > 30 (exactly 6 Deployments)
 #   check_AC3_no_plaintext  credential-looking env vars come from a Secret, never a literal; the Secret exists
@@ -20,7 +21,8 @@ cd "$(dirname "$0")/.."
 
 CHART="deploy/helm/ticketrush"
 RELEASE="ticketrush"
-EXPECTED_TOPICS='["orders.requested","tickets.reserved","orders.rejected","payments.result","orders.confirmed","tickets.released"]'
+SOURCE_TOPICS='["orders.requested","tickets.reserved","orders.rejected","payments.result","orders.confirmed","tickets.released"]'
+EXPECTED_TOPICS="" # Derived after require_tools, so a missing jq is reported cleanly.
 SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/m3-chart-check.XXXXXX")"
 trap 'rm -rf "$SCRATCH"' EXIT
 
@@ -69,7 +71,52 @@ check_AC1_topics() {
         ($t[] | select(.spec.partitions != 12) | "topic \(.spec.topicName // .metadata.name) has \(.spec.partitions) partitions, expected 12"),
         ($t[] | select(.spec.replicas != 3) | "topic \(.spec.topicName // .metadata.name) has replicas \(.spec.replicas), expected 3")
       ] | .[]' "$docs")
-  [ -z "$out" ] || while IFS= read -r line; do fail check_AC1_topics "$line"; done <<< "$out"
+  [ -z "$out" ] || while IFS= read -r line; do fail "${2:-check_AC1_topics}" "$line"; done <<< "$out"
+}
+
+# Exercise the repository's trusted init shell with Kafka CLI calls captured, not sent to a broker.
+# This checks behavior, allowing an explicit topic list or source loops constructing "$t.DLT".
+# Compose escapes shell dollars as $$; decode them just as Compose does.
+check_AC8_dltTopology() {
+  local docs="$1" init_file="$2" init out
+  check_AC1_topics "$docs" check_AC8_dltTopology
+  init=$(< "$init_file")
+  init=${init//\$\$/\$}
+  init=${init//\/opt\/kafka\/bin\/kafka-topics.sh/kafka-topics.sh}
+  : > "$SCRATCH/compose-topics.tsv"
+  if ! (
+    kafka-topics.sh() {
+      local topic="" partitions="" replicas="" create=0
+      while [ "$#" -gt 0 ]; do
+        case "$1" in
+          --create) create=1; shift ;;
+          --topic=*) topic="${1#*=}"; shift ;;
+          --partitions=*) partitions="${1#*=}"; shift ;;
+          --replication-factor=*) replicas="${1#*=}"; shift ;;
+          --topic) topic="${2:-}"; shift 2 || return 1 ;;
+          --partitions) partitions="${2:-}"; shift 2 || return 1 ;;
+          --replication-factor) replicas="${2:-}"; shift 2 || return 1 ;;
+          *) shift ;;
+        esac
+      done
+      [ "$create" = 1 ] || return 0
+      printf '%s\t%s\t%s\n' "$topic" "$partitions" "$replicas" >> "$TOPIC_CAPTURE"
+    }
+    export -f kafka-topics.sh
+    export TOPIC_CAPTURE="$SCRATCH/compose-topics.tsv"
+    bash -eu -c "$init"
+  ) > "$SCRATCH/compose-init.log" 2>&1; then
+    fail check_AC8_dltTopology "Compose kafka-init could not be evaluated with the recording Kafka CLI (no broker used)"
+    return
+  fi
+  out=$(jq -Rnr --argjson expected "$EXPECTED_TOPICS" '
+    [inputs | split("\t") | {name: .[0], partitions: .[1], replicas: .[2]}] as $t
+    | ($t | map(.name) | sort) as $names
+    | [ (if $names != ($expected | sort) then "Compose init topics are \($names | join(",")), expected exactly the six sources and their .DLT topics" else empty end),
+        ($t[] | select(.partitions != "12") | "Compose topic \(.name) has partitions \(.partitions), expected 12"),
+        ($t[] | select(.replicas != "1") | "Compose topic \(.name) has RF \(.replicas), expected 1")
+      ] | .[]' < "$SCRATCH/compose-topics.tsv")
+  [ -z "$out" ] || while IFS= read -r line; do fail check_AC8_dltTopology "$line"; done <<< "$out"
 }
 
 check_AC2_hardening() {
@@ -116,6 +163,7 @@ run_checks() {
   check_AC1_topics "$1"
   check_AC2_hardening "$1"
   check_AC3_no_plaintext "$1"
+  check_AC8_dltTopology "$1" "${2:-$SCRATCH/compose-init.sh}"
   return $FAILED
 }
 
@@ -132,8 +180,38 @@ expect_failure() {  # name, expected-check, jq filter
   fi
 }
 
+expect_compose_failure() { # name, jq string mutation
+  local name="$1" filter="$2" output
+  if ! jq -Rs -j "$filter" "$SCRATCH/compose-init.sh" > "$SCRATCH/mutated-init.sh"; then
+    echo "FAIL $name: cannot construct Compose mutation"
+    SELFTEST_FAILED=1
+    return
+  fi
+  if cmp -s "$SCRATCH/compose-init.sh" "$SCRATCH/mutated-init.sh"; then
+    echo "FAIL $name: Compose mutation made no change"
+    SELFTEST_FAILED=1
+    return
+  fi
+  output=$(run_checks "$SCRATCH/docs.json" "$SCRATCH/mutated-init.sh")
+  if echo "$output" | grep -q '^FAIL check_AC8_dltTopology:'; then
+    echo "ok   $name (rejected by check_AC8_dltTopology)"
+  else
+    echo "FAIL $name: mutation was not rejected by check_AC8_dltTopology"
+    SELFTEST_FAILED=1
+  fi
+}
+
 selftest() {
   SELFTEST_FAILED=0
+  expect_failure selftest_AC8_missing_DLT check_AC8_dltTopology \
+    '(map(select(.kind == "KafkaTopic" and ((.spec.topicName // .metadata.name) | endswith(".DLT")))) | .[0].metadata.name) as $n | map(select(.kind != "KafkaTopic" or .metadata.name != $n))'
+  expect_failure selftest_AC8_DLT_bad_partitions check_AC8_dltTopology \
+    'map(if .kind == "KafkaTopic" and ((.spec.topicName // .metadata.name) | endswith(".DLT")) then .spec.partitions = 6 else . end)'
+  expect_failure selftest_AC8_DLT_bad_RF check_AC8_dltTopology \
+    'map(if .kind == "KafkaTopic" and ((.spec.topicName // .metadata.name) | endswith(".DLT")) then .spec.replicas = 1 else . end)'
+  expect_compose_failure selftest_AC8_compose_missing_DLT 'gsub("\\.DLT"; ".notDLT")'
+  expect_compose_failure selftest_AC8_compose_bad_partitions 'gsub("--partitions[ =]+12"; "--partitions 6")'
+  expect_compose_failure selftest_AC8_compose_bad_RF 'gsub("--replication-factor[ =]+1"; "--replication-factor 3")'
   expect_failure selftest_AC1_mutation_fails_one_broker check_AC1_kafka \
     'map(if .kind == "KafkaNodePool" then .spec.replicas = 1 else . end)'
   expect_failure selftest_AC1_mutation_fails_min_isr check_AC1_kafka \
@@ -150,6 +228,11 @@ selftest() {
 }
 
 require_tools || exit 2
+EXPECTED_TOPICS=$(jq -cn --argjson sources "$SOURCE_TOPICS" '$sources + ($sources | map(. + ".DLT"))')
+# Read only the init command, not the environment or the Docker daemon. A string or argv list is supported.
+yq -o=json '.services."kafka-init".command' deploy/compose/docker-compose.yml \
+  | jq -er 'if type == "array" then join("\n") elif type == "string" then . else error("missing kafka-init command") end' \
+  > "$SCRATCH/compose-init.sh" || { echo "FAIL check_AC8_dltTopology: cannot read Compose kafka-init command"; exit 1; }
 
 MODE="chart"
 MANIFEST=""

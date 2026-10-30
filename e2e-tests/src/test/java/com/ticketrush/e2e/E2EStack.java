@@ -95,13 +95,27 @@ final class E2EStack implements AutoCloseable {
         return stack;
     }
 
+    static E2EStack start(String seedEventId, int seedStock, Map<String, String> providerConfig) throws Exception {
+        E2EStack stack = new E2EStack();
+        stack.providerConfig = providerConfig;
+        stack.boot(seedEventId, seedStock);
+        return stack;
+    }
+
+    private Map<String, String> providerConfig = Map.of();
+
+    ConfigurableApplicationContext context(Class<?> application) {
+        return contexts.stream().filter(ctx -> ctx.getBeansOfType(application).size() == 1)
+                .findFirst().orElseThrow();
+    }
+
     private void boot(String seedEventId, int seedStock) throws Exception {
         kafka.start();
         postgres.start();
         redis.start();
         createTopics();
 
-        ConfigurableApplicationContext provider = run(ProviderApplication.class, true, Map.of());
+        ConfigurableApplicationContext provider = run(ProviderApplication.class, true, providerConfig);
         providerUrl = "http://localhost:" + provider.getEnvironment().getProperty("local.server.port");
 
         run(OrderServiceApplication.class, false, Map.of(
@@ -257,7 +271,7 @@ final class E2EStack implements AutoCloseable {
         }
     }
 
-    private Connection connection() throws Exception {
+    Connection connection() throws Exception {
         return DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
@@ -337,7 +351,11 @@ final class E2EStack implements AutoCloseable {
         for (Map.Entry<String, List<String>> group : GROUPS.entrySet()) {
             Map<TopicPartition, OffsetAndMetadata> committed =
                     admin.listConsumerGroupOffsets(group.getKey()).partitionsToOffsetAndMetadata().get();
-            for (String topic : group.getValue()) {
+            List<String> inputs = new ArrayList<>(group.getValue());
+            if (!providerConfig.isEmpty() && group.getKey().equals("inventory-service")) {
+                inputs.add(Topics.TICKETS_RELEASED);
+            }
+            for (String topic : inputs) {
                 for (int p = 0; p < Topics.PARTITIONS; p++) {
                     TopicPartition tp = new TopicPartition(topic, p);
                     long end = admin.listOffsets(Map.of(tp, OffsetSpec.latest())).partitionResult(tp).get().offset();
@@ -401,6 +419,7 @@ final class E2EStack implements AutoCloseable {
             List<NewTopic> topics = new ArrayList<>();
             for (String topic : ALL_TOPICS) {
                 topics.add(new NewTopic(topic, Topics.PARTITIONS, (short) 1));
+                topics.add(new NewTopic(topic + ".DLT", Topics.PARTITIONS, (short) 1));
             }
             admin.createTopics(topics).all().get();
         }

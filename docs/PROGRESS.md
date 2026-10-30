@@ -8,7 +8,7 @@ result, and what is NOT done or not verified.
 | 1 | Happy path locally | `feat/t_4d7a08e4-m1-finish` | Done (pending owner go-ahead) |
 | 2 | Correctness under contention | `milestone-2` | Done (pending owner go-ahead) |
 | 3 | Kubernetes | `milestone-3` | Not started |
-| 4 | Failure handling | `milestone-4` | Not started |
+| 4 | Failure handling | `milestone-4` | RED tests written, implementation pending |
 | 5 | Observability and autoscaling | `milestone-5` | Not started |
 | 6 | Chaos experiments and results | `milestone-6` | Not started |
 | 7 | Minimal Angular dashboard | `milestone-7` | Not started |
@@ -164,3 +164,12 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - NOT done / not verified: Compose stack not re-run (files untouched); a first run with an empty
   Docker build cache and empty image cache (long Maven and image pulls) was not timed; no HA for
   Postgres/Redis; secrets are dummy local defaults; only one laptop (Docker VM 8 GB, 6 CPU) tried.
+
+### Milestone 4 RED step - 2026-10-30
+- What exists: planned failure, replay, timeout, outbox, DLT, provider retry and conservation tests; real Testcontainers fixtures; compile-only `SagaReaper` and `OutboxRelay` contracts. No M4 production behavior implemented.
+- Verified with Java 21: `mvn test-compile -DskipTests` -> exit 0. `mvn verify -DexcludedGroups=m4-red` -> BUILD SUCCESS, 98 existing tests pass, including M2 contention and replay once.
+- RED verification: `mvn verify -fae -pl inventory-service,fake-payment-provider,order-service -am -Dgroups=m4-red` -> BUILD FAILURE as expected: inventory 2 missing-consumer timeouts; provider 1 failure/4 passes; order 35 missing-outbox assertion failures.
+- RED verification: targeted E2E command -> 21 missing-DLT timeouts, 8 failure-handling RED invocations, 1 missing-outbox failure. Final OutboxE2ETest rerun -> AC4 RED, AC9 real-container/log-capture test PASS.
+- `scripts/m3-chart-check.sh` -> Helm lint passes, topology RED: six DLT topics missing from Helm and Compose.
+- Full commands, AC mapping, observed failures, skeleton contracts and deviations: [M4-TEST-HANDOFF.md](M4-TEST-HANDOFF.md).
+- NOT done / not verified: M4 implementation, deeper outbox/race assertions beyond the missing-migration guards, a fully green default `mvn verify`, M2 x10 rerun, M3 cluster acceptance and chart mutation phase. AC7 has a documented randomness limitation until an approved seed hook exists. This is RED-step evidence, not milestone acceptance.
