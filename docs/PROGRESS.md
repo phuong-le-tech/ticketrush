@@ -8,7 +8,7 @@ result, and what is NOT done or not verified.
 | 1 | Happy path locally | `feat/t_4d7a08e4-m1-finish` | Done (pending owner go-ahead) |
 | 2 | Correctness under contention | `milestone-2` | Done (pending owner go-ahead) |
 | 3 | Kubernetes | `milestone-3` | Not started |
-| 4 | Failure handling | `milestone-4` | RED tests written, implementation pending |
+| 4 | Failure handling | `milestone-4` | Done (pending owner go-ahead) |
 | 5 | Observability and autoscaling | `milestone-5` | Not started |
 | 6 | Chaos experiments and results | `milestone-6` | Not started |
 | 7 | Minimal Angular dashboard | `milestone-7` | Not started |
@@ -173,3 +173,77 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - `scripts/m3-chart-check.sh` -> Helm lint passes, topology RED: six DLT topics missing from Helm and Compose.
 - Full commands, AC mapping, observed failures, skeleton contracts and deviations: [M4-TEST-HANDOFF.md](M4-TEST-HANDOFF.md).
 - NOT done / not verified: M4 implementation, deeper outbox/race assertions beyond the missing-migration guards, a fully green default `mvn verify`, M2 x10 rerun, M3 cluster acceptance and chart mutation phase. AC7 has a documented randomness limitation until an approved seed hook exists. This is RED-step evidence, not milestone acceptance.
+
+### Milestone 4 - 2026-10-30
+- What exists:
+  - order-service: Flyway V2 (`orders.outbox`, status `FAILED` replaces `PAYMENT_FAILED`, `RESERVED`
+    allowed, partial indexes for the reaper and the relay). Each status change and its event
+    (OrderConfirmed, or TicketsReleased on payment failure / timeout) commit in one transaction.
+    `OutboxRelay` (every 100 ms) locks the oldest unpublished rows with `FOR UPDATE SKIP LOCKED`,
+    sends them, waits for the acks, then sets `published_at`. `SagaReaper` (every 1 s) turns
+    PENDING/RESERVED orders older than `ORDER_SAGA_TIMEOUT_SECONDS` (120) into FAILED(TIMEOUT).
+  - inventory-service: `TicketsReleasedListener` + `release.lua` restock the stored reservation
+    quantity once per orderId (`released` field on `inventory:order:{orderId}`).
+  - payment-service: a decline (200 FAILED or 4xx) is final; 5xx, timeouts, network errors and
+    unreadable replies are retried with the same Idempotency-Key, then dead-lettered.
+  - fake-payment-provider: `FAKE_PROVIDER_FAILURE_RATE` (0.0 to 1.0); a decline is stored under the
+    key so a retry gets the same answer.
+  - Every consumer: shared `KafkaErrorHandling` (common): 4 attempts, backoff 1 s x2
+    (`KAFKA_RETRY_*`), then `<topic>.DLT`, same partition, original bytes. All exceptions are
+    retried, deserialization included.
+  - notification-service: one NOTIFY per orderId (in memory, per pod).
+  - Compose and Helm create the six `<topic>.DLT` topics (12 partitions; RF 1 / RF 3).
+- Verified with `mvn verify` (repo root, head `faf7699`) -> BUILD SUCCESS in 12:46 min, 172 tests,
+  0 failures, 0 errors, 0 skipped (common 20, api-gateway 22, inventory 23, payment 7, provider 12,
+  order 50, notification 3, e2e 35). e2e classes in that run:
+  ```
+  Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 101.0 s -- in com.ticketrush.e2e.OversellE2ETest
+  Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 373.9 s -- in com.ticketrush.e2e.DltE2ETest
+  Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 127.3 s -- in com.ticketrush.e2e.FailureE2ETest
+  Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 28.77 s -- in com.ticketrush.e2e.ReplayE2ETest
+  Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.813 s -- in com.ticketrush.e2e.PurchaseFlowE2ETest
+  Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 21.99 s -- in com.ticketrush.e2e.OutboxE2ETest
+  ```
+  Module ITs in the same run: OutboxIT 3, SagaReaperIT 32, OrderSagaIT 10, ReleaseIT 2,
+  PaymentFlowIT 5, ChargeControllerIT 10, all green.
+- Verified with `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`, and `--selftest` ->
+  `RESULT: m3-chart-check selftest passed` (the six AC8 DLT mutations are all rejected).
+- Verified with `scripts/m2-acceptance.sh` (M2 contention and replay, 10 separate Maven runs) -> 10/10:
+  ```
+  run 1/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-1.log)
+  run 2/10: PASS in 135s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-2.log)
+  run 3/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-3.log)
+  run 4/10: PASS in 134s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-4.log)
+  run 5/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-5.log)
+  run 6/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-6.log)
+  run 7/10: PASS in 131s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-7.log)
+  run 8/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-8.log)
+  run 9/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-9.log)
+  run 10/10: PASS in 130s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-10.log)
+  RESULT: 10/10 runs passed
+  ```
+  OversellE2ETest per run: 99.1 / 101.8 / 100.4 / 101.5 / 100.0 / 99.4 / 99.4 / 99.7 / 99.6 / 98.2 s;
+  ReplayE2ETest (2 tests): 28.9 / 29.1 / 29.4 / 29.0 / 29.3 / 29.5 / 28.5 / 28.8 / 29.0 / 29.0 s.
+- Verified with `scripts/m3-acceptance.sh` (deletes and recreates the kind cluster; the old node
+  container had exited 4 days earlier), exit 0:
+  ```
+  PASS AC4_clean_up - 13 pods Ready
+  PASS AC4_second_run - same node, 0 restarts
+  PASS AC5_order_confirmed - POST 202, 121fe014-a107-554b-9c0a-6973ae86e301 CONFIRMED in Postgres and on orders.confirmed
+  PASS AC6_graceful_restart - old pod logged 'Graceful shutdown complete', rollout completed
+  RESULT: m3-acceptance passed
+  ```
+  After it, `kubectl get kafkatopics` shows the 6 sources and 6 `.DLT` topics, 12 partitions, RF 3, Ready.
+- NOT done / not verified:
+  - Refunds: a charge that succeeds after the order FAILED(TIMEOUT) is only logged (WARN with the
+    charge id) and stays on `payments.result`.
+  - The relay has no backoff: a row whose publish or mark keeps failing re-sends its batch every
+    tick and holds the outbox behind it (consumers dedupe, but nothing behind it moves). Not exercised.
+  - In order-service a DB outage longer than the ~7 s retry window dead-letters valid messages; the
+    order then times out. Not exercised.
+  - Whether the offset of a dead-lettered record is committed when no later record follows on that
+    partition (manual ack mode) was not checked; if not, a restart dead-letters it again.
+  - notification dedupe is lost on restart and not shared between pods.
+  - AC7 is stochastic (no seeded random source): the assertions require both CONFIRMED and FAILED
+    orders and passed, but the exact share is not asserted.
+  - Compose stack not re-run (its kafka-init command is only checked statically by the chart check).
