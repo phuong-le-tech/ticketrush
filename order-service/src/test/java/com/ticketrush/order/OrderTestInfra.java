@@ -72,7 +72,9 @@ final class OrderTestInfra {
                     new NewTopic(Topics.ORDERS_REQUESTED, Topics.PARTITIONS, (short) 1),
                     new NewTopic(Topics.PAYMENTS_RESULT, Topics.PARTITIONS, (short) 1),
                     new NewTopic(Topics.ORDERS_REJECTED, Topics.PARTITIONS, (short) 1),
-                    new NewTopic(Topics.ORDERS_CONFIRMED, Topics.PARTITIONS, (short) 1))).all().get();
+                    new NewTopic(Topics.ORDERS_CONFIRMED, Topics.PARTITIONS, (short) 1),
+                    // The relay also publishes releases; an auto-created topic would have 1 partition.
+                    new NewTopic(Topics.TICKETS_RELEASED, Topics.PARTITIONS, (short) 1))).all().get();
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -89,6 +91,9 @@ final class OrderTestInfra {
         registry.add("spring.flyway.schemas", () -> "orders");
         registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
         registry.add("spring.kafka.consumer.auto-offset-reset", () -> "earliest");
+        // Fixtures are dated in the past and the reaper tests drive SagaReaper with a fixed clock:
+        // the scheduled real-clock reaper would expire those orders behind the tests' back.
+        registry.add("order.saga.reaper-enabled", () -> "false");
     }
 
     // ---- Kafka ----
