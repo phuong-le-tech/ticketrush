@@ -14,9 +14,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * Consomme tickets.reserved, debite via le provider, publie payments.result (cle = orderId).
- * Un echec provider (5xx, timeout) donne un PaymentResult FAILED, sans retry. L'offset n'est valide
+ * A charge or a decline is published. A provider with no usable answer throws, so the shared error
+ * handler retries (backoff, same Idempotency-Key = orderId) and then dead-letters the record; the
+ * order then times out in order-service and its tickets are released. L'offset n'est valide
  * qu'apres confirmation d'envoi par Kafka: si la publication echoue, le message est rejoue, et le
- * provider dedoublonne grace a Idempotency-Key = orderId. Dedup cote consumer hors scope M1.4.
+ * provider dedoublonne grace a Idempotency-Key = orderId.
  */
 @Component
 public class TicketsReservedListener {
