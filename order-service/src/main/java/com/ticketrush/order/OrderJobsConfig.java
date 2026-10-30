@@ -21,7 +21,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @EnableScheduling
 class OrderJobsConfig {
 
+    /** Can be switched off, e.g. by tests that drive relays by hand around a forced failure. */
     @Bean
+    @ConditionalOnProperty(name = "order.outbox.relay-enabled", havingValue = "true", matchIfMissing = true)
     OutboxRelay outboxRelay(JdbcClient jdbc, KafkaTemplate<String, Object> kafka,
                             PlatformTransactionManager transactionManager) {
         return new OutboxRelay(jdbc, kafka, new TransactionTemplate(transactionManager));

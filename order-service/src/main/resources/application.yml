@@ -39,6 +39,7 @@ order:
     reaper-enabled: ${ORDER_SAGA_REAPER_ENABLED:true}
   outbox:
     relay-interval-ms: ${ORDER_OUTBOX_RELAY_INTERVAL_MS:100}
+    relay-enabled: ${ORDER_OUTBOX_RELAY_ENABLED:true}
 
 ticketrush:
   kafka:
