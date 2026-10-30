@@ -30,6 +30,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** No mocked DB, Kafka producer, acknowledgment, or transport. */
 @SpringBootTest
@@ -38,6 +40,7 @@ class OutboxIT {
     @Autowired OrderRepository repository;
     @Autowired JdbcClient jdbc;
     @Autowired KafkaTemplate<String, Object> kafka;
+    @Autowired PlatformTransactionManager transactionManager;
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
@@ -104,7 +107,7 @@ class OutboxIT {
         // Warm metadata while the real broker is available; the outage must hit a real send.
         kafka.partitionsFor(Topics.ORDERS_CONFIRMED);
         kafka.partitionsFor(Topics.TICKETS_RELEASED);
-        OutboxRelay relay = new OutboxRelay(jdbc, kafka);
+        OutboxRelay relay = new OutboxRelay(jdbc, kafka, new TransactionTemplate(transactionManager));
         var docker = OrderTestInfra.KAFKA.getDockerClient();
         List<M4OrderTestSupport.OutboxRow> durable;
         docker.pauseContainerCmd(OrderTestInfra.KAFKA.getContainerId()).exec();

@@ -29,6 +29,8 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Real broker acknowledgments and a Postgres trigger reproduce the publish/mark crash window. */
 @ExtendWith(OutputCaptureExtension.class)
@@ -63,9 +65,10 @@ class OutboxE2ETest {
                     .as("M4 must migrate the transactional outbox before relays can deliver").isEqualTo(1L);
             AtomicReference<OutboxRelay> first = new AtomicReference<>();
             AtomicReference<OutboxRelay> second = new AtomicReference<>();
+            var transactions = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
             assertThatCode(() -> {
-                first.set(new OutboxRelay(jdbc, template(context.getBean(KafkaTemplate.class))));
-                second.set(new OutboxRelay(jdbc, template(context.getBean(KafkaTemplate.class))));
+                first.set(new OutboxRelay(jdbc, template(context.getBean(KafkaTemplate.class)), transactions));
+                second.set(new OutboxRelay(jdbc, template(context.getBean(KafkaTemplate.class)), transactions));
             }).as("production outbox relays must be executable, not compile-only contracts")
                     .doesNotThrowAnyException();
 
