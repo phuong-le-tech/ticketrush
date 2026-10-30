@@ -35,9 +35,12 @@ services:
     command:
       - |
         set -e
+        # Each source topic and its dead-letter topic <name>.DLT (same partition count).
         for t in orders.requested tickets.reserved orders.rejected payments.result orders.confirmed tickets.released; do
-          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists \
-            --topic "$$t" --partitions 12 --replication-factor 1
+          for name in "$$t" "$$t.DLT"; do
+            /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists \
+              --topic "$$name" --partitions 12 --replication-factor 1
+          done
         done
 
   postgres:
@@ -110,6 +113,8 @@ services:
     build:
       context: ../..
       dockerfile: fake-payment-provider/Dockerfile
+    environment:
+      FAKE_PROVIDER_FAILURE_RATE: ${FAKE_PROVIDER_FAILURE_RATE:-0}
 
   payment-service:
     build:
@@ -139,6 +144,7 @@ services:
       ORDER_DB_URL: jdbc:postgresql://postgres:5432/ticketrush
       ORDER_DB_USER: ${POSTGRES_USER:-ticketrush}
       ORDER_DB_PASSWORD: ${POSTGRES_PASSWORD:-ticketrush-local}
+      ORDER_SAGA_TIMEOUT_SECONDS: ${ORDER_SAGA_TIMEOUT_SECONDS:-120}
 
   notification-service:
     build:
