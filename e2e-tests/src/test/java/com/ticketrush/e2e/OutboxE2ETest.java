@@ -57,7 +57,8 @@ class OutboxE2ETest {
 
     @Test
     void AC4_concurrentRelaysAndCrashAfterAckReplayYieldOneNotification(CapturedOutput output) throws Exception {
-        try (E2EStack stack = E2EStack.start("outbox-seed", 2, Map.of())) {
+        // Only the two relays below may publish: the scheduled one would re-send the trigger-blocked row every tick.
+        try (E2EStack stack = E2EStack.start("outbox-seed", 2, Map.of(), Map.of("order.outbox.relay-enabled", "false"))) {
             var context = stack.context(OrderServiceApplication.class);
             JdbcClient jdbc = context.getBean(JdbcClient.class);
             assertThat(jdbc.sql("select count(*) from information_schema.tables "

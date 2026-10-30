@@ -96,13 +96,21 @@ final class E2EStack implements AutoCloseable {
     }
 
     static E2EStack start(String seedEventId, int seedStock, Map<String, String> providerConfig) throws Exception {
+        return start(seedEventId, seedStock, providerConfig, Map.of());
+    }
+
+    /** orderConfig: extra order-service properties, e.g. to switch off a scheduled job a test drives by hand. */
+    static E2EStack start(String seedEventId, int seedStock, Map<String, String> providerConfig,
+                          Map<String, String> orderConfig) throws Exception {
         E2EStack stack = new E2EStack();
         stack.providerConfig = providerConfig;
+        stack.orderConfig = orderConfig;
         stack.boot(seedEventId, seedStock);
         return stack;
     }
 
     private Map<String, String> providerConfig = Map.of();
+    private Map<String, String> orderConfig = Map.of();
 
     ConfigurableApplicationContext context(Class<?> application) {
         return contexts.stream().filter(ctx -> ctx.getBeansOfType(application).size() == 1)
@@ -118,7 +126,7 @@ final class E2EStack implements AutoCloseable {
         ConfigurableApplicationContext provider = run(ProviderApplication.class, true, providerConfig);
         providerUrl = "http://localhost:" + provider.getEnvironment().getProperty("local.server.port");
 
-        run(OrderServiceApplication.class, false, Map.of(
+        Map<String, String> order = new HashMap<>(Map.of(
                 "spring.datasource.url", postgres.getJdbcUrl(),
                 "spring.datasource.username", postgres.getUsername(),
                 "spring.datasource.password", postgres.getPassword(),
@@ -128,6 +136,8 @@ final class E2EStack implements AutoCloseable {
                 "spring.kafka.consumer.enable-auto-commit", "false",
                 "spring.kafka.listener.ack-mode", "manual",
                 "spring.kafka.listener.concurrency", "4"));
+        order.putAll(orderConfig);
+        run(OrderServiceApplication.class, false, order);
         ConfigurableApplicationContext inventory = run(InventoryApplication.class, false, Map.ofEntries(
                 Map.entry("spring.data.redis.host", redis.getHost()),
                 Map.entry("spring.data.redis.port", String.valueOf(redis.getMappedPort(6379))),
