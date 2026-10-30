@@ -8,6 +8,10 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
+fake-provider:
+  # Share of first charge attempts declined (0.0 to 1.0). Used by the failure tests.
+  failure-rate: ${FAKE_PROVIDER_FAILURE_RATE:0}
+
 management:
   endpoint:
     health:
