@@ -1,12 +1,15 @@
 package com.ticketrush.payment;
 
 import com.ticketrush.common.EventJson;
+import com.ticketrush.common.KafkaErrorHandling;
 import org.springframework.boot.kafka.autoconfigure.DefaultKafkaConsumerFactoryCustomizer;
 import org.springframework.boot.kafka.autoconfigure.DefaultKafkaProducerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 @Configuration
+@Import(KafkaErrorHandling.class)
 public class PaymentConfig {
 
     /** Serde partage (en-tete __TypeId__ logique) pour que tous les services parlent le meme JSON. */
@@ -15,7 +18,7 @@ public class PaymentConfig {
         return factory -> {
             @SuppressWarnings("unchecked")
             var f = (org.springframework.kafka.core.DefaultKafkaConsumerFactory<Object, Object>) factory;
-            f.setValueDeserializerSupplier(EventJson::deserializer);
+            f.setValueDeserializerSupplier(EventJson::listenerDeserializer);
         };
     }
 
@@ -24,7 +27,7 @@ public class PaymentConfig {
         return factory -> {
             @SuppressWarnings("unchecked")
             var f = (org.springframework.kafka.core.DefaultKafkaProducerFactory<Object, Object>) factory;
-            f.setValueSerializerSupplier(EventJson::serializer);
+            f.setValueSerializerSupplier(EventJson::producerSerializer);
         };
     }
 }
