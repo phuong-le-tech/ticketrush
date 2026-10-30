@@ -58,7 +58,12 @@ Rationale:
   only state change, so there is nothing to keep atomic with it.
 - **Order-service also consumes `orders.requested`** to create a `PENDING` row. That row is the saga
   state the reaper (M4) and the dashboard (M7) need. This is an extra consumer, not an extra service.
-- **The reaper lives in inventory-service** (it owns reservations). Built in M4.
+- **The reaper lives in order-service** (M4, deviation from the first plan that put it in
+  inventory-service; approved 2026-10-30). Order-service owns the saga state, so the timeout is one
+  conditional update next to the payment transition, and a release is emitted at most once.
+- **Transactional outbox in order-service only (M4).** `orders.outbox` rows are written in the same
+  transaction as the status change; `OutboxRelay` publishes them. Payment and inventory keep direct
+  sends: their replays are already safe (provider key = orderId, `reserve.lua` dedupe).
 
 ### Dependencies and why
 
@@ -120,7 +125,7 @@ record TicketsReleased(UUID messageId, UUID orderId, String eventId, int quantit
 | `orders.rejected` | inventory -> order | orderId | 12 |
 | `payments.result` | payment -> order | orderId | 12 |
 | `orders.confirmed` | order -> notification | orderId | 12 |
-| `tickets.released` | reaper / order -> inventory (M4) | eventId | 12 |
+| `tickets.released` | order (outbox: payment failure, saga timeout) -> inventory (M4) | eventId | 12 |
 | `<topic>.DLT` (M4) | Spring `DeadLetterPublishingRecoverer` | same key | 12 |
 
 Rationale:
@@ -175,3 +180,10 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-10-25 | Credentials come from a chart-generated Secret (`ticketrush-credentials`) built from `values.yaml` dummy defaults; Deployments only reference it with `secretKeyRef` | No plaintext credential in a rendered Deployment; real values are supplied with `--set-string` and never committed. |
 | 2026-10-25 | Image tag = first 12 hex of the Docker image id; `.dockerignore` keeps `.git`, `target`, docs and scripts out of the build context | An unchanged build gives the same tag, so a second `m3-up.sh` changes nothing. |
 | 2026-10-25 | order-service and inventory-service get init containers that wait for Postgres or Redis (`waitFor` in values.yaml) | Both fail fast at startup when the dependency is not reachable yet; on a cold start that crash-looped them (7-8 restarts). Kafka needs no wait: the clients retry. |
+| 2026-10-30 | M4 outbox in order-service only: Flyway V2 `orders.outbox(id, topic, msg_key, type, payload jsonb, created_at, published_at)`, written in the status-change transaction for OrderConfirmed (`orders.confirmed`, key orderId) and TicketsReleased (`tickets.released`, key eventId). The relay locks the oldest unpublished rows with `FOR UPDATE SKIP LOCKED`, sends with acks=all, sets `published_at` after the ack, all in one DB transaction | Owner decision. A crash can no longer lose an event between the DB write and the send; at-least-once, consumers dedupe. |
+| 2026-10-30 | Saga reaper moved to order-service (deviation from section 2's first plan). `ORDER_SAGA_TIMEOUT_SECONDS` (default 120): PENDING/RESERVED orders created strictly more than that ago become FAILED(TIMEOUT) and emit TicketsReleased(TIMEOUT). PaymentResult FAILED makes the order FAILED and emits TicketsReleased(PAYMENT_FAILED). inventory-service restocks once per orderId (`release.lua`, only if the order holds a reservation) | Owner decision. Conditional updates make the timeout and the payment race safe: one terminal outcome, one release at most. |
+| 2026-10-30 | Every consumer: `DefaultErrorHandler`, exponential backoff 1 s x2, 4 attempts (`KAFKA_RETRY_*`), then `DeadLetterPublishingRecoverer` to `<topic>.DLT`, same partition, 12 partitions (Compose RF 1, Helm KafkaTopic RF 3). Fake provider decline rate `FAKE_PROVIDER_FAILURE_RATE` (0.0 to 1.0, default 0) | Owner decision. A poison record leaves its partition after about 7 s instead of blocking it. |
+| 2026-10-30 | Implementation choices for the decisions above: status `FAILED` replaces `PAYMENT_FAILED` (V2 migrates old rows; `failure_reason` says why) and `RESERVED` is an allowed active state; every exception is retryable, deserialization included (Spring treats those as fatal by default); the DLT resolver is explicit because Spring Kafka 4 defaults to a `-dlt` suffix; DLT records keep the original bytes (`ErrorHandlingDeserializer` plus a byte[]-aware serializer) | Match the approved names and attempt counts exactly; one status for every failed saga keeps the reaper and the payment path symmetric. |
+| 2026-10-30 | Payment: a 200 SUCCEEDED or a decline (200 FAILED, or 4xx) is final; 5xx, timeouts, network errors and unreadable replies throw and are retried with the same Idempotency-Key, then dead-lettered with no PaymentResult (the order then times out). The fake provider stores declines under the key too, so a retry gets the same answer | A lost reply may hide a real charge: only a retry with the same key can tell, and it never charges twice. |
+| 2026-10-30 | notification-service dedupes OrderConfirmed by orderId in memory (bounded, per pod) | The outbox is at-least-once. Shortcut: lost on restart and not shared between pods; a shared store is needed once a notification has a real effect. |
+| 2026-10-30 | Known limitation (not fixed in M4): a PaymentResult SUCCEEDED for an order already FAILED(TIMEOUT) is not confirmed; it is logged (WARN, charge id) and stays on `payments.result` for a future refund. No refunds yet | Owner decision. The timeout default (120 s) is far above the worst-case payment time (4 x provider timeout 2 s + 7 s backoff = 15 s). |
