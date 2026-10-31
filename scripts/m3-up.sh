@@ -92,6 +92,7 @@ for service in "${SERVICES[@]}"; do
   tag_args+=(--set-string "services.${service}.tag=$(cat "${SCRATCH}/${service}.tag")")
 done
 helm --kube-context "$CONTEXT" upgrade --install ticketrush "$CHART" --namespace "$NS" "${tag_args[@]}" \
+  --set monitoring.enabled=false --set autoscaling.enabled=false \
   --wait --timeout "$INFRA_TIMEOUT"
 
 log "waiting for Kafka, topics and pods"

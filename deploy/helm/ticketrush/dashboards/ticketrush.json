@@ -1,0 +1,35 @@
+{
+  "uid": "ticketrush-m5",
+  "title": "TicketRush - consumers and saga",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "title": "Kafka consumer lag", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [{"refId": "A", "expr": "sum by (consumergroup, topic) (kafka_consumergroup_lag)", "legendFormat": "{{consumergroup}} / {{topic}}"}]
+    },
+    {
+      "id": 2, "title": "Mean consumer processing time", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [{"refId": "A", "expr": "sum by (service, topic) (rate(ticketrush_consumer_processing_seconds_sum[1m])) / clamp_min(sum by (service, topic) (rate(ticketrush_consumer_processing_seconds_count[1m])), 0.000001)", "legendFormat": "{{service}} / {{topic}}"}]
+    },
+    {
+      "id": 3, "title": "Accepted orders per second", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [{"refId": "A", "expr": "sum(rate(ticketrush_orders_total[1m]))", "legendFormat": "orders/sec"}]
+    },
+    {
+      "id": 4, "title": "Saga outcomes", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [{"refId": "A", "expr": "sum by (outcome) (ticketrush_saga_outcomes_total)", "legendFormat": "{{outcome}}"}]
+    }
+  ]
+}

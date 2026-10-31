@@ -43,6 +43,14 @@ spec:
       transaction.state.log.replication.factor: {{ .Values.kafka.replicationFactor }}
       transaction.state.log.min.isr: {{ .Values.kafka.minInsyncReplicas }}
       auto.create.topics.enable: false
+  {{- if .Values.monitoring.enabled }}
+  kafkaExporter:
+    groupRegex: ".*"
+    topicRegex: ".*"
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: 250m, memory: 128Mi}
+  {{- end }}
   entityOperator:
     topicOperator:
       resources:
