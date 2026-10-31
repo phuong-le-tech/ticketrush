@@ -15,6 +15,13 @@ spring:
     listener:
       ack-mode: record
 
+ticketrush:
+  kafka:
+    retry:
+      initial-interval-ms: ${KAFKA_RETRY_INITIAL_INTERVAL_MS:1000}
+      multiplier: ${KAFKA_RETRY_MULTIPLIER:2.0}
+      max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:4}
+
 management:
   endpoint:
     health:

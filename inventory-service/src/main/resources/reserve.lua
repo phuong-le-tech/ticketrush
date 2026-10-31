@@ -4,7 +4,10 @@
 -- the stored outcome can never interleave with another order.
 -- Returns {0} (rejected) or {1, priceCents, quantity, currency, reservedUntil}.
 
--- Already processed (replay or duplicate POST): return the first outcome, never touch stock again.
+-- Replays never touch stock; a released reservation can no longer be reported as held.
+if redis.call('HGET', KEYS[2], 'released') == '1' then
+  return {0}
+end
 local seen = redis.call('HMGET', KEYS[2], 'reserved', 'priceCents', 'quantity', 'currency', 'reservedUntil')
 if seen[1] == '1' then
   return {1, seen[2], seen[3], seen[4], seen[5]}

@@ -9,6 +9,8 @@ public final class Topics {
     public static final String ORDERS_CONFIRMED = "orders.confirmed";
     public static final String TICKETS_RELEASED = "tickets.released";
     public static final int PARTITIONS = 12;
+    /** Dead-letter topic of a source topic: {@code <topic>.DLT}, same partition count. */
+    public static final String DLT_SUFFIX = ".DLT";
 
     private Topics() {
     }

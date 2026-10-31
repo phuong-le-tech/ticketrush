@@ -21,6 +21,13 @@ payment:
     url: ${PAYMENT_PROVIDER_URL:http://localhost:8083}
     timeout-ms: ${PAYMENT_PROVIDER_TIMEOUT_MS:2000}
 
+ticketrush:
+  kafka:
+    retry:
+      initial-interval-ms: ${KAFKA_RETRY_INITIAL_INTERVAL_MS:1000}
+      multiplier: ${KAFKA_RETRY_MULTIPLIER:2.0}
+      max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:4}
+
 management:
   endpoint:
     health:

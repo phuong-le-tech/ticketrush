@@ -22,7 +22,7 @@ kafka:
     requests: {cpu: 100m, memory: 384Mi}
     limits: {cpu: 500m, memory: 768Mi}
 
-# Names, partitions and replication follow DESIGN.md section 4.
+# Names, partitions and replication follow DESIGN.md section 4. Each source also gets <name>.DLT.
 topics:
   partitions: 12
   names:
@@ -71,6 +71,9 @@ services:
     kafka: true
   fake-payment-provider:
     port: 8083
+    env:
+      # Share of first charge attempts declined (0.0 to 1.0).
+      FAKE_PROVIDER_FAILURE_RATE: "0"
   inventory-service:
     port: 8081
     kafka: true
@@ -91,6 +94,7 @@ services:
     waitFor: [postgres]
     env:
       ORDER_DB_URL: jdbc:postgresql://postgres:5432/ticketrush
+      ORDER_SAGA_TIMEOUT_SECONDS: "120"
     secretEnv:
       ORDER_DB_USER: postgres-user
       ORDER_DB_PASSWORD: postgres-password

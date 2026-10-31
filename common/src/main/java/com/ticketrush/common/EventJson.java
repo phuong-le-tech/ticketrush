@@ -1,8 +1,14 @@
 package com.ticketrush.common;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serializer;
 import org.springframework.kafka.support.mapping.DefaultJacksonJavaTypeMapper;
 import org.springframework.kafka.support.mapping.JacksonJavaTypeMapper.TypePrecedence;
+import org.springframework.kafka.support.serializer.DelegatingByTypeSerializer;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 import tools.jackson.databind.json.JsonMapper;
@@ -37,6 +43,41 @@ public final class EventJson {
 
     public static JacksonJsonDeserializer<Object> deserializer() {
         return new JacksonJsonDeserializer<Object>(Object.class, MAPPER).typeMapper(typeMapper());
+    }
+
+    /**
+     * Deserializer for listeners: a record that cannot be read (bad JSON, unknown type) reaches the
+     * error handler with its raw bytes instead of failing inside poll(), so it can be dead-lettered.
+     */
+    public static Deserializer<Object> listenerDeserializer() {
+        return new ErrorHandlingDeserializer<>(deserializer());
+    }
+
+    /**
+     * Serializer for service producers: events as JSON, and byte[] passed through untouched so a
+     * dead-lettered record that could not be deserialized keeps its original bytes.
+     */
+    public static Serializer<Object> producerSerializer() {
+        Map<Class<?>, Serializer<?>> delegates = new LinkedHashMap<>();
+        delegates.put(byte[].class, new ByteArraySerializer());
+        delegates.put(Object.class, serializer());
+        return new DelegatingByTypeSerializer(delegates, true);
+    }
+
+    /** Logical type name of an event class, as written in the "__TypeId__" header. */
+    public static String typeIdOf(Class<?> eventClass) {
+        return TYPE_MAPPINGS.entrySet().stream().filter(e -> e.getValue().equals(eventClass))
+                .map(Map.Entry::getKey).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Not an event class: " + eventClass.getName()));
+    }
+
+    /** Event class for a logical type name. */
+    public static Class<?> classOf(String typeId) {
+        Class<?> eventClass = TYPE_MAPPINGS.get(typeId);
+        if (eventClass == null) {
+            throw new IllegalArgumentException("Unknown event type: " + typeId);
+        }
+        return eventClass;
     }
 
     private static DefaultJacksonJavaTypeMapper typeMapper() {

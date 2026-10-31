@@ -53,7 +53,9 @@ import tools.jackson.databind.JsonNode;
  * Contrat HTTP vers le provider: header Idempotency-Key = orderId (jamais une cle fabriquee),
  * body JSON {orderId, amountCents, currency}; reponse 200 {chargeId, status}.
  * Contrat Kafka: consomme tickets.reserved, publie PaymentResult sur payments.result (cle = orderId),
- * messageId neuf, offset valide seulement apres publication (non teste ici), pas de retry en M1.
+ * messageId neuf, offset valide seulement apres publication (non teste ici). M4: a provider with no
+ * usable answer (5xx, timeout) is retried with the same key, then the record goes to
+ * tickets.reserved.DLT and no PaymentResult is published (the order times out in order-service).
  */
 @SpringBootTest(properties = {
         "server.port=0",
@@ -71,6 +73,7 @@ class PaymentFlowIT {
                 Map.<String, Object>of("bootstrap.servers", KAFKA.getBootstrapServers()))) {
             admin.createTopics(List.of(
                     new NewTopic(Topics.TICKETS_RESERVED, Topics.PARTITIONS, (short) 1),
+                    new NewTopic(Topics.TICKETS_RESERVED + ".DLT", Topics.PARTITIONS, (short) 1),
                     new NewTopic(Topics.PAYMENTS_RESULT, Topics.PARTITIONS, (short) 1))).all().get();
         } catch (Exception e) {
             throw new IllegalStateException(e);
@@ -89,22 +92,30 @@ class PaymentFlowIT {
     }
 
     private KafkaConsumer<String, Object> resultConsumer;
+    private KafkaConsumer<String, Object> deadLetterConsumer;
 
     @BeforeEach
     void setUp() {
         PROVIDER.reset();
-        resultConsumer = new KafkaConsumer<>(Map.<String, Object>of(
+        resultConsumer = consumer(Topics.PAYMENTS_RESULT);
+        deadLetterConsumer = consumer(Topics.TICKETS_RESERVED + ".DLT");
+    }
+
+    private static KafkaConsumer<String, Object> consumer(String topic) {
+        KafkaConsumer<String, Object> consumer = new KafkaConsumer<>(Map.<String, Object>of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers(),
                 ConsumerConfig.GROUP_ID_CONFIG, "test-results-" + UUID.randomUUID(),
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"),
                 new StringDeserializer(), EventJson.deserializer());
-        resultConsumer.subscribe(List.of(Topics.PAYMENTS_RESULT));
+        consumer.subscribe(List.of(topic));
+        return consumer;
     }
 
     @AfterEach
     void tearDown() {
         PROVIDER.release();
         resultConsumer.close();
+        deadLetterConsumer.close();
     }
 
     private static TicketsReserved reserved(UUID orderId, long amountCents) {
@@ -123,14 +134,31 @@ class PaymentFlowIT {
 
     /** Attend `count` PaymentResult pour cette commande (le topic est partage entre les tests). */
     private List<ConsumerRecord<String, Object>> awaitResults(UUID orderId, int count) {
+        return awaitRecords(resultConsumer, orderId, count);
+    }
+
+    /** Waits for `count` records of this order on the consumer's topic (shared between tests). */
+    private static List<ConsumerRecord<String, Object>> awaitRecords(KafkaConsumer<String, Object> consumer,
+                                                                     UUID orderId, int count) {
         List<ConsumerRecord<String, Object>> received = new ArrayList<>();
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
-            resultConsumer.poll(Duration.ofMillis(500)).forEach(r -> {
-                if (r.value() instanceof PaymentResult p && p.orderId().equals(orderId)) {
+            consumer.poll(Duration.ofMillis(500)).forEach(r -> {
+                if (orderId.toString().equals(r.key())) {
                     received.add(r);
                 }
             });
             assertThat(received).hasSize(count);
+        });
+        return received;
+    }
+
+    /** PaymentResults already published for this order; call once the record was dead-lettered. */
+    private List<ConsumerRecord<String, Object>> resultsSoFar(UUID orderId) {
+        List<ConsumerRecord<String, Object>> received = new ArrayList<>();
+        resultConsumer.poll(Duration.ofSeconds(2)).forEach(r -> {
+            if (orderId.toString().equals(r.key())) {
+                received.add(r);
+            }
         });
         return received;
     }
@@ -166,8 +194,8 @@ class PaymentFlowIT {
     }
 
     @Test
-    void providerErrorPublishesFailedWithReasonAndDoesNotRetry() throws Exception {
-        PROVIDER.respond(500, "{\"error\":\"boom\"}");
+    void providerDeclinePublishesFailedWithReasonAndDoesNotRetry() throws Exception {
+        PROVIDER.respond(200, "{\"chargeId\":null,\"status\":\"FAILED\"}");
         UUID orderId = UUID.randomUUID();
 
         send(reserved(orderId, 9900));
@@ -183,16 +211,28 @@ class PaymentFlowIT {
     }
 
     @Test
-    void providerTimeoutPublishesFailedAndTheConsumerKeepsProcessingNextMessages() throws Exception {
+    void providerServerErrorIsRetriedWithTheSameKeyThenDeadLetteredWithoutResult() throws Exception {
+        PROVIDER.respond(500, "{\"error\":\"boom\"}");
+        UUID orderId = UUID.randomUUID();
+
+        send(reserved(orderId, 9900));
+
+        awaitRecords(deadLetterConsumer, orderId, 1);
+        assertThat(PROVIDER.callsFor(orderId)).hasSize(4)
+                .extracting(Received::idempotencyKey).containsOnly(orderId.toString());
+        assertThat(resultsSoFar(orderId)).isEmpty();
+    }
+
+    @Test
+    void providerTimeoutIsRetriedThenDeadLetteredAndTheConsumerKeepsProcessingNextMessages() throws Exception {
         PROVIDER.hang();
         UUID slowOrder = UUID.randomUUID();
 
         send(reserved(slowOrder, 7000));
 
-        PaymentResult failed = (PaymentResult) awaitResults(slowOrder, 1).get(0).value();
-        assertThat(failed.status()).isEqualTo(Status.FAILED);
-        assertThat(failed.providerChargeId()).isNull();
-        assertThat(failed.failureReason()).isNotBlank();
+        awaitRecords(deadLetterConsumer, slowOrder, 1);
+        assertThat(PROVIDER.callsFor(slowOrder)).hasSize(4);
+        assertThat(resultsSoFar(slowOrder)).isEmpty();
 
         // Le consumer est toujours vivant: une exception ne bloque pas la partition.
         PROVIDER.respond(200, "{\"chargeId\":\"ch_2\",\"status\":\"SUCCEEDED\"}");

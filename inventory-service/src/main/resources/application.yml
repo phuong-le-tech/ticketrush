@@ -30,6 +30,13 @@ inventory:
   # How long an order's reservation outcome is remembered for dedupe (default 7 days).
   dedup-ttl-seconds: ${INVENTORY_DEDUP_TTL_SECONDS:604800}
 
+ticketrush:
+  kafka:
+    retry:
+      initial-interval-ms: ${KAFKA_RETRY_INITIAL_INTERVAL_MS:1000}
+      multiplier: ${KAFKA_RETRY_MULTIPLIER:2.0}
+      max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:4}
+
 management:
   endpoint:
     health:

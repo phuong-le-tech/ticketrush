@@ -20,8 +20,33 @@ spring:
       group-id: order-service
       enable-auto-commit: false
       auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
+    producer:
+      acks: all
     listener:
       ack-mode: manual
+  task:
+    scheduling:
+      pool:
+        # Outbox relay and saga reaper run side by side, a slow publish does not delay the reaper.
+        size: 2
+
+order:
+  saga:
+    # PENDING/RESERVED orders older than this become FAILED(TIMEOUT). Must exceed the worst case
+    # payment time (provider timeout x retry attempts plus backoff).
+    timeout-seconds: ${ORDER_SAGA_TIMEOUT_SECONDS:120}
+    reaper-interval-ms: ${ORDER_SAGA_REAPER_INTERVAL_MS:1000}
+    reaper-enabled: ${ORDER_SAGA_REAPER_ENABLED:true}
+  outbox:
+    relay-interval-ms: ${ORDER_OUTBOX_RELAY_INTERVAL_MS:100}
+    relay-enabled: ${ORDER_OUTBOX_RELAY_ENABLED:true}
+
+ticketrush:
+  kafka:
+    retry:
+      initial-interval-ms: ${KAFKA_RETRY_INITIAL_INTERVAL_MS:1000}
+      multiplier: ${KAFKA_RETRY_MULTIPLIER:2.0}
+      max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:4}
 
 management:
   endpoint:

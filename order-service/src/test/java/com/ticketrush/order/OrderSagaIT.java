@@ -185,14 +185,14 @@ class OrderSagaIT {
     // ---- 4. FAILED ----
 
     @Test
-    void failedPaymentMarksPaymentFailedWithReasonAndPublishesNothing() {
+    void failedPaymentMarksFailedWithReasonAndPublishesNoConfirmation() {
         UUID orderId = UUID.randomUUID();
         sendRequested(requested(orderId));
         awaitStatus(orderId, "PENDING");
 
         sendPayment(failed(orderId));
 
-        awaitStatus(orderId, "PAYMENT_FAILED");
+        awaitStatus(orderId, "FAILED");
         assertThat(OrderTestInfra.rows(orderId).get(0).failureReason()).isEqualTo("CARD_DECLINED");
         assertNoConfirmed(orderId);
     }
@@ -251,10 +251,10 @@ class OrderSagaIT {
     // ---- 7. FAILED / REJECTED avant OrderRequested ----
 
     @ParameterizedTest
-    @ValueSource(strings = {"PAYMENT_FAILED", "REJECTED"})
+    @ValueSource(strings = {"FAILED", "REJECTED"})
     void terminalStateReceivedBeforeOrderRequestedIsNotOverwrittenByThePendingRequest(String terminal) {
         UUID orderId = UUID.randomUUID();
-        if (terminal.equals("PAYMENT_FAILED")) {
+        if (terminal.equals("FAILED")) {
             sendPayment(failed(orderId));
         } else {
             sendRejected(rejected(orderId));
@@ -277,12 +277,12 @@ class OrderSagaIT {
         sendRequested(requested(orderId));
         awaitStatus(orderId, "PENDING");
         sendPayment(failed(orderId));
-        awaitStatus(orderId, "PAYMENT_FAILED");
+        awaitStatus(orderId, "FAILED");
 
         sendPayment(succeeded(orderId));
         OrderTestInfra.awaitIdle();
 
-        assertThat(OrderTestInfra.statusOf(orderId)).isEqualTo("PAYMENT_FAILED");
+        assertThat(OrderTestInfra.statusOf(orderId)).isEqualTo("FAILED");
         assertNoConfirmed(orderId);
     }
 

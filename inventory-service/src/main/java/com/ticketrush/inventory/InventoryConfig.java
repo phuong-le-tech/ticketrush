@@ -1,6 +1,7 @@
 package com.ticketrush.inventory;
 
 import com.ticketrush.common.EventJson;
+import com.ticketrush.common.KafkaErrorHandling;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,9 +9,11 @@ import org.springframework.boot.kafka.autoconfigure.DefaultKafkaConsumerFactoryC
 import org.springframework.boot.kafka.autoconfigure.DefaultKafkaProducerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 @Configuration
+@Import(KafkaErrorHandling.class)
 public class InventoryConfig {
 
     /** 7 days. Also the fallback for contexts that skip application.yml (the in-process e2e boot). */
@@ -28,7 +31,7 @@ public class InventoryConfig {
         return factory -> {
             @SuppressWarnings("unchecked")
             var f = (org.springframework.kafka.core.DefaultKafkaConsumerFactory<Object, Object>) factory;
-            f.setValueDeserializerSupplier(EventJson::deserializer);
+            f.setValueDeserializerSupplier(EventJson::listenerDeserializer);
         };
     }
 
@@ -37,7 +40,7 @@ public class InventoryConfig {
         return factory -> {
             @SuppressWarnings("unchecked")
             var f = (org.springframework.kafka.core.DefaultKafkaProducerFactory<Object, Object>) factory;
-            f.setValueSerializerSupplier(EventJson::serializer);
+            f.setValueSerializerSupplier(EventJson::producerSerializer);
         };
     }
 

@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -19,9 +20,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -45,14 +55,15 @@ class ChargeControllerIT {
 
     private final HttpClient http = HttpClient.newHttpClient();
 
-    private URI uri(String path) {
-        return URI.create("http://localhost:" + port + path);
+    private HttpResponse<String> post(String idempotencyKey, UUID orderId, long amountCents) throws Exception {
+        return post(port, idempotencyKey, orderId, amountCents);
     }
 
-    private HttpResponse<String> post(String idempotencyKey, UUID orderId, long amountCents) throws Exception {
+    private HttpResponse<String> post(int targetPort, String idempotencyKey, UUID orderId, long amountCents)
+            throws Exception {
         String body = "{\"orderId\":\"" + orderId + "\",\"amountCents\":" + amountCents
                 + ",\"currency\":\"EUR\"}";
-        HttpRequest.Builder request = HttpRequest.newBuilder(uri("/charges"))
+        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://localhost:" + targetPort + "/charges"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body));
         if (idempotencyKey != null) {
@@ -62,10 +73,89 @@ class ChargeControllerIT {
     }
 
     private JsonNode charges(String idempotencyKey) throws Exception {
+        return charges(port, idempotencyKey);
+    }
+
+    private JsonNode charges(int targetPort, String idempotencyKey) throws Exception {
         String query = URLEncoder.encode(idempotencyKey, StandardCharsets.UTF_8);
         HttpResponse<String> response = http.send(
-                HttpRequest.newBuilder(uri("/charges?idempotencyKey=" + query)).GET().build(),
+                HttpRequest.newBuilder(URI.create("http://localhost:" + targetPort
+                        + "/charges?idempotencyKey=" + query)).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(200);
+        return JSON.readTree(response.body());
+    }
+
+    @org.junit.jupiter.api.Tag("m4-red")
+    @ParameterizedTest(name = "AC1 rate={0}, status={1}, charges={2}")
+    @CsvSource({",SUCCEEDED,1,\\S+,false", "0.0,SUCCEEDED,1,\\S+,false", "1.0,FAILED,0,^$,true"})
+    void AC1_rateZeroAndAbsentSucceedOneFailsWithoutCharge(
+            String failureRate, String expectedStatus, int expectedCount, String chargeIdPattern,
+            boolean expectedNoChargeId) throws Exception {
+        StandardEnvironment environment = providerEnvironment(failureRate);
+        assertThat(environment.getProperty("FAKE_PROVIDER_FAILURE_RATE")).isEqualTo(failureRate);
+        try (ConfigurableApplicationContext provider = new SpringApplicationBuilder(ProviderApplication.class)
+                .environment(environment).run("--server.port=0")) {
+            int targetPort = ((WebServerApplicationContext) provider).getWebServer().getPort();
+            UUID orderId = UUID.randomUUID();
+            String key = orderId.toString();
+            assertThat(charges(targetPort, key)).isEmpty();
+
+            JsonNode first = chargeReply(targetPort, key, orderId);
+            assertThat(first.path("status").asString()).isEqualTo(expectedStatus);
+            assertThat(first.path("chargeId").asString("")).matches(chargeIdPattern);
+            assertThat(first.path("chargeId").isMissingNode() || first.path("chargeId").isNull())
+                    .isEqualTo(expectedNoChargeId);
+            assertThat(charges(targetPort, key)).hasSize(expectedCount);
+
+            JsonNode second = chargeReply(targetPort, key, orderId);
+            assertThat(second.path("status").asString()).isEqualTo(expectedStatus);
+            assertThat(second.path("chargeId")).isEqualTo(first.path("chargeId"));
+            assertThat(charges(targetPort, key)).hasSize(expectedCount);
+
+            JsonNode third = chargeReply(targetPort, key, orderId);
+            assertThat(third.path("status").asString()).isEqualTo(expectedStatus);
+            assertThat(third.path("chargeId")).isEqualTo(first.path("chargeId"));
+            assertThat(charges(targetPort, key)).hasSize(expectedCount);
+        }
+    }
+
+    @org.junit.jupiter.api.Tag("m4-red")
+    @ParameterizedTest(name = "AC1 successful retry payload rate={0}")
+    @NullSource
+    @ValueSource(strings = "0.0")
+    void AC1_successfulRetryPreservesExactChargePayload(String failureRate) throws Exception {
+        try (ConfigurableApplicationContext provider = new SpringApplicationBuilder(ProviderApplication.class)
+                .environment(providerEnvironment(failureRate)).run("--server.port=0")) {
+            int targetPort = ((WebServerApplicationContext) provider).getWebServer().getPort();
+            UUID orderId = UUID.randomUUID();
+            String key = orderId.toString();
+            JsonNode first = chargeReply(targetPort, key, orderId);
+            assertThat(first.path("status").asString()).isEqualTo("SUCCEEDED");
+            assertThat(first.path("chargeId").asString()).isNotBlank();
+            assertThat(first.path("orderId").asString()).isEqualTo(key);
+            assertThat(first.path("amountCents").asLong()).isEqualTo(5000L);
+            assertThat(first.path("currency").asString()).isEqualTo("EUR");
+            assertThat(chargeReply(targetPort, key, orderId)).isEqualTo(first);
+            assertThat(chargeReply(targetPort, key, orderId)).isEqualTo(first);
+            JsonNode recorded = charges(targetPort, key);
+            assertThat(recorded).hasSize(1);
+            assertThat(recorded.get(0)).isEqualTo(first);
+        }
+    }
+
+    private static StandardEnvironment providerEnvironment(String failureRate) {
+        StandardEnvironment environment = new StandardEnvironment();
+        Map<String, Object> variables = failureRate == null ? Map.of()
+                : Map.of("FAKE_PROVIDER_FAILURE_RATE", failureRate);
+        environment.getPropertySources().replace(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME,
+                new SystemEnvironmentPropertySource(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME,
+                        variables));
+        return environment;
+    }
+
+    private JsonNode chargeReply(int targetPort, String key, UUID orderId) throws Exception {
+        HttpResponse<String> response = post(targetPort, key, orderId, 5000);
         assertThat(response.statusCode()).isEqualTo(200);
         return JSON.readTree(response.body());
     }
