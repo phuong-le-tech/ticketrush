@@ -13,7 +13,7 @@
 # - Grafana dashboard ConfigMap label grafana_dashboard=1, JSON contains queries
 #   for lag, processing time, orders/sec and saga outcomes; queries must be concrete
 #   PromQL (no unresolved Grafana variables). Grafana Secret has admin-user/password.
-# - Default lag exporter contract: kafka_consumergroup_lag{consumergroup,topic}.
+# - Default lag exporter contract: kafka_consumergroup_lag_sum{consumergroup,topic}.
 #   Exporter choice is NOT frozen: --config JSON can override lag_query using
 #   {group}/{topic} placeholders, service/Secret names, ports and test bounds.
 #   Group/topic/threshold/cooldown are read from each real Kafka ScaledObject.
@@ -284,7 +284,7 @@ def selftest():
 def defaults():
     return dict(cluster='ticketrush', namespace='ticketrush', prometheus_service='prometheus',
                 prometheus_port=9090, grafana_service='grafana', grafana_port=80,
-                grafana_secret='ticketrush-grafana', lag_query='kafka_consumergroup_lag',
+                grafana_secret='ticketrush-grafana', lag_query='kafka_consumergroup_lag_sum{consumergroup="{group}",topic="{topic}"}',
                 timeout_seconds=1500, command_timeout=60, up_timeout=900,
                 poll_seconds=5, load_timeout=300, stock_per_event=500,
                 load_script='scripts/m5-load.js')
@@ -359,14 +359,41 @@ class Live:
         vector(response)
         return response
 
+    def lag_query(self, c):
+        template = self.c['lag_query']
+        if template == 'kafka_consumergroup_lag':
+            return 'kafka_consumergroup_lag{consumergroup=' + json.dumps(c['group']) + ',topic=' + json.dumps(c['topic']) + '}'
+        return template.replace('{group}', c['group']).replace('{topic}', c['topic'])
+
+    def warm_up(self, gateway, evidence):
+        # Kafka exporter has no group/topic series until the first real offset commit.
+        event = 'm5-warmup-' + str(time.time_ns())
+        self.kc('exec', 'redis-0', '--', 'redis-cli', 'HSET', 'inventory:event:' + event,
+                'stock', '1', 'priceCents', '100', 'currency', 'EUR')
+        request = urllib.request.Request(gateway + '/orders', method='POST',
+            data=json.dumps(dict(eventId=event, customerId=event, quantity=1)).encode(),
+            headers={'Content-Type': 'application/json', 'Idempotency-Key': event})
+        with urllib.request.urlopen(request, timeout=15) as response:
+            check(response.status == 202, 'warm-up order not acknowledged')
+            order_id = json.load(response)['orderId']
+        until = min(self.deadline, time.time() + 120)
+        while time.time() < until:
+            rows = self.orders([event])
+            settled = len(rows) == 1 and rows[0]['order_id'] == order_id and rows[0]['status'] == 'CONFIRMED'
+            try:
+                drained = all(sum(vector(self.query(self.lag_query(c)))) == 0
+                              for c in evidence['services'].values())
+            except Failure:
+                drained = False
+            if settled and drained:
+                print('PASS warm-up - real confirmed order and committed, drained lag for both groups', flush=True)
+                return
+            time.sleep(self.c['poll_seconds'])
+        raise Failure('cold-start warm-up did not settle with real drained lag')
+
     def sample(self, evidence):
         for service, c in evidence['services'].items():
-            template = self.c['lag_query']
-            if template == 'kafka_consumergroup_lag':
-                query = 'kafka_consumergroup_lag{consumergroup=' + json.dumps(c['group']) + ',topic=' + json.dumps(c['topic']) + '}'
-            else:
-                query = template.replace('{group}', c['group']).replace('{topic}', c['topic'])
-            response = self.query(query)
+            response = self.query(self.lag_query(c))
             result = response['data']['result']
             check(all(x['metric'].get('consumergroup') == c['group'] and
                       x['metric'].get('topic') == c['topic'] for x in result), 'lag query lost group/topic labels')
@@ -425,6 +452,7 @@ class Live:
             e['services'][service] = dict(group=m['consumerGroup'], topic=m['topic'], threshold=float(m['lagThreshold']))
             e['cooldown_seconds'][service] = so['spec'].get('cooldownPeriod', 300)
         check(set(e['services']) == set(SERVICES), 'both Kafka ScaledObjects required')
+        self.warm_up(gateway, e)
         self.sample(e)
         run_id = 'm5-' + str(time.time_ns())
         events = [run_id + '-' + str(i) for i in range(24)]
