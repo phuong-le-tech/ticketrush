@@ -300,3 +300,17 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   and durable storage of late-success charge ids remain outside these blocker fixes.
 - Handoff: request review on this recovery card only. Orchestrator must reconcile stale original
   card `t_0371160d` and its gated pr-manager child `t_64d86fe2` after the reviewer verdict.
+
+### Milestone 5 - test-only RED phase
+
+- New metrics tests compile on Java 21. Service tests produced 35 assertion failures and zero
+  errors; metrics E2E produced 3 assertion failures and zero errors. Missing meters and HTTP 404
+  are the expected RED conditions. No production instrumentation or deployment code is added.
+- `scripts/m5-chart-check.sh` rejects the current chart's missing monitoring/scaling resources;
+  `scripts/m5-acceptance.sh` rejects missing `scripts/m5-up.sh` before touching kind.
+  Both scripts' offline `--selftest` modes pass. Synthetic fixtures prove only the evaluators.
+- AC7 regression: `scripts/m3-chart-check.sh` and its `--selftest` pass. The destructive
+  `scripts/m3-acceptance.sh` was not run in this test-only phase: cluster bootstrap/real k6 scaling
+  belong to the downstream implementation run. This is a not-run limitation, not M3 acceptance.
+- NOT verified here: real M5 cluster, dashboard data, KEDA scale-up/down, or k6 conservation.
+  See `docs/M5-RED-RESULTS.md` for exact test commands, expected failures and plan deviations.

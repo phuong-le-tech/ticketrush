@@ -109,6 +109,15 @@ final class E2EStack implements AutoCloseable {
         return stack;
     }
 
+    /** M5-only fixture mode: real HTTP scrapes on every service, not only HTTP front doors. */
+    static E2EStack startMetrics(String eventId, int stock) throws Exception {
+        E2EStack stack = new E2EStack();
+        stack.metricsWeb = true;
+        stack.boot(eventId, stock);
+        return stack;
+    }
+
+    private boolean metricsWeb;
     private Map<String, String> providerConfig = Map.of();
     private Map<String, String> orderConfig = Map.of();
 
@@ -398,12 +407,16 @@ final class E2EStack implements AutoCloseable {
     private ConfigurableApplicationContext run(Class<?> app, boolean web, Map<String, String> config) {
         List<String> args = new ArrayList<>(List.of(
                 "--spring.config.location=optional:classpath:/e2e-no-shared-config/",
-                "--spring.main.web-application-type=" + (web ? "servlet" : "none"),
+                "--spring.main.web-application-type=" + (web || metricsWeb ? "servlet" : "none"),
                 "--server.port=0",
                 "--spring.jmx.enabled=false",
                 "--spring.kafka.bootstrap-servers=" + kafka.getBootstrapServers(),
                 "--spring.kafka.consumer.auto-offset-reset=earliest",
                 "--spring.autoconfigure.exclude=" + excludedAutoConfigurations(app)));
+        if (metricsWeb) {
+            // E2E deliberately bypasses application.yml; PrometheusIT separately verifies real exposure config.
+            args.add("--management.endpoints.web.exposure.include=health,prometheus");
+        }
         config.forEach((k, v) -> args.add("--" + k + "=" + v));
         ConfigurableApplicationContext ctx = new SpringApplicationBuilder(app).run(args.toArray(String[]::new));
         contexts.add(ctx);
