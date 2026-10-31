@@ -104,8 +104,8 @@ spec:
                   name: ticketrush-grafana
                   key: admin-password
           resources:
-            requests: {cpu: 50m, memory: 128Mi}
-            limits: {cpu: 500m, memory: 256Mi}
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 512Mi}
           startupProbe:
             httpGet: {path: /api/health, port: http}
             failureThreshold: 60
