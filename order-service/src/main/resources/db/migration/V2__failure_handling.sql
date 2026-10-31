@@ -1,11 +1,11 @@
 -- M4 failure handling.
--- FAILED replaces PAYMENT_FAILED: a payment failure and a saga timeout both end FAILED, and
+-- New failures use FAILED; retain PAYMENT_FAILED so the M3 writer still works on rollback.
 -- failure_reason says which (provider reason or TIMEOUT). RESERVED is accepted as an active state
 -- next to PENDING; the reaper expires both.
-UPDATE orders.orders SET status = 'FAILED' WHERE status = 'PAYMENT_FAILED';
 ALTER TABLE orders.orders DROP CONSTRAINT orders_status_check;
 ALTER TABLE orders.orders ADD CONSTRAINT orders_status_check
-    CHECK (status IN ('PENDING', 'RESERVED', 'CONFIRMED', 'FAILED', 'REJECTED'));
+    CHECK (status IN ('PENDING', 'RESERVED', 'CONFIRMED', 'FAILED', 'PAYMENT_FAILED', 'REJECTED'));
+UPDATE orders.orders SET status = 'FAILED' WHERE status = 'PAYMENT_FAILED';
 
 -- The reaper scans active orders by age.
 CREATE INDEX orders_active_by_created_at ON orders.orders (created_at)
