@@ -34,6 +34,8 @@ class SagaReaperIT {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         OrderTestInfra.registerProperties(registry);
+        // These tests compare durable saga writes; the relay owns publication in separate tests.
+        registry.add("order.outbox.relay-enabled", () -> "false");
     }
 
     @ParameterizedTest(name = "AC3 {0} age {1}s remains active")
