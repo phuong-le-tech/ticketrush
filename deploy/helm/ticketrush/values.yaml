@@ -1,6 +1,25 @@
 # Local kind defaults. The credentials below are dummy values for a throwaway cluster; override them
 # (for example with --set-string credentials.postgresPassword=...) for anything else. They only
 # ever reach the pods through the chart-generated Secret.
+# M5 bootstrap installs operator CRDs before installing this dependency-free chart.
+monitoring:
+  enabled: true
+  prometheusImage: quay.io/prometheus/prometheus:v3.15.1
+  grafanaImage: grafana/grafana:13.3.0
+  grafanaAdminUser: admin
+  # Empty generates a random password once; lookup preserves the existing Secret on upgrades.
+  grafanaAdminPassword: ""
+
+autoscaling:
+  enabled: true
+  maxReplicas: 2
+  lagThreshold: "10"
+  pollingInterval: 5
+  cooldownPeriod: 30
+  consumers:
+    inventory-service: orders.requested
+    payment-service: tickets.reserved
+
 credentials:
   postgresUser: ticketrush_app
   postgresPassword: ticketrush-local

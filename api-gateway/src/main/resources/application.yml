@@ -21,6 +21,10 @@ gateway:
   send-timeout-ms: ${GATEWAY_SEND_TIMEOUT_MS:6000}
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
   endpoint:
     health:
       probes:

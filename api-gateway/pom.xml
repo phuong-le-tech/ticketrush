@@ -13,6 +13,10 @@
 
   <dependencies>
     <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.ticketrush</groupId>
       <artifactId>common</artifactId>
       <version>${project.version}</version>

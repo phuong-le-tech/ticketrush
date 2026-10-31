@@ -2,6 +2,10 @@ package com.ticketrush.notification;
 
 import com.ticketrush.common.OrderConfirmed;
 import com.ticketrush.common.Topics;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import java.util.concurrent.TimeUnit;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,6 +26,13 @@ public class OrderConfirmedListener {
 
     private static final Logger log = LoggerFactory.getLogger(OrderConfirmedListener.class);
     private static final int MAX_REMEMBERED_ORDERS = 100_000;
+    private Timer processing;
+
+    @Autowired
+    void registerMetrics(MeterRegistry registry) {
+        processing = registry.timer("ticketrush.consumer.processing", "consumer", "notification-service",
+                "topic", Topics.ORDERS_CONFIRMED);
+    }
 
     // shortcut: in memory and per pod, so a redelivery after a restart or a rebalance to another pod
     // notifies twice; move to a shared store (Redis or a table) once a notification has a real effect.
@@ -35,11 +46,16 @@ public class OrderConfirmedListener {
 
     @KafkaListener(topics = Topics.ORDERS_CONFIRMED)
     void onOrderConfirmed(OrderConfirmed order) {
-        if (!notified.add(order.orderId())) {
-            log.debug("Duplicate OrderConfirmed for order {} ignored", order.orderId());
-            return;
+        long started = System.nanoTime();
+        try {
+            if (!notified.add(order.orderId())) {
+                log.debug("Duplicate OrderConfirmed for order {} ignored", order.orderId());
+                return;
+            }
+            log.info("NOTIFY orderId={} customerId={} quantity={} amount={} {}",
+                    order.orderId(), order.customerId(), order.quantity(), order.amountCents(), order.currency());
+        } finally {
+            if (processing != null) processing.record(System.nanoTime() - started, TimeUnit.NANOSECONDS);
         }
-        log.info("NOTIFY orderId={} customerId={} quantity={} amount={} {}",
-                order.orderId(), order.customerId(), order.quantity(), order.amountCents(), order.currency());
     }
 }

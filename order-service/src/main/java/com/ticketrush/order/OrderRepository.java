@@ -8,6 +8,10 @@ import com.ticketrush.common.ReservationRejected;
 import com.ticketrush.common.Status;
 import com.ticketrush.common.TicketsReleased;
 import com.ticketrush.common.Topics;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -18,6 +22,8 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Etat de la saga. Choix de conception: chaque message est un upsert conditionnel unique (atomique,
@@ -44,6 +50,27 @@ public class OrderRepository {
             " RETURNING order_id, status, event_id, customer_id, quantity, amount_cents, currency";
 
     private final JdbcClient jdbc;
+    private Map<String, Counter> outcomes = Map.of();
+
+    @Autowired
+    void registerMetrics(MeterRegistry registry) {
+        outcomes = Map.of(
+                CONFIRMED, registry.counter("ticketrush.saga.outcomes", "outcome", CONFIRMED),
+                FAILED, registry.counter("ticketrush.saga.outcomes", "outcome", FAILED),
+                "REJECTED", registry.counter("ticketrush.saga.outcomes", "outcome", "REJECTED"));
+    }
+
+    private void countAfterCommit(String outcome, int count) {
+        // SQL RETURNING identifies effective transitions; commit is the boundary for counting them.
+        Counter counter = outcomes.get(outcome);
+        if (counter == null || count == 0) return;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                counter.increment(count);
+            }
+        });
+    }
 
     OrderRepository(JdbcClient jdbc) {
         this.jdbc = jdbc;
@@ -83,13 +110,15 @@ public class OrderRepository {
                 .param("amount", e.amountCents()).param("currency", e.currency())
                 .param("reason", ok ? null : e.failureReason())
                 .query(OrderRepository::map).optional();
+        transition.ifPresent(saga -> countAfterCommit(saga.status(), 1));
         transition.ifPresent(this::enqueueOutcome);
         return transition;
     }
 
     /** PENDING/RESERVED (ou ligne nouvelle) -> REJECTED; sinon aucune ligne. Nothing to release. */
+    @Transactional
     Optional<Saga> onRejected(ReservationRejected e) {
-        return jdbc.sql("""
+        Optional<Saga> transition = jdbc.sql("""
                 INSERT INTO orders.orders (order_id, status, failure_reason)
                 VALUES (:id, 'REJECTED', :reason)
                 ON CONFLICT (order_id) DO UPDATE SET
@@ -97,6 +126,8 @@ public class OrderRepository {
                 WHERE orders.orders.status IN ('PENDING', 'RESERVED')""" + RETURNING)
                 .param("id", e.orderId()).param("reason", e.reason())
                 .query(OrderRepository::map).optional();
+        transition.ifPresent(saga -> countAfterCommit(saga.status(), 1));
+        return transition;
     }
 
     /**
@@ -117,6 +148,7 @@ public class OrderRepository {
                 .param("limit", limit)
                 .query(OrderRepository::map).list();
         expired.forEach(saga -> enqueueRelease(saga, REASON_TIMEOUT, now));
+        countAfterCommit(FAILED, expired.size());
         return expired.size();
     }
 

@@ -9,7 +9,7 @@ result, and what is NOT done or not verified.
 | 2 | Correctness under contention | `milestone-2` | Done (pending owner go-ahead) |
 | 3 | Kubernetes | `milestone-3` | Not started |
 | 4 | Failure handling | `milestone-4` | Review rework implemented; pending reviewer verdict |
-| 5 | Observability and autoscaling | `milestone-5` | Not started |
+| 5 | Observability and autoscaling | `milestone-5` | Implementation verified; independent review pending |
 | 6 | Chaos experiments and results | `milestone-6` | Not started |
 | 7 | Minimal Angular dashboard | `milestone-7` | Not started |
 | 8 | Portfolio polish | `milestone-8` | Not started |
@@ -300,3 +300,100 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   and durable storage of late-success charge ids remain outside these blocker fixes.
 - Handoff: request review on this recovery card only. Orchestrator must reconcile stale original
   card `t_0371160d` and its gated pr-manager child `t_64d86fe2` after the reviewer verdict.
+
+### Milestone 5 - test-only RED phase
+
+- New metrics tests compile on Java 21. Service tests produced 35 assertion failures and zero
+  errors; metrics E2E produced 3 assertion failures and zero errors. Missing meters and HTTP 404
+  are the expected RED conditions. No production instrumentation or deployment code is added.
+- `scripts/m5-chart-check.sh` rejects the current chart's missing monitoring/scaling resources;
+  `scripts/m5-acceptance.sh` rejects missing `scripts/m5-up.sh` before touching kind.
+  Both scripts' offline `--selftest` modes pass. Synthetic fixtures prove only the evaluators.
+- AC7 regression: `scripts/m3-chart-check.sh` and its `--selftest` pass. The destructive
+  `scripts/m3-acceptance.sh` was not run in this test-only phase: cluster bootstrap/real k6 scaling
+  belong to the downstream implementation run. This is a not-run limitation, not M3 acceptance.
+- NOT verified here: real M5 cluster, dashboard data, KEDA scale-up/down, or k6 conservation.
+  See `docs/M5-RED-RESULTS.md` for exact test commands, expected failures and plan deviations.
+
+### Milestone 5 implementation - 2026-10-31
+
+- Status: implementation verified locally, independent review pending on child `t_151f8374`.
+  No push, PR, merge or M6 work in this implementation phase. Executable code head `0dddd8c`;
+  subsequent documentation/evidence commit does not change code.
+- What exists: Prometheus registry/exposure on all six services; per-consumer/topic attempt timers;
+  acknowledged gateway POST counter; after-commit saga outcome counters (replays/rollbacks add zero).
+  Strimzi exporter supplies real group/topic lag. The chart provisions six ServiceMonitors, exporter
+  PodMonitor, Prometheus, a Secret-backed Grafana with a four-panel ConfigMap dashboard, and Kafka
+  KEDA ScaledObjects for inventory/payment (min 1, max 2 <= 12 partitions). `m5-up.sh` installs pinned
+  operators before the chart, reuses content-tagged builds, and preserves generated credentials.
+  `m5-load.js` drives 24 events with strict k6 thresholds; optional 200ms consumer delay creates lag.
+- Full unfiltered root verification in this run, Java 21.0.10:
+  ```sh
+  export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home
+  export PATH="$JAVA_HOME/bin:$PATH"
+  mvn verify
+  ```
+  -> exit 0, **213 tests, 0 failures, 0 errors, 0 skipped** (175 baseline + 38 M5 tests).
+  ```text
+  [INFO] BUILD SUCCESS
+  [INFO] Total time:  17:13 min
+  [INFO] Finished at: 2026-10-31T06:35:42+01:00
+  ```
+  All six PrometheusIT, four MetricsTest classes, SagaMetricsIT (8) and MetricsE2ETest (3) passed.
+  Existing contention, replay, failure, DLT, outbox and migration suites passed unchanged.
+  Per-class counts and reactor output: [maven-summary.txt](evidence/m5/maven-summary.txt).
+  No separate lint/typecheck command is defined in CLAUDE.md/AGENTS.md; Maven compiled all modules.
+- `scripts/m5-chart-check.sh`, `scripts/m5-chart-check.sh --selftest`,
+  `scripts/m5-acceptance.sh --selftest`, `scripts/m3-chart-check.sh` and its `--selftest` -> exit 0.
+  Helm lint/template and resource mutation checks pass. `bash -n scripts/m5-up.sh
+  scripts/m5-acceptance.sh` and added-line typography/`git diff --check` -> clean.
+- Real clean-kind acceptance, run in this implementation session:
+  ```sh
+  M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/m5-acceptance.sh
+  ```
+  -> exit 0 in 492.626 seconds, clean Kubernetes 1.36.4 on kind 0.33.0, k6 2.3.0.
+  ```text
+  PASS warm-up - real confirmed order and committed, drained lag for both groups
+  PASS AC4_cleanAndRepeat - Ready stack, stable node/Secret, four provisioned queries return data
+  PASS AC5_scaleAndConserve - both services causal 1 -> >1 -> 1; stock/orders/charges conserved
+  RESULT: m5-acceptance passed
+  ```
+  Full raw output and measured audit: [acceptance.log](evidence/m5/acceptance.log),
+  [evidence.json](evidence/m5/evidence.json), [samples.jsonl](evidence/m5/samples.jsonl),
+  [k6-summary.json](evidence/m5/k6-summary.json). These are live outputs, not selftest fixtures.
+  Representative raw epoch-second measurements (lag, ready replicas):
+
+  | Service | Baseline | Above threshold at 1 | Scale-up | Drained | After load + >=30s drained |
+  |---|---|---|---|---|---|
+  | inventory | 1793424641.2098382: 0, 1 | 1793424653.126893: 25, 1 | 1793424674.071604: 126, 2 | 1793424775.815177: 0, 2 | 1793424814.6380641: 0, 1 |
+  | payment | 1793424641.255181: 0, 1 | 1793424674.161098: 26, 1 | 1793424690.1167018: 101, 2 | 1793424781.495662: 0, 2 | 1793424814.69504: 0, 1 |
+
+  k6 load timestamps: 1793424642.7319071 to 1793424764.953024. Maximum observed lag: inventory 126,
+  payment 206. Both scale down, not merely stop growing. With min=1 the HPA's 30s scale-down
+  stabilization controls return to 1; KEDA's cooldown governs scale-to-zero, which is disabled.
+- Real conservation audit: **960 acknowledged distinct orders = 960 CONFIRMED; 960 charges, exactly
+  one per order; stock 12000 = remaining 11040 + sold 960**. No duplicate order/idempotency tuple,
+  no unsettled order, no oversell, no provider restart. k6 dropped iterations 0, failed-request rate 0,
+  checks 960/960. The isolated warm-up is excluded from these 24-event audit totals.
+- Real Grafana provisioned-dashboard API and exact dashboard PromQL returned nonempty finite data:
+  lag 5 series, processing time 7, orders/sec 1, saga outcomes 3. Repeat bootstrap preserved the
+  kind node ID and Grafana Secret fingerprint; all pods Ready after the audit. Passwords are not logged.
+- Diagnosis and reversible adjustments: initial bootstrap failed on an absent operator TLS Secret
+  with admission hooks off; disabled operator TLS too. Short Kafka DNS did not resolve from a separate
+  KEDA namespace; co-located KEDA with the apps. Grafana at 256Mi/500m repeatedly exhausted its
+  startup window; 512Mi/1 CPU made a fresh pod Ready in 10s, and clean acceptance confirmed it.
+  The earlier acceptance timeout is not counted as success. Version/compatibility URLs were checked
+  against official KEDA, kind, kube-prometheus-stack, Prometheus Operator and k6 sources in DESIGN.md.
+- Fixed test: `ec94ce3` adds a real isolated warm-up order and bounded drained-offset wait because the
+  exporter emits no group/topic series before any commit. It also uses the permitted exporter-specific
+  `kafka_consumergroup_lag_sum` contract. No scaling/conservation assertions or Java tests weakened.
+  Raw per-partition lag can be -1 for uncommitted offsets; the documented sum omits unknown partitions.
+- NOT done / limitations: independent exact-head review and PR are downstream gates, not claimed here.
+  M2 ten-run acceptance and Compose were not rerun (root verify includes contention/replay once).
+  Destructive `m3-acceptance.sh` was not rerun: it replaces the same local cluster and disables M5;
+  its static checks pass and clean M5 bootstrap exercised the shared app/Kafka/DB/probe paths, but
+  M3's dedicated graceful-rollout assertion is not new evidence. Builds used the laptop's image/build
+  caches; no empty-cache timing claim. Metrics/Grafana data are ephemeral and outcomes are counters,
+  not a durable financial ledger. This is a single 8GB Docker VM demonstration at 8 orders/sec with
+  intentional delay, not a capacity benchmark. No refunds or changes to the M4 late-success/timeout
+  limitations, topic names/partitions/keys, event schemas or DB schema. No new application services.

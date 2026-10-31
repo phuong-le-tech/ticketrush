@@ -23,6 +23,10 @@ ticketrush:
       max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:4}
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
   endpoint:
     health:
       probes:
