@@ -153,7 +153,8 @@ Rationale:
   or blank -> 400. The gateway stores nothing; dedupe happens where state lives:
   - inventory: `reserve.lua` checks `inventory:order:{orderId}` (Redis hash: `reserved`,
     `priceCents`, `quantity`, `currency`, `reservedUntil`) in the same script as the stock check.
-    Seen order -> the stored outcome is returned and re-published, stock is not touched. TTL
+    Seen order -> the stored outcome is returned and re-published, stock is not touched. After a
+    release (`released=1`), replay returns rejected instead: restored stock is not a held reservation. TTL
     `INVENTORY_DEDUP_TTL_SECONDS` (default 604800 = 7 days). An unknown event stores the rejection
     (`reserved=0`, same TTL) on the order key, so that orderId stays rejected if the event is seeded
     later; no `inventory:event:*` key is created.
@@ -187,3 +188,5 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-10-30 | Payment: a 200 SUCCEEDED or a decline (200 FAILED, or 4xx) is final; 5xx, timeouts, network errors and unreadable replies throw and are retried with the same Idempotency-Key, then dead-lettered with no PaymentResult (the order then times out). The fake provider stores declines under the key too, so a retry gets the same answer | A lost reply may hide a real charge: only a retry with the same key can tell, and it never charges twice. |
 | 2026-10-30 | notification-service dedupes OrderConfirmed by orderId in memory (bounded, per pod) | The outbox is at-least-once. Shortcut: lost on restart and not shared between pods; a shared store is needed once a notification has a real effect. |
 | 2026-10-30 | Known limitation (not fixed in M4): a PaymentResult SUCCEEDED for an order already FAILED(TIMEOUT) is not confirmed; it is logged (WARN, charge id) and stays on `payments.result` for a future refund. No refunds yet | Owner decision. The timeout default (120 s) is far above the worst-case payment time (4 x provider timeout 2 s + 7 s backoff = 15 s). |
+| 2026-10-31 | PR 18 review compatibility option: V2 expands the status CHECK before converting existing PAYMENT_FAILED rows to FAILED, and retains PAYMENT_FAILED in the allowed set | The M3 writer must still accept payment failures after an application-image rollback; contraction is deferred. This is compatibility, not an automated schema downgrade. |
+| 2026-10-31 | PR 18 review replay fix: reserve.lua returns rejected for an order marked released=1, without changing stock | A restored reservation must never be republished as held or trigger a new provider call. |

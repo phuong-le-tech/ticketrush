@@ -8,7 +8,7 @@ result, and what is NOT done or not verified.
 | 1 | Happy path locally | `feat/t_4d7a08e4-m1-finish` | Done (pending owner go-ahead) |
 | 2 | Correctness under contention | `milestone-2` | Done (pending owner go-ahead) |
 | 3 | Kubernetes | `milestone-3` | Not started |
-| 4 | Failure handling | `milestone-4` | Done (pending owner go-ahead) |
+| 4 | Failure handling | `milestone-4` | Review rework implemented; pending reviewer verdict |
 | 5 | Observability and autoscaling | `milestone-5` | Not started |
 | 6 | Chaos experiments and results | `milestone-6` | Not started |
 | 7 | Minimal Angular dashboard | `milestone-7` | Not started |
@@ -247,3 +247,56 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   - AC7 is stochastic (no seeded random source): the assertions require both CONFIRMED and FAILED
     orders and passed, but the exact share is not asserted.
   - Compose stack not re-run (its kafka-init command is only checked statically by the chart check).
+
+### Milestone 4 review recovery - 2026-10-31
+- Status: both PR 18 blockers implemented on `milestone-4`; pending code-reviewer verdict, not
+  milestone acceptance or owner-ready. Recovery card `t_007379d5`, original `t_0371160d`.
+- Verified code head: `c06b4f9ea9a259010993dda2b21e629a8a4cc47f`. The subsequent documentation
+  commit changes only this report and DESIGN.md.
+- Blocker 1: `1df0563` rejects replay when `released=1` in the atomic reserve script. Regression
+  `FailureE2ETest.releasedReservationReplayNeverEmitsReservedOrCallsProvider` reserves, releases,
+  then sends ten concurrent OrderRequested replays: no additional TicketsReserved or HTTP provider
+  calls, ten rejections, unchanged restored stock, FAILED order, no charge or confirmation.
+  With Java 21, command:
+  `mvn -pl e2e-tests -am test -Dtest=FailureE2ETest#releasedReservationReplayNeverEmitsReservedOrCallsProvider -Dsurefire.failIfNoSpecifiedTests=false`
+  -> RED: 1 failure (expected 1 TicketsReserved, got 11); GREEN: 1 test, 0 failures/errors/skipped,
+  BUILD SUCCESS, 27.168 s.
+- Blocker 2: `9902e15` implements the reviewer's legacy-compatibility option. V2 retains
+  PAYMENT_FAILED in the expanded CHECK, then converts existing rows to FAILED. Expanding first
+  also fixes upgrading a populated V1 database (the old CHECK rejects FAILED).
+  `MigrationCompatibilityIT.v2AllowsLegacyPaymentFailureWrites` and
+  `v2MigratesExistingPaymentFailures` use real PostgreSQL/Flyway. Command:
+  `mvn -pl order-service -am verify -Dit.test=MigrationCompatibilityIT -Dfailsafe.failIfNoSpecifiedTests=false -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false`
+  -> RED: 2 CHECK-violation errors; GREEN: 2 tests, 0 failures/errors/skipped, BUILD SUCCESS, 4.876 s.
+- First root `mvn verify` attempt -> BUILD FAILURE in 1:44 min: two SagaReaperIT snapshot
+  comparisons raced the scheduled relay; only published_at changed from null to a timestamp.
+  `c06b4f9` disables that fixture's relay with the existing switch. No assertions were removed or
+  weakened; relay behavior is exercised separately in OutboxIT and OutboxE2ETest.
+  `mvn -pl order-service -am verify -Dit.test=SagaReaperIT,MigrationCompatibilityIT -Dfailsafe.failIfNoSpecifiedTests=false -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false`
+  -> BUILD SUCCESS, 34 tests, 0 failures/errors/skipped, 12.401 s.
+- Final `mvn verify` at repo root, Java 21, code head above -> exit 0:
+  ```
+  [INFO] BUILD SUCCESS
+  [INFO] Total time:  13:51 min
+  ```
+  Parsed per-class results: 175 tests, 0 failures, 0 errors, 0 skipped. Includes
+  MigrationCompatibilityIT 2, SagaReaperIT 32, OutboxIT 3, FailureE2ETest 9, DltE2ETest 21,
+  OversellE2ETest 1, ReplayE2ETest 2, PurchaseFlowE2ETest 1, OutboxE2ETest 2.
+- `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`;
+  `scripts/m3-chart-check.sh --selftest` -> `RESULT: m3-chart-check selftest passed`.
+  `git diff --check origin/main...HEAD` and recovery added-line dash check -> clean.
+  No separate lint or typecheck command is defined in CLAUDE.md/AGENTS.md; Maven compiled all modules.
+- Compatibility limits: this retains the legacy writer's status value, not a full schema downgrade
+  or an exercised M3 image rollback. V2 is still pre-merge and was edited in place; an existing
+  development database with the earlier V2 checksum needs an explicit operator migration plan,
+  not an automatic Flyway repair. No down-script or destructive cleanup was added.
+- Additional documented limits from review: a TIMEOUT release received before reservation is a
+  no-op; a reservation arriving later can hold stock for a FAILED order. Inventory or order-service
+  consumer lag exceeding the timeout can also expire an otherwise valid payment. These lag cases
+  were not failure-injected in this recovery; tuning against HTTP latency alone is insufficient.
+- NOT re-run here: M2 ten-run acceptance, M3 cluster acceptance, Compose stack or CI (no checks
+  reported on PR 18 before the push). The original M4 ten-run/cluster evidence above remains
+  historical; root verification here includes contention and replay once. Refunds, 408/429 policy
+  and durable storage of late-success charge ids remain outside these blocker fixes.
+- Handoff: request review on this recovery card only. Orchestrator must reconcile stale original
+  card `t_0371160d` and its gated pr-manager child `t_64d86fe2` after the reviewer verdict.
