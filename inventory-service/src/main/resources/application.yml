@@ -31,6 +31,8 @@ inventory:
   dedup-ttl-seconds: ${INVENTORY_DEDUP_TTL_SECONDS:604800}
 
 ticketrush:
+  consumer:
+    processing-delay-ms: ${CONSUMER_PROCESSING_DELAY_MS:0}
   kafka:
     retry:
       initial-interval-ms: ${KAFKA_RETRY_INITIAL_INTERVAL_MS:1000}
@@ -38,6 +40,10 @@ ticketrush:
       max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:4}
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
   endpoint:
     health:
       probes:

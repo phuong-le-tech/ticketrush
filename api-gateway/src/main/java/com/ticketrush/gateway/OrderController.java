@@ -2,6 +2,9 @@ package com.ticketrush.gateway;
 
 import com.ticketrush.common.OrderRequested;
 import com.ticketrush.common.Topics;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -25,6 +28,12 @@ public class OrderController {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final long sendTimeoutMs;
+    private Counter orders;
+
+    @Autowired
+    void registerMetrics(MeterRegistry registry) {
+        orders = registry.counter("ticketrush.orders");
+    }
 
     OrderController(KafkaTemplate<String, Object> kafkaTemplate,
                     @Value("${gateway.send-timeout-ms}") long sendTimeoutMs) {
@@ -54,6 +63,7 @@ public class OrderController {
             log.warn("Publication Kafka echouee pour la commande {}: {}", orderId, e.toString());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
+        if (orders != null) orders.increment();
         return ResponseEntity.accepted().body(Map.of("orderId", orderId.toString()));
     }
 

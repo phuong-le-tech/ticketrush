@@ -5,6 +5,10 @@ import com.ticketrush.common.PaymentResult;
 import com.ticketrush.common.ReservationRejected;
 import com.ticketrush.common.Status;
 import com.ticketrush.common.Topics;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import java.util.concurrent.TimeUnit;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -22,6 +26,19 @@ public class OrderSagaListener {
     private static final Logger log = LoggerFactory.getLogger(OrderSagaListener.class);
 
     private final OrderRepository repository;
+    private Timer requestedProcessing;
+    private Timer paymentProcessing;
+    private Timer rejectedProcessing;
+
+    @Autowired
+    void registerMetrics(MeterRegistry registry) {
+        requestedProcessing = registry.timer("ticketrush.consumer.processing", "consumer", "order-service",
+                "topic", Topics.ORDERS_REQUESTED);
+        paymentProcessing = registry.timer("ticketrush.consumer.processing", "consumer", "order-service",
+                "topic", Topics.PAYMENTS_RESULT);
+        rejectedProcessing = registry.timer("ticketrush.consumer.processing", "consumer", "order-service",
+                "topic", Topics.ORDERS_REJECTED);
+    }
 
     OrderSagaListener(OrderRepository repository) {
         this.repository = repository;
@@ -29,22 +46,41 @@ public class OrderSagaListener {
 
     @KafkaListener(topics = Topics.ORDERS_REQUESTED)
     void onRequested(OrderRequested event, Acknowledgment ack) {
-        repository.onRequested(event);
-        ack.acknowledge();
+        long started = System.nanoTime();
+        try {
+            repository.onRequested(event);
+            ack.acknowledge();
+        } finally {
+            record(requestedProcessing, started);
+        }
     }
 
     @KafkaListener(topics = Topics.PAYMENTS_RESULT)
     void onPayment(PaymentResult event, Acknowledgment ack) {
-        if (repository.onPayment(event).isEmpty() && event.status() == Status.SUCCEEDED) {
-            warnIfChargedAfterFailure(event);
+        long started = System.nanoTime();
+        try {
+            if (repository.onPayment(event).isEmpty() && event.status() == Status.SUCCEEDED) {
+                warnIfChargedAfterFailure(event);
+            }
+            ack.acknowledge();
+        } finally {
+            record(paymentProcessing, started);
         }
-        ack.acknowledge();
     }
 
     @KafkaListener(topics = Topics.ORDERS_REJECTED)
     void onRejected(ReservationRejected event, Acknowledgment ack) {
-        repository.onRejected(event);
-        ack.acknowledge();
+        long started = System.nanoTime();
+        try {
+            repository.onRejected(event);
+            ack.acknowledge();
+        } finally {
+            record(rejectedProcessing, started);
+        }
+    }
+
+    private static void record(Timer timer, long started) {
+        if (timer != null) timer.record(System.nanoTime() - started, TimeUnit.NANOSECONDS);
     }
 
     /**

@@ -7,6 +7,11 @@ import com.ticketrush.common.Topics;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
@@ -25,6 +30,15 @@ public class TicketsReservedListener {
 
     private final ProviderClient provider;
     private final KafkaTemplate<String, Object> kafka;
+    private Timer processing;
+    @Value("${ticketrush.consumer.processing-delay-ms:0}")
+    private long processingDelayMs;
+
+    @Autowired
+    void registerMetrics(MeterRegistry registry) {
+        processing = registry.timer("ticketrush.consumer.processing", "consumer", "payment-service",
+                "topic", Topics.TICKETS_RESERVED);
+    }
 
     TicketsReservedListener(ProviderClient provider, KafkaTemplate<String, Object> kafka) {
         this.provider = provider;
@@ -34,12 +48,21 @@ public class TicketsReservedListener {
     @KafkaListener(topics = Topics.TICKETS_RESERVED)
     void onTicketsReserved(TicketsReserved reserved, Acknowledgment ack)
             throws ExecutionException, InterruptedException {
-        ProviderClient.Outcome outcome = provider.charge(reserved.orderId(), reserved.amountCents(),
-                reserved.currency());
-        PaymentResult result = new PaymentResult(UUID.randomUUID(), reserved.orderId(), reserved.eventId(),
-                outcome.succeeded() ? Status.SUCCEEDED : Status.FAILED, reserved.amountCents(),
-                reserved.currency(), outcome.chargeId(), outcome.failureReason(), Instant.now());
-        kafka.send(Topics.PAYMENTS_RESULT, reserved.orderId().toString(), result).get();
-        ack.acknowledge();
+        long started = System.nanoTime();
+        try {
+            if (processingDelayMs > 0) Thread.sleep(processingDelayMs);
+            ProviderClient.Outcome outcome = provider.charge(reserved.orderId(), reserved.amountCents(),
+                    reserved.currency());
+            PaymentResult result = new PaymentResult(UUID.randomUUID(), reserved.orderId(), reserved.eventId(),
+                    outcome.succeeded() ? Status.SUCCEEDED : Status.FAILED, reserved.amountCents(),
+                    reserved.currency(), outcome.chargeId(), outcome.failureReason(), Instant.now());
+            kafka.send(Topics.PAYMENTS_RESULT, reserved.orderId().toString(), result).get();
+            ack.acknowledge();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        } finally {
+            if (processing != null) processing.record(System.nanoTime() - started, TimeUnit.NANOSECONDS);
+        }
     }
 }
