@@ -17,7 +17,7 @@
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
       "fieldConfig": {"defaults": {"unit": "s"}},
-      "targets": [{"refId": "A", "expr": "sum by (service, topic) (rate(ticketrush_consumer_processing_seconds_sum[1m])) / clamp_min(sum by (service, topic) (rate(ticketrush_consumer_processing_seconds_count[1m])), 0.000001)", "legendFormat": "{{service}} / {{topic}}"}]
+      "targets": [{"refId": "A", "expr": "sum by (consumer, topic) (rate(ticketrush_consumer_processing_seconds_sum[1m])) / clamp_min(sum by (consumer, topic) (rate(ticketrush_consumer_processing_seconds_count[1m])), 0.000001)", "legendFormat": "{{consumer}} / {{topic}}"}]
     },
     {
       "id": 3, "title": "Accepted orders per second", "type": "timeseries",

@@ -31,6 +31,9 @@ kubeScheduler:
 kubeProxy:
   enabled: false
 prometheusOperator:
+  # Disabling admission hooks also removes the generated TLS Secret.
+  tls:
+    enabled: false
   admissionWebhooks:
     enabled: false
   resources:
