@@ -23,6 +23,18 @@ Checked against Maven Central and Docker Hub on 2026-10-16. Re-check tools for l
 | kind | 0.33 (local tool) | M3. Local cluster `ticketrush`. Installed with `brew install kind`. |
 | PostgreSQL / Redis in Kubernetes | 18.6 / 8.10.2 | M3. Same images as Compose, as plain single-replica StatefulSets with a PVC (no Bitnami, no HA). |
 
+### M5 version and compatibility check (2026-10-31)
+
+| Component | Pinned version | Official source and compatibility |
+|---|---|---|
+| kind node / Kubernetes | `kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed` | [kind 0.33.0 release images](https://github.com/kubernetes-sigs/kind/releases/tag/v0.33.0). Do not use its default 1.37 node: it is outside KEDA's tested range. |
+| KEDA Helm and operator | 2.21.0 | [Official chart index](https://kedacore.github.io/charts/index.yaml), [deployment compatibility](https://keda.sh/docs/2.21/deploy/): tested Kubernetes 1.34 to 1.36. |
+| kube-prometheus-stack / Prometheus Operator | 92.16.1 / 0.94.2 | [Release](https://github.com/prometheus-community/helm-charts/releases/tag/kube-prometheus-stack-92.16.1), [chart metadata](https://github.com/prometheus-community/helm-charts/blob/kube-prometheus-stack-92.16.1/charts/kube-prometheus-stack/Chart.yaml): Kubernetes >=1.25. |
+| Prometheus | 3.15.1 | [Official release](https://github.com/prometheus/prometheus/releases/tag/v3.15.1), [operator compatibility](https://prometheus-operator.dev/docs/getting-started/compatibility/): supports Prometheus >=2.0, published E2E list currently ends at 3.14.0. This newer pin requires live M5 verification. |
+| Grafana | 13.3.0 | [Official release](https://github.com/grafana/grafana/releases/tag/v13.3.0). Provisioned standalone, not the disabled bundled chart. |
+| k6 | 2.3.0 | [Official release](https://github.com/grafana/k6/releases/tag/v2.3.0), [installation](https://grafana.com/docs/k6/latest/set-up/install-k6/). Host CLI, not a Kubernetes operator; no Kubernetes API compatibility dependency. |
+| Micrometer Prometheus registry | Spring Boot BOM-managed | Same version as the existing Boot-managed Micrometer core; no independent version override. |
+
 ## 2. Repo layout
 
 ```
@@ -79,6 +91,10 @@ Rationale:
 | `spring-boot-starter-actuator` (every service) | M3. Readiness and liveness endpoints (`/actuator/health/readiness`, `/actuator/health/liveness`) for the Kubernetes probes. Only the health endpoint is exposed (Boot default). |
 | `spring-boot-starter-webmvc` (inventory, order, notification) | M3. These three had no web server; the probes need an HTTP port. Same starter as the gateway. |
 | `spring-boot-starter-test` (test only) | JUnit 5 and AssertJ for unit tests. |
+| `micrometer-registry-prometheus` (six services) | M5. Exports existing Micrometer meters in Prometheus format at `/actuator/prometheus`; managed by the Boot BOM. |
+| kube-prometheus-stack (operator only), Prometheus and Grafana | M5. ServiceMonitor reconciliation, app scraping and provisioned visualizations; bundled infrastructure dashboards/exporters and Alertmanager disabled to fit kind. |
+| KEDA | M5. Kafka-offset-driven HPA for existing inventory/payment Deployments. |
+| k6 (host CLI) | M5. Measured constant-arrival-rate load, strict request/check/dropped-iteration thresholds. |
 
 Any new dependency must be added to this table with a reason.
 
@@ -190,3 +206,12 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-10-30 | Known limitation (not fixed in M4): a PaymentResult SUCCEEDED for an order already FAILED(TIMEOUT) is not confirmed; it is logged (WARN, charge id) and stays on `payments.result` for a future refund. No refunds yet | Owner decision. The timeout default (120 s) is far above the worst-case payment time (4 x provider timeout 2 s + 7 s backoff = 15 s). |
 | 2026-10-31 | PR 18 review compatibility option: V2 expands the status CHECK before converting existing PAYMENT_FAILED rows to FAILED, and retains PAYMENT_FAILED in the allowed set | The M3 writer must still accept payment failures after an application-image rollback; contraction is deferred. This is compatibility, not an automated schema downgrade. |
 | 2026-10-31 | PR 18 review replay fix: reserve.lua returns rejected for an order marked released=1, without changing stock | A restored reservation must never be republished as held or trigger a new provider call. |
+| 2026-10-31 | M5 exposes only health and prometheus on all six HTTP servers. Processing timers have exactly consumer/topic tags; acknowledged gateway POST counter has no tags; saga counters have outcome CONFIRMED/FAILED/REJECTED | Bounded cardinality, no customer/order/event identifiers. Timers count attempts including retries and errors; gateway counter includes successful duplicate POSTs, not unique orders. |
+| 2026-10-31 | Saga counters increment after transaction commit for effective SQL RETURNING transitions, including timeout as FAILED, not during outbox publication | Rollback and concurrent replay must not increase outcomes; filling late request metadata must not count the same terminal state twice. Counters reset on process restart and are not an audit ledger. |
+| 2026-10-31 | Strimzi's existing Kafka exporter plus a PodMonitor supplies `kafka_consumergroup_lag_sum{consumergroup,topic}` and raw per-partition `kafka_consumergroup_lag{consumergroup,topic,partition}`; dashboard/acceptance use the group/topic total. Six ServiceMonitors scrape app timers/counters every 5 seconds | Actual group offsets and broker end offsets, not client-local estimates. [Strimzi exporter configuration](https://strimzi.io/docs/operators/latest/configuring.html#type-KafkaExporterSpec-reference). No topic/schema/key/partition changes. |
+| 2026-10-31 | KEDA Kafka triggers use inventory-service/orders.requested and payment-service/tickets.reserved, threshold 10, min 1, max 2 (12 partitions), polling 5 s, cooldown 30 s, HPA scaleDown stabilization 30 s | HPA owns replicas, so Helm omits replicas for these Deployments. With min 1, HPA stabilization governs scale-down to 1; KEDA cooldown controls scale-to-zero, which is disabled. [Kafka scaler](https://keda.sh/docs/2.21/scalers/apache-kafka/). |
+| 2026-10-31 | M5 uses kube-prometheus-stack for the operator/CRDs only; standalone Prometheus CR and provisioned Grafana StatefulSet, short 2 h ephemeral metrics retention, no Alertmanager/node exporter/kube-state-metrics | Laptop footprint, only the requested four application signal areas. Grafana is ephemeral but reprovisions dashboard/datasource on restart. Random admin password stored in a Secret, preserved by lookup on upgrades. |
+| 2026-10-31 | `scripts/m5-up.sh` extends the M3 build/load/bootstrap pattern with operators and a pinned KEDA-compatible kind node. M3 bootstrap explicitly disables M5 CRs | Keep the original bootstrap usable without new operator CRDs; running it over an M5 release removes monitoring/scaling, so use separate runs/clusters. |
+| 2026-10-31 | Optional inventory/payment `CONSUMER_PROCESSING_DELAY_MS`, default 0, enabled via `M5_CONSUMER_PROCESSING_DELAY_MS` only for demonstrations | Deliberately create measurable backlog without changing Kafka keys or business behavior. A single show still occupies one inventory partition; k6 uses 24 isolated shows. Rebalancing and backlog must stay below the saga timeout. |
+| 2026-10-31 | Acceptance makes one isolated real warm-up purchase and waits for confirmation plus real zero-lag vectors before measuring the baseline; no purchase side effects in bootstrap | Exporter omits group/topic series before any offset commit. Its raw partition lag is -1 for uncommitted partitions; its lag_sum sums known offsets, so never sum raw -1 sentinels. Unknown partitions can temporarily underreport backlog; KEDA independently queries Kafka, and measured high lag is still required for each causal scale-up. |
+| 2026-10-31 | KEDA operator lives in the app namespace; Grafana has a bounded 300 s startup probe and 512Mi/1 CPU limits | Short bootstrap DNS must resolve in the same namespace for app and scaler. At 256Mi/500m Grafana 13 repeatedly exceeded 300 s without opening HTTP; the resized fresh pod became Ready in 10 s. Prometheus operator TLS is off together with admission hooks, avoiding a reference to a Secret the disabled hooks never create. |

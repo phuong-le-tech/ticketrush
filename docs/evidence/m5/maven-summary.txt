@@ -1,0 +1,69 @@
+Per-class test results:
+com.ticketrush.common.EventJsonRoundTripTest 11 0 0 0
+com.ticketrush.common.TopicsTest 1 0 0 0
+com.ticketrush.common.EventTypeHeaderTest 8 0 0 0
+com.ticketrush.gateway.OrderIdempotencyTest 11 0 0 0
+com.ticketrush.gateway.KafkaUnavailableTest 1 0 0 0
+com.ticketrush.gateway.OrderValidationTest 6 0 0 0
+com.ticketrush.gateway.ActuatorProbesIT 2 0 0 0
+com.ticketrush.gateway.OrderPublishIT 2 0 0 0
+com.ticketrush.gateway.PrometheusIT 1 0 0 0
+com.ticketrush.inventory.MetricsTest 6 0 0 0
+com.ticketrush.inventory.PricingTest 2 0 0 0
+com.ticketrush.inventory.ReleaseIT 2 0 0 0
+com.ticketrush.inventory.ReservationFlowIT 7 0 0 0
+com.ticketrush.inventory.InventoryRepositoryIT 10 0 0 0
+com.ticketrush.inventory.ActuatorProbesIT 2 0 0 0
+com.ticketrush.inventory.PrometheusIT 1 0 0 0
+com.ticketrush.payment.MetricsTest 3 0 0 0
+com.ticketrush.payment.ActuatorProbesIT 2 0 0 0
+com.ticketrush.payment.PaymentFlowIT 5 0 0 0
+com.ticketrush.payment.PrometheusIT 1 0 0 0
+com.ticketrush.provider.ActuatorProbesIT 2 0 0 0
+com.ticketrush.provider.ChargeControllerIT 10 0 0 0
+com.ticketrush.provider.PrometheusIT 1 0 0 0
+com.ticketrush.order.MetricsTest 9 0 0 0
+com.ticketrush.order.MigrationCompatibilityIT 2 0 0 0
+com.ticketrush.order.OrderSchemaIT 3 0 0 0
+com.ticketrush.order.ActuatorProbesIT 2 0 0 0
+com.ticketrush.order.OrderSagaIT 10 0 0 0
+com.ticketrush.order.OutboxIT 3 0 0 0
+com.ticketrush.order.PrometheusIT 1 0 0 0
+com.ticketrush.order.SagaReaperIT 32 0 0 0
+com.ticketrush.order.SagaMetricsIT 8 0 0 0
+com.ticketrush.notification.MetricsTest 3 0 0 0
+com.ticketrush.notification.ActuatorProbesIT 2 0 0 0
+com.ticketrush.notification.NotificationIT 1 0 0 0
+com.ticketrush.notification.PrometheusIT 1 0 0 0
+com.ticketrush.e2e.OversellE2ETest 1 0 0 0
+com.ticketrush.e2e.DltE2ETest 21 0 0 0
+com.ticketrush.e2e.MetricsE2ETest 3 0 0 0
+com.ticketrush.e2e.FailureE2ETest 9 0 0 0
+com.ticketrush.e2e.ReplayE2ETest 2 0 0 0
+com.ticketrush.e2e.PurchaseFlowE2ETest 1 0 0 0
+com.ticketrush.e2e.OutboxE2ETest 2 0 0 0
+Totals (tests, failures, errors, skipped): [213, 0, 0, 0]
+[INFO] --- jar:3.4.1:jar (default-jar) @ e2e-tests ---
+[WARNING] JAR will be empty - no content was marked for inclusion!
+[INFO]
+[INFO] --- failsafe:3.2.5:integration-test (default) @ e2e-tests ---
+[INFO]
+[INFO] --- failsafe:3.2.5:verify (default) @ e2e-tests ---
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for ticketrush-parent 0.1.0-SNAPSHOT:
+[INFO]
+[INFO] ticketrush-parent .................................. SUCCESS [  0.001 s]
+[INFO] common ............................................. SUCCESS [  1.812 s]
+[INFO] api-gateway ........................................ SUCCESS [ 18.595 s]
+[INFO] inventory-service .................................. SUCCESS [ 42.113 s]
+[INFO] payment-service .................................... SUCCESS [ 49.813 s]
+[INFO] fake-payment-provider .............................. SUCCESS [  5.774 s]
+[INFO] order-service ...................................... SUCCESS [ 47.093 s]
+[INFO] notification-service ............................... SUCCESS [ 20.240 s]
+[INFO] e2e-tests .......................................... SUCCESS [14:07 min]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  17:13 min
+[INFO] Finished at: 2026-10-31T06:35:42+01:00
+[INFO] ------------------------------------------------------------------------
