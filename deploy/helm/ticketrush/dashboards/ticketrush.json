@@ -10,7 +10,7 @@
       "id": 1, "title": "Kafka consumer lag", "type": "timeseries",
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-      "targets": [{"refId": "A", "expr": "sum by (consumergroup, topic) (kafka_consumergroup_lag)", "legendFormat": "{{consumergroup}} / {{topic}}"}]
+      "targets": [{"refId": "A", "expr": "sum by (consumergroup, topic) (kafka_consumergroup_lag_sum)", "legendFormat": "{{consumergroup}} / {{topic}}"}]
     },
     {
       "id": 2, "title": "Mean consumer processing time", "type": "timeseries",

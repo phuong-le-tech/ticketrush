@@ -106,6 +106,10 @@ spec:
           resources:
             requests: {cpu: 50m, memory: 128Mi}
             limits: {cpu: 500m, memory: 256Mi}
+          startupProbe:
+            httpGet: {path: /api/health, port: http}
+            failureThreshold: 60
+            periodSeconds: 5
           readinessProbe:
             httpGet: {path: /api/health, port: http}
           livenessProbe:

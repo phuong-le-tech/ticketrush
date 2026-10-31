@@ -83,7 +83,7 @@ helm --kube-context "$CONTEXT" upgrade --install monitoring-operator \
   --namespace "$NS" -f deploy/helm/monitoring-operator-values.yaml --wait --timeout 300s
 log "KEDA 2.21.0"
 helm --kube-context "$CONTEXT" upgrade --install keda https://kedacore.github.io/charts/keda-2.21.0.tgz \
-  --namespace keda --create-namespace --wait --timeout 300s
+  --namespace "$NS" --wait --timeout 300s
 kubectl --context "$CONTEXT" wait --for=condition=Established --timeout=120s \
   crd/servicemonitors.monitoring.coreos.com crd/podmonitors.monitoring.coreos.com \
   crd/prometheuses.monitoring.coreos.com crd/scaledobjects.keda.sh
