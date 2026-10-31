@@ -62,6 +62,36 @@ class FailureE2ETest {
         }
     }
 
+    @Test
+    void releasedReservationReplayNeverEmitsReservedOrCallsProvider() throws Exception {
+        try (var stack = start("released-replay", 4, "1.0");
+             var proxy = new FaultProxy(stack, Fault.HTTP500)) {
+            UUID id = buy(stack, "released-replay", "released-buyer");
+            awaitStatus(stack, id, "FAILED");
+            awaitStock(stack, "released-replay", 4);
+            awaitOutboxPublished(stack);
+            awaitReleaseConsumed(stack);
+            stack.awaitQuiescent(SETTLE);
+            assertThat(stack.redis().opsForHash().get("inventory:order:" + id, "released")).isEqualTo("1");
+            assertThat(records(stack, Topics.TICKETS_RESERVED, id)).hasSize(1);
+            int providerCalls = proxy.keys().size();
+            assertThat(providerCalls).isGreaterThanOrEqualTo(2);
+
+            replayConcurrently(stack, records(stack, Topics.ORDERS_REQUESTED, id), 10);
+            stack.awaitQuiescent(SETTLE);
+            awaitReleaseConsumed(stack);
+
+            assertThat(records(stack, Topics.TICKETS_RESERVED, id)).hasSize(1);
+            assertThat(proxy.keys()).hasSize(providerCalls);
+            assertThat(records(stack, Topics.ORDERS_REJECTED, id)).hasSize(10);
+            assertThat(stack.stock("released-replay")).isEqualTo("4");
+            assertThat(stack.chargeCount(id)).isZero();
+            assertThat(stack.orderStatus(id)).isEqualTo("FAILED");
+            assertThat(records(stack, Topics.ORDERS_CONFIRMED, id)).isEmpty();
+            assertThat(proxy.errors()).isEmpty();
+        }
+    }
+
     @ParameterizedTest(name = "AC2 failed payment and release replay copies={0}")
     @ValueSource(ints = {1, 10})
     void AC2_oneAndTenConcurrentFailedReplaysRestoreOnce(int copies) throws Exception {
