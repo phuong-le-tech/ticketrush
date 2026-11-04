@@ -1,0 +1,481 @@
+{
+  "archive": "docs/evidence/m6/raw-logs.zip",
+  "sha256": "e75c416a31ffc911c8e08611eb452d445f9a2d763c9a6d51384ca13008f8fb03",
+  "preservation": "Verbatim bytes; every member compared to its source after writing.",
+  "files": [
+    {
+      "member": "m6-broker-restart-1793786582291791000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786582291791000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "fa80be72d6cfee36a561ae986451a85fd3d513681c727c130ab67840d591b7d5"
+    },
+    {
+      "member": "m6-broker-restart-1793786582291791000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786582291791000/fake-payment-provider-forward.log",
+      "bytes": 28840,
+      "sha256": "fb30a2792ef0e2fafd2e4b23b8c594e504c999788e575791b54202eae4df7b9e"
+    },
+    {
+      "member": "m6-broker-restart-1793786582291791000/k6.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786582291791000/k6.log",
+      "bytes": 121964,
+      "sha256": "72cd310f5ee8d2ff87fe9caacb375141099bc97d168fded9703644807d089636"
+    },
+    {
+      "member": "m6-broker-restart-1793786582291791000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786582291791000/prometheus-forward.log",
+      "bytes": 1960,
+      "sha256": "bcd6274b5a3dd884c4bf6e2b4b54b73864cac654fb08f26e58cc6dba5e6d76ac"
+    },
+    {
+      "member": "m6-broker-restart-1793786713567421000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786713567421000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "d0da6d0808d824173077f8a9c0053fde1e3286a70bbfead59b579de74a7ec4d5"
+    },
+    {
+      "member": "m6-broker-restart-1793786713567421000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786713567421000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "e2c34e4c0dbad75370e321343dca4cadc412ade3f17169b3aeef5259049a302e"
+    },
+    {
+      "member": "m6-broker-restart-1793786713567421000/k6.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786713567421000/k6.log",
+      "bytes": 122073,
+      "sha256": "d1112587841ae94f275285ee872ef9947abd2aaaed2f70bed9257a06d364e110"
+    },
+    {
+      "member": "m6-broker-restart-1793786713567421000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786713567421000/prometheus-forward.log",
+      "bytes": 1960,
+      "sha256": "7c7ecbba27a9904c51b6735054e2c0f0f16a46ea4a9de4a3d68f5a7c02bd1755"
+    },
+    {
+      "member": "m6-broker-restart-1793786843651282000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786843651282000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "6c3daf6e553399430f0869761c507f09e3468e46e3908d02850dfa7804c2112a"
+    },
+    {
+      "member": "m6-broker-restart-1793786843651282000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786843651282000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "a1bea6ec294aaf44fd403f3516e116f5a25b155629ed48d0845da1487cafbaf3"
+    },
+    {
+      "member": "m6-broker-restart-1793786843651282000/k6.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786843651282000/k6.log",
+      "bytes": 122073,
+      "sha256": "27970d344f00dd076ee5c056d39ecb1b6eebd40666673552c0570cafc0117c0c"
+    },
+    {
+      "member": "m6-broker-restart-1793786843651282000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-broker-restart-1793786843651282000/prometheus-forward.log",
+      "bytes": 1960,
+      "sha256": "8cf309e6b97e9e894b1a68e57dbe0da7791dc0344c3aa67dca82ce1eab8dfd24"
+    },
+    {
+      "member": "m6-consumer-ramp-1793788102587266000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-consumer-ramp-1793788102587266000/api-gateway-forward.log",
+      "bytes": 141258,
+      "sha256": "593cc6ee9219e0e998c8299902b1ec3be4d9bd25f62cceacb539209a2bb988c3"
+    },
+    {
+      "member": "m6-consumer-ramp-1793788102587266000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-consumer-ramp-1793788102587266000/fake-payment-provider-forward.log",
+      "bytes": 40,
+      "sha256": "1c2e580edf879fe546b0aeb0f8476ed1221367b26c1adb27f63e1269373daa0b"
+    },
+    {
+      "member": "m6-consumer-ramp-1793788102587266000/k6.log",
+      "source": "docs/evidence/m6/m6-consumer-ramp-1793788102587266000/k6.log",
+      "bytes": 196613,
+      "sha256": "d99789b13e2aa913d86f3b4fbf560d0e96c134b81d88d4bf044b5a36fcb99143"
+    },
+    {
+      "member": "m6-consumer-ramp-1793788102587266000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-consumer-ramp-1793788102587266000/prometheus-forward.log",
+      "bytes": 1000,
+      "sha256": "0227c5c622060822666a9fcbf9dc00e69a870fd96717e5f8a111ddf79ae41a16"
+    },
+    {
+      "member": "m6-inventory-kill-1793785168604883000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785168604883000/api-gateway-forward.log",
+      "bytes": 820,
+      "sha256": "66e9f228085429adaab9a0d5f5bc693cff056d732a6cb273f14b679778b2ea2b"
+    },
+    {
+      "member": "m6-inventory-kill-1793785168604883000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785168604883000/fake-payment-provider-forward.log",
+      "bytes": 40,
+      "sha256": "f6aea6578de15059209163c7ad6b666f274260f721e2433d366849519f532985"
+    },
+    {
+      "member": "m6-inventory-kill-1793785168604883000/k6.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785168604883000/k6.log",
+      "bytes": 830709,
+      "sha256": "f974d0110d3ac663aef12db25b1943875a28ca048b2b99d26497538e9affae59"
+    },
+    {
+      "member": "m6-inventory-kill-1793785168604883000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785168604883000/prometheus-forward.log",
+      "bytes": 1420,
+      "sha256": "8fcf344bba59a11276d1781525c456a5c360eb753acd397cc9761975e157b542"
+    },
+    {
+      "member": "m6-inventory-kill-1793785408527003000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785408527003000/api-gateway-forward.log",
+      "bytes": 610,
+      "sha256": "2f8e7f64a20c23f0a8763fd65795f3869b2b03cdd642451c966fb2eba9b594e8"
+    },
+    {
+      "member": "m6-inventory-kill-1793785408527003000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785408527003000/fake-payment-provider-forward.log",
+      "bytes": 40,
+      "sha256": "ac39d653b047897e26899ab6d18d55fbadfb9a0130391444be332ea7e8662ada"
+    },
+    {
+      "member": "m6-inventory-kill-1793785408527003000/k6.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785408527003000/k6.log",
+      "bytes": 121881,
+      "sha256": "60de4a7495292df8b24f60a854ad8e43424d57683f178cba99839f5afc89f3c2"
+    },
+    {
+      "member": "m6-inventory-kill-1793785408527003000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785408527003000/prometheus-forward.log",
+      "bytes": 1240,
+      "sha256": "cb10162f505fc3623a19bc2b479acb16dbdae2ae99a6c4862efec38981e6638f"
+    },
+    {
+      "member": "m6-inventory-kill-1793785612760753000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785612760753000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "548a872ab0e03b633124be32179018f265cbbef91a26bfe23093ab5d4e772abd"
+    },
+    {
+      "member": "m6-inventory-kill-1793785612760753000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785612760753000/fake-payment-provider-forward.log",
+      "bytes": 28840,
+      "sha256": "439c092bdfd31adcce05f3031b0829844b68b6bad167fb9270d6dae2b234f7e8"
+    },
+    {
+      "member": "m6-inventory-kill-1793785612760753000/k6.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785612760753000/k6.log",
+      "bytes": 121960,
+      "sha256": "a711581f756470140e670b6fd6582eebc760e717edc472cd71e736118df287e5"
+    },
+    {
+      "member": "m6-inventory-kill-1793785612760753000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785612760753000/prometheus-forward.log",
+      "bytes": 1540,
+      "sha256": "498808c0fa199cdefb09f76f1149e456616ef0e5a1c9bc8d44833868c3ffe028"
+    },
+    {
+      "member": "m6-inventory-kill-1793785755530496000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785755530496000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "7625134081085c4f769690454193af6eff38bb5f716ceaa5cee33fc34f1d0d1c"
+    },
+    {
+      "member": "m6-inventory-kill-1793785755530496000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785755530496000/fake-payment-provider-forward.log",
+      "bytes": 40,
+      "sha256": "fb8f06de296e5bbf0715ad9f2842937d856d0be719ad16f746f386b6c1c1cf49"
+    },
+    {
+      "member": "m6-inventory-kill-1793785755530496000/k6.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785755530496000/k6.log",
+      "bytes": 121976,
+      "sha256": "1a618c17215f2493d99f202e10b595739a977bf6fbe59e6c4091ee85d9475c0e"
+    },
+    {
+      "member": "m6-inventory-kill-1793785755530496000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793785755530496000/prometheus-forward.log",
+      "bytes": 1660,
+      "sha256": "d09fecf131490eb547405aff77d45ab362574a71a70e8515799e51f3aa0779be"
+    },
+    {
+      "member": "m6-inventory-kill-1793786175805766000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786175805766000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "94b04f1e8b0d07588f1ff9d5b567229c0405d6fbefb881fed3675109a00a9340"
+    },
+    {
+      "member": "m6-inventory-kill-1793786175805766000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786175805766000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "a49a0a6c4b6c82a005edc2bd7085e954578ec44f8a1c4a4fdb88c762e789c51f"
+    },
+    {
+      "member": "m6-inventory-kill-1793786175805766000/k6.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786175805766000/k6.log",
+      "bytes": 122079,
+      "sha256": "d79c59bdf1e2778384c1492975052099909231290f04cec856cab87ea26343ac"
+    },
+    {
+      "member": "m6-inventory-kill-1793786175805766000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786175805766000/prometheus-forward.log",
+      "bytes": 1840,
+      "sha256": "2e2433fd2d8764aa51e7d01674dea77d8e9c97fea1db757abc1bdf6c8fa1381e"
+    },
+    {
+      "member": "m6-inventory-kill-1793786312088218000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786312088218000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "9306092fcde1e4d1939cf7c3689b8240dc37c4fc769fba8f59475d641c180c77"
+    },
+    {
+      "member": "m6-inventory-kill-1793786312088218000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786312088218000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "c17431148010fc21c6e416b30d4ce27d96a820d5f78fdd7bb55bfb772da43b3b"
+    },
+    {
+      "member": "m6-inventory-kill-1793786312088218000/k6.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786312088218000/k6.log",
+      "bytes": 122073,
+      "sha256": "48b9c3ab5002dec02306083ff0bbfe90ddd0fda0aba1c10064beef72d7060d79"
+    },
+    {
+      "member": "m6-inventory-kill-1793786312088218000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786312088218000/prometheus-forward.log",
+      "bytes": 2080,
+      "sha256": "2708cf7bd47d24657a96a0df698f1e61e352c4d4da87949829b2a4ef71d21c6c"
+    },
+    {
+      "member": "m6-inventory-kill-1793786446569085000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786446569085000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "96babd06910264eeff5b6ddb97cbdebff20367974a43da1c9efd46b68fdeb335"
+    },
+    {
+      "member": "m6-inventory-kill-1793786446569085000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786446569085000/fake-payment-provider-forward.log",
+      "bytes": 28840,
+      "sha256": "7f3dc871768b9c79fe0e3b088648ce84ac7786d180c82ed0d4280756491b6fad"
+    },
+    {
+      "member": "m6-inventory-kill-1793786446569085000/k6.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786446569085000/k6.log",
+      "bytes": 121964,
+      "sha256": "13936a6b8615107ed6b4034b34f437ed847cd367f8a218775e4fbbb16b654f6d"
+    },
+    {
+      "member": "m6-inventory-kill-1793786446569085000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-inventory-kill-1793786446569085000/prometheus-forward.log",
+      "bytes": 2260,
+      "sha256": "8e4bb63d600d4049619ef0fb7b8d3395833df5a72ca322a0f184d0aaa57f827f"
+    },
+    {
+      "member": "m6-payment-declines-1793787117900791000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787117900791000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "18d73abe1522b2b0aa3bd7a9d5547e8c0652f04a5ea0cf9ee9d3ccc33548323e"
+    },
+    {
+      "member": "m6-payment-declines-1793787117900791000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787117900791000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "3d586ca028db79af35a13f3ad40334b139e5116ee943511dd042c3f1a7865625"
+    },
+    {
+      "member": "m6-payment-declines-1793787117900791000/k6.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787117900791000/k6.log",
+      "bytes": 122067,
+      "sha256": "c71f278ab2843e7f01918e67a18d3f2f2fbd5fda8dfb018afddfaf2e4ab4f586"
+    },
+    {
+      "member": "m6-payment-declines-1793787117900791000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787117900791000/prometheus-forward.log",
+      "bytes": 160,
+      "sha256": "e4b1b931310572098a37c6688408154fa23a8777c43ea3c8c76e276bfd674192"
+    },
+    {
+      "member": "m6-payment-declines-1793787407150655000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787407150655000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "5d037cc09de992e9a7229cae4e002e61c45f78dcb4c93105041518dce0c79b64"
+    },
+    {
+      "member": "m6-payment-declines-1793787407150655000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787407150655000/fake-payment-provider-forward.log",
+      "bytes": 28840,
+      "sha256": "b9a859a305ab409a4c26029ac140dc1c71dd92ec0a5252803eb22eb18b052fef"
+    },
+    {
+      "member": "m6-payment-declines-1793787407150655000/k6.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787407150655000/k6.log",
+      "bytes": 121960,
+      "sha256": "4ca072e897e0a9391cea1055c0dde04bafdc70bb8b31838ef9ca36635ba5f17c"
+    },
+    {
+      "member": "m6-payment-declines-1793787407150655000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787407150655000/prometheus-forward.log",
+      "bytes": 160,
+      "sha256": "44dde37a8187af27aa609d79de2637b81e728041c42dbb339c93954a8024869b"
+    },
+    {
+      "member": "m6-payment-declines-1793787555934552000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787555934552000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "bda4df48a9c9f41ecef1c09d3c1a989c596a5b300b0d1eb9b69b587657b99d9c"
+    },
+    {
+      "member": "m6-payment-declines-1793787555934552000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787555934552000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "d255f10b52b527b31602fbcd50a99eb02fa76e5fe9d47c12df88172d0672b9b1"
+    },
+    {
+      "member": "m6-payment-declines-1793787555934552000/k6.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787555934552000/k6.log",
+      "bytes": 122070,
+      "sha256": "e40902b0193a41353800e84a61a844a7648c917c956709d386c9904d2e7f64af"
+    },
+    {
+      "member": "m6-payment-declines-1793787555934552000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-payment-declines-1793787555934552000/prometheus-forward.log",
+      "bytes": 160,
+      "sha256": "376bb70c86203175f48ea8d443690ae85d8b2a8d13780fd4b02cc720f9b9514c"
+    },
+    {
+      "member": "m6-postgres-latency-1793787705384289000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787705384289000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "43a7620d94910b0e06bd852888a3af5920a55d22161d385da34f0d015b9adbb7"
+    },
+    {
+      "member": "m6-postgres-latency-1793787705384289000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787705384289000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "e84a1acda0b26a06c1731a8312fa99211f90c67cfbdf9f06d82f43a4a3a42ef4"
+    },
+    {
+      "member": "m6-postgres-latency-1793787705384289000/k6.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787705384289000/k6.log",
+      "bytes": 122067,
+      "sha256": "7a90cf346b36b89533c814894ab49bf0dea9be694b2732884d9ecbc16d60aa8e"
+    },
+    {
+      "member": "m6-postgres-latency-1793787705384289000/postgres-lock.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787705384289000/postgres-lock.log",
+      "bytes": 57,
+      "sha256": "ad7b442c4ba4c7c57aca13a7b74973ad4810756ef176e4846f1dd9de5e16b9f9"
+    },
+    {
+      "member": "m6-postgres-latency-1793787705384289000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787705384289000/prometheus-forward.log",
+      "bytes": 4600,
+      "sha256": "6e7387e72a0d6d3bf8832d968209172b3af27612ae0212325cd0e69344a3f195"
+    },
+    {
+      "member": "m6-postgres-latency-1793787838420505000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787838420505000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "6c78a54e30657a2e5d9b04e5fb9feb75f476bcaf5c56afc12d2ad135e575e751"
+    },
+    {
+      "member": "m6-postgres-latency-1793787838420505000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787838420505000/fake-payment-provider-forward.log",
+      "bytes": 28840,
+      "sha256": "c947ba5552344e1aab4c2afdc7715f948c9acc0203eaacb4f10ef809039257bd"
+    },
+    {
+      "member": "m6-postgres-latency-1793787838420505000/k6.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787838420505000/k6.log",
+      "bytes": 121958,
+      "sha256": "9eb4e5455ef33b1be89758eae404eef1e6740492ded4e3a64d65a4528aa2fb8b"
+    },
+    {
+      "member": "m6-postgres-latency-1793787838420505000/postgres-lock.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787838420505000/postgres-lock.log",
+      "bytes": 57,
+      "sha256": "ad7b442c4ba4c7c57aca13a7b74973ad4810756ef176e4846f1dd9de5e16b9f9"
+    },
+    {
+      "member": "m6-postgres-latency-1793787838420505000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787838420505000/prometheus-forward.log",
+      "bytes": 4720,
+      "sha256": "9561400d6c52370bea536178b279721c1245c912026f16e2c72f3d5f96738822"
+    },
+    {
+      "member": "m6-postgres-latency-1793787970340420000/api-gateway-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787970340420000/api-gateway-forward.log",
+      "bytes": 1960,
+      "sha256": "21be6e4d8f1f6254c1df15500e583de78cee6d65f5e4a114f367f765dae57397"
+    },
+    {
+      "member": "m6-postgres-latency-1793787970340420000/fake-payment-provider-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787970340420000/fake-payment-provider-forward.log",
+      "bytes": 28870,
+      "sha256": "3cf97523430692996c9b7c61b2aa0e58bb3455d955866fe2b655cf2c8c7b5ec5"
+    },
+    {
+      "member": "m6-postgres-latency-1793787970340420000/k6.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787970340420000/k6.log",
+      "bytes": 122067,
+      "sha256": "f16ec8cee487446f5a810314d8adc1bd99d1c4937fcfbb9b4736d92bf3715b4a"
+    },
+    {
+      "member": "m6-postgres-latency-1793787970340420000/postgres-lock.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787970340420000/postgres-lock.log",
+      "bytes": 57,
+      "sha256": "ad7b442c4ba4c7c57aca13a7b74973ad4810756ef176e4846f1dd9de5e16b9f9"
+    },
+    {
+      "member": "m6-postgres-latency-1793787970340420000/prometheus-forward.log",
+      "source": "docs/evidence/m6/m6-postgres-latency-1793787970340420000/prometheus-forward.log",
+      "bytes": 4720,
+      "sha256": "a7627cd50b6ef7dde62db0c77f614a3843f8cffc9314e6a496f5df10f12e384d"
+    },
+    {
+      "member": "verification-history/m6-bootstrap-retry.log",
+      "source": "target/m6-bootstrap-retry.log",
+      "bytes": 11731,
+      "sha256": "4ec17f27693dc2445d29ca57abca96c9f21c9aa68d6d2ad0f154ccb003f62d20"
+    },
+    {
+      "member": "verification-history/m6-bootstrap.log",
+      "source": "target/m6-bootstrap.log",
+      "bytes": 249,
+      "sha256": "665152d0571191b376f87dce1f19a915e502be66825cab1101e0978829d121ab"
+    },
+    {
+      "member": "verification-history/m6-first-live.log",
+      "source": "target/m6-first-live.log",
+      "bytes": 5881,
+      "sha256": "154ea5f59417f147b698aca8080b8cffa539393f82fc59de1dc83c1b6b468383"
+    },
+    {
+      "member": "verification-history/m6-live-final.log",
+      "source": "target/m6-live-final.log",
+      "bytes": 49104,
+      "sha256": "1b849f679d13c4333aaa3395e90003b714ce5c160eff7eb62a2447a9a70336a1"
+    },
+    {
+      "member": "verification-history/m6-live-resume-final.log",
+      "source": "target/m6-live-resume-final.log",
+      "bytes": 50332,
+      "sha256": "e002d3f4804934d8d48fdd1e7023a69bbbc85c887204c7acaea2b4d7a2fe64ad"
+    },
+    {
+      "member": "verification-history/m6-live-resume.log",
+      "source": "target/m6-live-resume.log",
+      "bytes": 10149,
+      "sha256": "594b73087af1bed79a1aaa2a2514188fd45193704a480786974188127807cde6"
+    },
+    {
+      "member": "verification-history/m6-live.log",
+      "source": "target/m6-live.log",
+      "bytes": 13144,
+      "sha256": "0cada55e235242f8843ebb0dbdfe242992cc90ccb9b48325256fafe740fe36f0"
+    },
+    {
+      "member": "verification-history/m6-second-live.log",
+      "source": "target/m6-second-live.log",
+      "bytes": 5200,
+      "sha256": "5327a158fed8ca49790ef3f9a9919d3a8f051baea69875acf97eb2613f96a152"
+    }
+  ]
+}

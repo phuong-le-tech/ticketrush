@@ -1,0 +1,39 @@
+M6 partial execution report, 2026-11-04
+Status: BLOCKED, not milestone acceptance.
+
+NOT RUN: mvn verify - the local Docker/kind runtime became unhealthy during the first consumer ramp.
+No new Maven test count or BUILD SUCCESS is claimed in this implementation run.
+
+The unqualified scripts/m6-chaos.sh batch exited 1 before payment load:
+FAIL m6-chaos: provider audit requires one pod
+That collector baseline issue was fixed test-first by excluding terminating rollout pods.
+
+The first resumed command then rejected a completed payment audit because the checker confused
+PROVIDER_DECLINED (actual SQL failure reason) with PAYMENT_FAILED (synthetic release-reason fixture).
+The unchanged real JSON re-evaluated PASS after a new regression and evaluator-only fix.
+
+The final scripts/m6-chaos.sh --resume completed the missing payment and Postgres audits, then
+stalled on the first inventory ramp. Its collector was stopped after best-effort restoration.
+The collector process and its shell were confirmed absent afterward (PIDs 59557 and 59541).
+No ramp result, recovery time, invariant pass, cleanup-probe acceptance or single-show benchmark is claimed.
+
+Actual runtime/management diagnostics:
+- Inventory rollout: 5 out of 8 new replicas updated, then 180s rollout timeout; not eight Ready.
+- kubectl: net/http: TLS handshake timeout.
+- docker stats: command timed out after 25 seconds.
+- crictl: validate CRI v1 runtime API for /run/containerd/containerd.sock:
+  rpc error: code = DeadlineExceeded desc = context deadline exceeded.
+- Project-node docker stop/start: BLOCKED by the unattended terminal approval gate. It did not execute.
+- Later API reads returned desired replicas 1 for both consumers and ScaledObject max=2, but
+  inventory status still showed 5 up-to-date replicas for desired 1. ScaledObject Paused status
+  was still True despite successful annotation-removal patches. Reconciliation/rollout is not verified.
+
+The failed ramp's commands.jsonl records successful restoration patches for both deployments'
+original resources/JVM options, desired replicas 1, provider failure rate 0, ScaledObject max=2,
+and removal of the pause annotations. Successful patch responses are NOT proof of runtime recovery.
+Baseline settings are preserved in:
+docs/evidence/m6/m6-consumer-ramp-1793788102587266000/before.json
+
+Operator action required: recover the local project Docker/kind runtime using an approved lifecycle
+action, verify baseline reconciliation, then investigate startup/resource pressure before retrying.
+Do not rerun the existing ramp blindly. No application code, database/event schema or M5 chart defaults changed.

@@ -1,0 +1,116 @@
+{
+  "replicas": {
+    "inventory-service": 1,
+    "payment-service": 1
+  },
+  "resources": {
+    "inventory-service": {
+      "limits": {
+        "cpu": "1",
+        "memory": "512Mi"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "384Mi"
+      }
+    },
+    "payment-service": {
+      "limits": {
+        "cpu": "1",
+        "memory": "512Mi"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "384Mi"
+      }
+    }
+  },
+  "scaledobjects": {
+    "inventory-service": {
+      "spec": {
+        "advanced": {
+          "horizontalPodAutoscalerConfig": {
+            "behavior": {
+              "scaleDown": {
+                "stabilizationWindowSeconds": 30
+              }
+            }
+          },
+          "scalingModifiers": {}
+        },
+        "cooldownPeriod": 30,
+        "maxReplicaCount": 2,
+        "minReplicaCount": 1,
+        "pollingInterval": 5,
+        "scaleTargetRef": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "name": "inventory-service"
+        },
+        "triggers": [
+          {
+            "metadata": {
+              "bootstrapServers": "ticketrush-kafka-bootstrap:9092",
+              "consumerGroup": "inventory-service",
+              "lagThreshold": "10",
+              "offsetResetPolicy": "earliest",
+              "topic": "orders.requested"
+            },
+            "type": "kafka"
+          }
+        ]
+      },
+      "annotations": {
+        "meta.helm.sh/release-name": "ticketrush",
+        "meta.helm.sh/release-namespace": "ticketrush"
+      }
+    },
+    "payment-service": {
+      "spec": {
+        "advanced": {
+          "horizontalPodAutoscalerConfig": {
+            "behavior": {
+              "scaleDown": {
+                "stabilizationWindowSeconds": 30
+              }
+            }
+          },
+          "scalingModifiers": {}
+        },
+        "cooldownPeriod": 30,
+        "maxReplicaCount": 2,
+        "minReplicaCount": 1,
+        "pollingInterval": 5,
+        "scaleTargetRef": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "name": "payment-service"
+        },
+        "triggers": [
+          {
+            "metadata": {
+              "bootstrapServers": "ticketrush-kafka-bootstrap:9092",
+              "consumerGroup": "payment-service",
+              "lagThreshold": "10",
+              "offsetResetPolicy": "earliest",
+              "topic": "tickets.reserved"
+            },
+            "type": "kafka"
+          }
+        ]
+      },
+      "annotations": {
+        "meta.helm.sh/release-name": "ticketrush",
+        "meta.helm.sh/release-namespace": "ticketrush"
+      }
+    }
+  },
+  "provider_env": {
+    "FAKE_PROVIDER_FAILURE_RATE": "0"
+  },
+  "db_settings": {
+    "lock_timeout": "0",
+    "statement_timeout": "0",
+    "chaos_locks": 0
+  }
+}

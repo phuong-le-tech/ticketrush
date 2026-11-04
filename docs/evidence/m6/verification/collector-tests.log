@@ -1,0 +1,11 @@
+test_child_stop_error_does_not_skip_cluster_restoration (__main__.CleanupTest) ... ok
+test_decline_audit_accepts_actual_provider_reason (__main__.CleanupTest) ... ok
+test_downscale_and_wait_before_restoring_large_pod_resources (__main__.CleanupTest) ... ok
+test_lag_accepts_fresh_scrape (__main__.CleanupTest) ... ok
+test_lag_rejects_stale_scrape_even_with_fresh_query_timestamp (__main__.CleanupTest) ... ok
+test_pod_query_excludes_terminating_rollout_pod (__main__.CleanupTest) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.006s
+
+OK

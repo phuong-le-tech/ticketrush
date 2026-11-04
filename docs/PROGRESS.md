@@ -10,7 +10,7 @@ result, and what is NOT done or not verified.
 | 3 | Kubernetes | `milestone-3` | Not started |
 | 4 | Failure handling | `milestone-4` | Review rework implemented; pending reviewer verdict |
 | 5 | Observability and autoscaling | `milestone-5` | Implementation verified; independent review pending |
-| 6 | Chaos experiments and results | `milestone-6` | Not started |
+| 6 | Chaos experiments and results | `milestone-6` | Partial: four experiments audited; blocked on kind runtime recovery |
 | 7 | Minimal Angular dashboard | `milestone-7` | Not started |
 | 8 | Portfolio polish | `milestone-8` | Not started |
 
@@ -397,3 +397,81 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   not a durable financial ledger. This is a single 8GB Docker VM demonstration at 8 orders/sec with
   intentional delay, not a capacity benchmark. No refunds or changes to the M4 late-success/timeout
   limitations, topic names/partitions/keys, event schemas or DB schema. No new application services.
+
+### Milestone 6 - partial implementation, blocked on 2026-11-04
+
+- **NOT accepted and NOT handed to review.** Four experiment families have complete real audits:
+  inventory-kill 4, broker-restart 3, payment-declines 3, postgres-latency 3. The first consumer ramp
+  stalled before eight Ready pods were verified. No M7/M8 work, push or PR.
+- Implemented `scripts/m6-chaos.sh`, a shared offline evaluator, context refusal before live tool
+  use, acknowledged-ID collection using the reused M5 k6 purchase flow, reversible fault handlers,
+  command/ledger/sample evidence and resume-by-re-evaluation. No new dependency, application
+  behavior, event/topic/key/schema/public API change or M5 chart-default change. The two new k6
+  variables are documented in `.env.example`. Test-writer tests remain unchanged.
+- RED reproduced: `scripts/m6-chaos-test.sh --offline` -> 60 assertion failures, 9 skips, 0 errors,
+  caused by the missing runner. Fresh offline GREEN -> `OK (skipped=9)`, 25 methods, no failures
+  or errors. `python3 scripts/m6-collector-test.py` -> six tests pass. Collector regressions were
+  observed RED first for restoration ordering, child-stop error handling, stale scrape acceptance,
+  terminating rollout pods and the actual provider decline reason.
+- `scripts/m6-chaos.sh --selftest` -> `RESULT: m6-chaos selftest passed (offline synthetic evidence only)`.
+  It rejects synthetic oversell, lost-order and duplicate-charge inputs, without Kubernetes access.
+- `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`.
+  `scripts/m5-chart-check.sh` -> `RESULT: m5-chart-check passed`.
+  Their selftests and `scripts/m5-acceptance.sh --selftest` also passed earlier in this run.
+  A later hygiene check caught extra blank lines at the new documentation EOFs; those were fixed
+  rather than changing a test. Final command logs are in `docs/evidence/m6/verification/`.
+- Real execution used `scripts/m5-up.sh` after restarting the previously stopped project node.
+  The first bootstrap met a transient API validation error; its retry completed with all pods Ready.
+  `scripts/m6-chaos.sh` then completed all three inventory and broker repetitions but exited 1:
+  `FAIL m6-chaos: provider audit requires one pod`. A terminating old provider pod caused this
+  pre-load collector refusal, fixed test-first without changing application code.
+- `scripts/m6-chaos.sh --resume` re-evaluated completed live files and collected only missing runs.
+  Its first payment audit was rejected by the checker expecting PAYMENT_FAILED (release-event
+  reason) rather than SQL's PROVIDER_DECLINED. The unchanged real JSON passed after a new test
+  and evaluator fix and was preserved under its normal run filename, counted only once. Later
+  payment repetitions passed directly. The final resumed command was stopped after the ramp
+  runtime failure and best-effort cleanup, not reported as exit 0.
+- Every completed run, date, exact recovery value and before/during/after completion rate is in
+  the [README table](../README.md#measured-results), linked to its raw JSON. Confirmed orders
+  each have one charge; nonconfirmed orders zero, every accepted ID is conserved, stocks are
+  nonnegative and conserved, and payment failures release held quantity once. These claims apply
+  only to the completed audits, NOT the failed ramp or interrupted runs. k6 acknowledgments are
+  960 or 961 per completed run, with the actual count recorded rather than assuming rate x time.
+- Real payment outcomes: 671 CONFIRMED / 290 FAILED, 672 / 288 and 667 / 294; all failures in these
+  audits were compensated, uncharged provider declines. Postgres baseline/injected wall-clock
+  query seconds: 0.08587195799918845 / 4.016240458004177,
+  0.07906504100537859 / 3.7067007919831667, and 0.07849620800698176 / 4.01285149998148.
+  This is a four-second table-lock injection with kubectl/psql overhead, not general network delay.
+- Failed/interrupted attempts are retained and listed in README: two k6 arrival failures (13 and
+  5 dropped iterations), one intentionally interrupted inventory audit, the pre-load provider
+  baseline refusal and the failed ramp. Verbatim runtime logs are preserved in
+  `docs/evidence/m6/raw-logs.zip`; no whitespace cleanup or synthetic output replaced those bytes.
+- **Runtime blocker:** the first inventory rollout toward eight reported only 5 of 8 new replicas
+  updated, then timed out. k6 recorded 381 acknowledgments, 923 dropped iterations and 960 failed
+  HTTP attempts. API TLS handshakes and the project's containerd CRI subsequently timed out.
+  Resource/startup pressure is a hypothesis, not a demonstrated OOM diagnosis. A project-node
+  stop/start was BLOCKED by the headless approval gate and did not execute; no bypass was attempted.
+- The failed collector and its shell were stopped and verified absent. Raw command output records
+  best-effort successful patches for original resources/JVM options, desired replicas 1, provider
+  rate 0, maxReplicaCount 2 and removal of pause annotations. A later API read still showed stale
+  inventory reconciliation (5 up-to-date for desired 1) and Paused scaler status. **No successful
+  after-snapshot or fully restored runtime is claimed.** Baseline and exact commands:
+  `docs/evidence/m6/m6-consumer-ramp-1793788102587266000/before.json` and `commands.jsonl`.
+- Final `scripts/m6-chaos-test.sh` -> `FAILED (failures=7, skipped=1)`, 25 tests, no errors.
+  All offline contract cases and four real experiment audit methods pass. Remaining failures are
+  missing ramp/cleanup evidence, the incomplete results set and the manifest's honest nonzero/
+  not-run states. Raw output: `docs/evidence/m6/verification/full-harness.log`.
+- **NOT RUN: `mvn verify`** in this implementation run because the Docker/kind runtime became
+  unhealthy. The required next command is
+  `JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home mvn verify` after recovery.
+  The parent's earlier 213-test result is historical, not fresh verification for this implementation.
+  No separate lint/typecheck command exists; shell syntax and Python compilation were checked.
+- **NOT done / unverified:** three successful consumer-ramp repetitions, actual throughput at eight,
+  SIGINT and timeout cleanup probes, the real one-show 1-versus-8 benchmark, a green full acceptance
+  harness, fresh root Maven verification, independent review and PR. Recovery numbers above are
+  conservative fault-to-post-load settlement intervals, not isolated minimum MTTR; the provider's
+  after-restoration window is idle because its in-memory charge audit precedes rollout.
+- Operator action: recover the local project Docker/kind runtime with an approved lifecycle action,
+  verify baseline reconciliation, then investigate startup/resource pressure before retrying the
+  ramp. Do not rerun the same rollout blindly. [Blocker details](evidence/m6/blocked.txt) and
+  `verification.json` record failures/not-run states explicitly; they are not a green milestone manifest.

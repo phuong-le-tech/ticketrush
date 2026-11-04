@@ -1,0 +1,58 @@
+{
+  "status": "blocked",
+  "date": "2026-11-04",
+  "notice": "Partial verification only. Nonzero and null exit codes are intentional, honest failure/not-run states; this is not a green milestone manifest.",
+  "commands": {
+    "scripts/m6-chaos.sh --selftest": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/selftest.log",
+      "summary": "RESULT: m6-chaos selftest passed (offline synthetic evidence only)"
+    },
+    "scripts/m6-chaos.sh": {
+      "exit_code": 1,
+      "log": "docs/evidence/m6/verification/default-batch.log",
+      "summary": "FAIL m6-chaos: provider audit requires one pod",
+      "note": "This was the unqualified batch. Its pre-load collector issue was fixed; resumed execution is recorded separately, not substituted as an exit 0."
+    },
+    "mvn verify": {
+      "exit_code": null,
+      "status": "not_run",
+      "log": "docs/evidence/m6/blocked.txt",
+      "summary": "NOT RUN: mvn verify - the local Docker/kind runtime became unhealthy during the first consumer ramp."
+    },
+    "scripts/m3-chart-check.sh": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/m3-chart.log",
+      "summary": "RESULT: m3-chart-check passed"
+    },
+    "scripts/m5-chart-check.sh": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/m5-chart.log",
+      "summary": "RESULT: m5-chart-check passed"
+    }
+  },
+  "additional_commands": {
+    "scripts/m6-chaos-test.sh": {
+      "exit_code": 1,
+      "log": "docs/evidence/m6/verification/full-harness.log",
+      "summary": "FAILED (failures=7, skipped=1)"
+    },
+    "scripts/m6-chaos-test.sh --offline": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/offline.log",
+      "summary": "OK (skipped=9)"
+    },
+    "python3 scripts/m6-collector-test.py": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/collector-tests.log",
+      "summary": "OK"
+    },
+    "scripts/m6-chaos.sh --resume": {
+      "exit_code": null,
+      "status": "stopped_after_runtime_failure_and_best_effort_restoration",
+      "log_archive_member": "verification-history/m6-live-resume-final.log",
+      "archive": "docs/evidence/m6/raw-logs.zip",
+      "summary": "The final resumed collector was stopped; no successful whole-batch result is claimed."
+    }
+  }
+}
