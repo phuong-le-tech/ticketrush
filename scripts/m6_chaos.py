@@ -1,18 +1,10 @@
 """M6 evidence validation and bounded, project-local chaos experiments."""
-import argparse
 import copy
-import datetime
 import json
 import math
-import os
 from pathlib import Path
-import re
-import signal
 import subprocess
 import sys
-import time
-import urllib.parse
-import urllib.request
 
 CONTEXT = 'kind-ticketrush'
 NAMESPACE = 'ticketrush'
@@ -54,7 +46,7 @@ def rate(window):
 
 
 def evaluate(e):
-    check(isinstance(e, dict) and e['version'] == 1 and e['timed_out'] is False,
+    check(isinstance(e, dict) and integer(e['version']) and e['version'] == 1 and e['timed_out'] is False,
           'invalid version or timeout')
     start, end, limit = (e[k] for k in ('started_at', 'finished_at', 'timeout_seconds'))
     check(all(number(v) for v in (start, end, limit)) and 0 < end - start <= limit,
@@ -98,7 +90,7 @@ def evaluate(e):
               'provider baseline predates failure-rate rollout')
         orders = e['invariants']['orders']
         check(any(o['status'] == 'CONFIRMED' for o in orders) and
-              any(o['status'] == 'FAILED' and o['failure_reason'] == 'PAYMENT_FAILED' for o in orders),
+              any(o['status'] == 'FAILED' and o['failure_reason'] in ('PAYMENT_FAILED', 'PROVIDER_DECLINED') for o in orders),
               'must observe both successes and declines')
     elif experiment == 'postgres-latency':
         baseline, injected = fault['baseline_query_seconds'], fault['injected_query_seconds']
@@ -160,8 +152,8 @@ def evaluate_invariants(e):
               sold + remaining == initial, 'oversell or stock not conserved')
 
 
-def selftest():
-    # Independent, synthetic evidence. Never persisted as live results.
+def synthetic_evidence() -> dict:
+    # Synthetic data ONLY. Never persisted as live results.
     e = dict(version=1, experiment='inventory-kill', timed_out=False,
              started_at=0, finished_at=10, timeout_seconds=20,
              k6=dict(exit_code=0, started_at=1, finished_at=8, accepted_order_ids=['order']),
@@ -173,6 +165,11 @@ def selftest():
              invariants=dict(provider_stable=True, events=[dict(event_id='show', initial_stock=1, remaining_stock=0)],
                              orders=[dict(order_id='order', event_id='show', customer_id='buyer', idempotency_key='key',
                                           quantity=1, status='CONFIRMED')], charges=[dict(order_id='order', count=1)], dlt=[]))
+    return e
+
+
+def selftest():
+    e = synthetic_evidence()
     evaluate(e)
     for name in ('oversell', 'lost order', 'duplicate charge'):
         bad = copy.deepcopy(e)
@@ -201,6 +198,7 @@ def main():
         context = subprocess.run(['kubectl', 'config', 'current-context'], capture_output=True, text=True, timeout=10)
         check(context.returncode == 0 and context.stdout.strip() == CONTEXT,
               'Refusing context: only kind-ticketrush is allowed; no context was switched')
+        # Live helpers must share this Failure type when the CLI runs as __main__.
         sys.modules['m6_chaos'] = sys.modules[__name__]
         from m6_live import run_live
         run_live()

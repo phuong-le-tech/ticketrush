@@ -46,6 +46,9 @@ export default function () {
     const response = http.post(`${__ENV.BASE_URL}/orders`, body, params);
     if (response.status === 202 && response.json('orderId')) {
       acceptedOrders.add(1);
+      if (__ENV.M6_AUDIT_ACKS === '1') {
+        console.log(`M6_ACK ${response.json('orderId')}`);
+      }
       check(response, { 'order acknowledged': () => true });
       return;
     }

@@ -2,6 +2,11 @@
 target/
 *.class
 *.log
+# Concise verification output is tracked; verbatim runtime logs live in the raw-logs.zip snapshot.
+!docs/evidence/m6/verification/*.log
+
+# Python collectors
+__pycache__/
 
 # IDE
 .idea/
