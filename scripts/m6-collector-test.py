@@ -50,12 +50,11 @@ class CleanupTest(unittest.TestCase):
             index = self.calls.index(call)
             self.assertEqual(('ready', SERVICES[0]), self.calls[index + 1])
 
-    def test_ramp_memory_limit_covers_observed_startup_usage(self):
+    def test_ramp_preserves_chart_memory_and_jvm_defaults(self):
         self.live.get = Mock(return_value={'status': {'readyReplicas': 8}})
         self.live.ramp(SERVICES[0])
-        template = next(c[3]['spec']['template'] for c in self.calls
-                        if c[:3] == ('patch', 'deployment', SERVICES[0]))
-        self.assertEqual('384Mi', template['spec']['containers'][0]['resources']['limits']['memory'])
+        self.assertFalse(any(c[:3] == ('patch', 'deployment', SERVICES[0]) for c in self.calls),
+                         'The larger VM permits ramping without an artificial small-heap template')
 
     def test_rollout_waits_for_terminating_pods_before_next_phase(self):
         self.live.rollout = Live.rollout.__get__(self.live)
