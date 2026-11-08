@@ -3,16 +3,16 @@
 Update this file at the end of every milestone: status, the exact verification command and its
 result, and what is NOT done or not verified.
 
-| # | Milestone | Branch | Status |
+| # | Milestone | Merged in | Status |
 |---|---|---|---|
-| 1 | Happy path locally | `feat/t_4d7a08e4-m1-finish` | Done (pending owner go-ahead) |
-| 2 | Correctness under contention | `milestone-2` | Done (pending owner go-ahead) |
-| 3 | Kubernetes | `milestone-3` | Not started |
-| 4 | Failure handling | `milestone-4` | Review rework implemented; pending reviewer verdict |
-| 5 | Observability and autoscaling | `milestone-5` | Implementation verified; independent review pending |
-| 6 | Chaos experiments and results | `milestone-6` | Implementation verified on 16GB VM; independent review pending |
-| 7 | Minimal Angular dashboard | `milestone-7` | Not started |
-| 8 | Portfolio polish | `milestone-8` | Not started |
+| 1 | Happy path locally | PR #12 (`794443c`) | Done |
+| 2 | Correctness under contention | PRs #13, #15, #16 (`0f4d85e`) | Done |
+| 3 | Kubernetes | PR #17 (`88f15f3`) | Done |
+| 4 | Failure handling | PR #18 (`6a5a3b0`) | Done |
+| 5 | Observability and autoscaling | PR #19 (`aa465d5`) | Done |
+| 6 | Chaos experiments and results | PR #20 (`f409c88`) | Done |
+| 7 | Minimal Angular dashboard | - | Not started |
+| 8 | Portfolio polish | - | Not started |
 
 ## Milestone 1 checklist (done)
 
