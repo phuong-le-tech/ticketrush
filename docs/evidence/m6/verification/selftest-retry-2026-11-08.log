@@ -1,0 +1,4 @@
+PASS rejects oversell
+PASS rejects lost order
+PASS rejects duplicate charge
+RESULT: m6-chaos selftest passed (offline synthetic evidence only)

@@ -1,0 +1,33 @@
+TEST FIXTURE: synthetic valid M5 resources, not rendered chart acceptance
+ok   valid base fixture/manifest passes structural checks
+ok   selftest_missing_ScaledObject (rejected by scaledObjects)
+ok   selftest_missing_ServiceMonitor (rejected by serviceMonitors)
+ok   selftest_missing_ConfigMap (rejected by dashboard)
+ok   selftest_missing_Deployment (rejected by secrets)
+ok   selftest_missing_inventory-service_scaledObject (rejected by scaledObjects)
+ok   selftest_missing_payment-service_scaledObject (rejected by scaledObjects)
+ok   selftest_max_0 (rejected by scaledObjects)
+ok   selftest_max_13 (rejected by scaledObjects)
+ok   selftest_max_None (rejected by scaledObjects)
+ok   selftest_max_'12' (rejected by scaledObjects)
+ok   selftest_max_True (rejected by scaledObjects)
+ok   selftest_wrong_consumerGroup (rejected by scaledObjects)
+ok   selftest_wrong_topic (rejected by scaledObjects)
+ok   selftest_wrong_bootstrapServers (rejected by scaledObjects)
+ok   selftest_bad_minReplicaCount (rejected by scaledObjects)
+ok   selftest_bad_cooldownPeriod (rejected by scaledObjects)
+ok   selftest_bad_scaleTargetRef (rejected by scaledObjects)
+ok   selftest_bad_monitor_selector (rejected by serviceMonitors)
+ok   selftest_bad_service_selector (rejected by serviceMonitors)
+ok   selftest_bad_monitor_namespace (rejected by serviceMonitors)
+ok   selftest_missing_named_service_port (rejected by serviceMonitors)
+ok   selftest_wrong_endpoint_port (rejected by serviceMonitors)
+ok   selftest_wrong_endpoint_path (rejected by serviceMonitors)
+ok   selftest_literal_grafana_password (rejected by secrets)
+ok   selftest_missing_secret (rejected by secrets)
+ok   selftest_dashboard_missing_query (rejected by dashboard)
+ok   selftest_dashboard_constant_query (rejected by dashboard)
+ok   valid maxReplicaCount 1
+ok   valid maxReplicaCount 12
+ok   selftest_undocumented_env rejected; documented env accepted
+RESULT: m5-chart-check selftest passed (checker evidence only)

@@ -10,7 +10,7 @@ result, and what is NOT done or not verified.
 | 3 | Kubernetes | `milestone-3` | Not started |
 | 4 | Failure handling | `milestone-4` | Review rework implemented; pending reviewer verdict |
 | 5 | Observability and autoscaling | `milestone-5` | Implementation verified; independent review pending |
-| 6 | Chaos experiments and results | `milestone-6` | Partial: four experiments audited; blocked on kind runtime recovery |
+| 6 | Chaos experiments and results | `milestone-6` | Implementation verified on 16GB VM; independent review pending |
 | 7 | Minimal Angular dashboard | `milestone-7` | Not started |
 | 8 | Portfolio polish | `milestone-8` | Not started |
 
@@ -475,3 +475,121 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   verify baseline reconciliation, then investigate startup/resource pressure before retrying the
   ramp. Do not rerun the same rollout blindly. [Blocker details](evidence/m6/blocked.txt) and
   `verification.json` record failures/not-run states explicitly; they are not a green milestone manifest.
+
+### Milestone 6 retry - 2026-11-08, 8GB attempt (superseded by recovery below)
+
+- Phuong authorized a fresh retry after the prior quota/gateway failures. Branch remains
+  `milestone-6`; code change committed locally as `5f4842e`. No push, PR, review handoff or M7/M8 work.
+- Contrary to the initial operator note, the project cluster was not empty. Docker Desktop had
+  changed current-context to `docker-desktop`. All project reads used `--context kind-ticketrush`;
+  current-context was explicitly switched back and read back before the guarded live runner.
+- Both old reduced inventory pods reported `OOMKilled`, exit 137, at 256Mi. Restored the original
+  M5 baseline before load and read back consumers 1/1 Ready, original 512Mi limits / 384Mi
+  requests and MaxRAMPercentage=60, max 2 and Paused=False scalers, provider rate 0 and zero
+  chaos DB sessions. All project pods were Ready before load.
+- `scripts/m5-up.sh` failed twice fetching its unchanged pinned Prometheus chart with HTTP 503.
+  Logs: `verification/bootstrap-2026-11-08.log` and `bootstrap-retry-2026-11-08.log` under the M6
+  evidence directory. Reused the existing healthy M5 stack as allowed by the spec; no new dependency.
+- Added two collector regressions, observed both fail, then implemented waiting for terminating
+  surplus pods and a 384Mi experimental limit. Preserved the incremental startup work from the
+  interrupted retry, extending ramp load to 360s without changing 8/s or strict k6 thresholds.
+  `python3 scripts/m6-collector-test.py` -> `Ran 9 tests in 1.009s`, `OK`.
+- `scripts/m6-chaos.sh --experiment consumer-ramp --runs 1 --timeout-seconds 900` -> exit 1:
+  `FAIL m6-chaos: command failed: kubectl --context kind-ticketrush -n ticketrush --request-timeout=30s rollout: error: timed out waiting for the condition`.
+  Inventory reached four Ready / five desired; no eight-pod or payment-ramp result was collected.
+  Raw evidence: `docs/evidence/m6/m6-consumer-ramp-1794134769312914000/`.
+  k6 recorded 963 acknowledgments, 794 dropped iterations, 851 failed HTTP requests and 235 failed
+  checks. These are failed-attempt observations, NOT a completed invariant audit or recovery result.
+- During slowdown, kubelet log retrieval timed out at TLS handshake. VM memory available was
+  967Mi and swap use 590Mi; Docker reported 6.076GiB usage in an earlier sample. Memory/startup
+  and I/O pressure remain possible causes, not a conclusive root cause of the node slowdown.
+  The four Ready reduced pods had zero restarts at the observed checkpoint.
+- SIGINT was sent to the collector during failure handling. The collector exited 1, with cleanup
+  commands logged as successful. Subsequent reads showed all pods Ready, inventory/payment
+  1/1, max 2 and Paused=False, and the original inventory resources/JVM settings. No collector
+  or k6 process remained. No node stop/restart or approval-gate bypass was attempted in this run.
+- An exact full after-snapshot comparison did NOT run: a combined command was refused by the
+  user-defined `jq *.env*` deny rule. It was not retried or rephrased. Earlier, a one-off Python
+  `-c` restoration command was denied and did not run; restoration instead used direct baseline
+  kubectl operations. Only the observed readbacks above are claimed, not exact cleanup acceptance.
+- Fresh `scripts/m6-chaos.sh --selftest` ->
+  `RESULT: m6-chaos selftest passed (offline synthetic evidence only)`.
+  Fresh `scripts/m6-chaos-test.sh --offline` -> `OK (skipped=9)`, 25 tests, no failures.
+  Fresh `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`.
+  Fresh `scripts/m5-chart-check.sh` -> `RESULT: m5-chart-check passed`.
+  M3/M5 chart selftests and M5 acceptance selftest also passed in this retry.
+- Fresh full `scripts/m6-chaos-test.sh` -> `FAILED (failures=7, skipped=1)`, 25 tests.
+  The original 13 successful audits re-evaluate successfully, but no additional pass is claimed.
+  All fresh verification logs use `*-2026-11-08.log` names, distinct from historical evidence.
+  Verbatim raw logs for the preserved interrupted retry and this run are in `retry-raw-logs.zip`;
+  original local files remain unmodified.
+- **NOT RUN: `mvn verify`** in this retry. The monitored ramp again destabilized the shared Docker
+  runtime; no Testcontainers workload was added to it. Parent/historical Maven output is not fresh.
+  **NOT done / unverified:** three successful ramp repetitions, SIGINT/timeout cleanup acceptance,
+  single-show 1-versus-8 measurements, fresh Java 21 Maven verification, full acceptance, review, PR.
+- Operator action needed before further load: investigate the local Docker VM's resource/runtime
+  pressure and provide sufficient headroom for eight consumers. Current VM reports 8,320,028,672
+  bytes and six CPUs. Do not repeat the same ramp blindly or relax acceptance thresholds.
+
+### Milestone 6 - 16GB recovery and verification (2026-11-08)
+
+- Phuong increased Docker memory during this run. Independently observed MemTotal 16,788,209,664
+  bytes (15.64GiB), six CPUs unchanged, node restart `2026-11-08T10:56:12.6753005Z`, all project
+  pods Ready. Rechecked consumers at chart requests 384Mi / limits 512Mi and
+  `-XX:+UseSerialGC -XX:MaxRAMPercentage=60`, provider rate 0, zero chaos sessions, max 2/unpaused
+  scalers. Explicitly selected and read back `kind-ticketrush` again after Docker changed context.
+- Removed the experimental small-heap/resource override rather than changing M5 defaults. Kept
+  one-at-a-time staging and waiting for terminating pods. Strengthened the own collector sizing
+  test to forbid deployment-template changes; observed RED before the implementation removal.
+  Commits: `b4bce0e` test contract correction and `7490fe4` implementation. Test-writer tests and
+  application code remain unchanged; no new dependency or public/topic/schema/key change.
+- `scripts/m6-chaos.sh --experiment consumer-ramp --runs 3 --timeout-seconds 900` -> exit 0,
+  `RESULT: m6-chaos passed`. Each 24-show repetition acknowledged 2,881 IDs, reached eight Ready
+  inventory and payment replicas in separate phases, passed terminal/stock/unique-order/charge
+  invariants, and restored exact before/after settings. Recovery seconds:
+  340.56781005859375, 339.5589737892151, 340.2294728755951. Before/during/after and per-Ready-count
+  measurements are in README, with every JSON linked once. Log: `verification/ramp-16gb-2026-11-08.log`.
+- `scripts/m6-chaos.sh --resume` -> exit 0, `RESULT: m6-chaos passed`. This is the actual successful
+  whole-runner invocation; the earlier unqualified `scripts/m6-chaos.sh` exit 1 is retained as
+  historical failure, not rewritten as success. Resume re-evaluated completed live evidence,
+  then actually ran both cleanup probes and the one-show comparison. Log:
+  `verification/resume-16gb-2026-11-08.log` under `docs/evidence/m6/`.
+- Real SIGINT and deadline-timeout probes both mutated effective settings after acknowledged
+  load, exited 1 as intended, restored exact snapshots, then completed independently audited
+  inventory-kill reruns with disjoint order IDs. Evidence: `cleanup-SIGINT.json`,
+  `cleanup-timeout.json` and their linked rerun JSONs. Aborted first loads are NOT counted as passes.
+- Real single-show comparison (`bottleneck.json`): 175 completions at one Ready inventory replica,
+  7.999579402694281 terminal outcomes/s; 124 completions in the shorter eight-Ready window,
+  8.025785165011973/s. The entire single-show ramp also passed invariants with 2,881 acknowledged
+  IDs and exact restoration. At an offered 8/s this is not a saturation ceiling or evidence that
+  inventory was the active bottleneck. The one-key/one-partition limit remains documented.
+- Completed evidence totals: inventory-kill 6 (including the two cleanup reruns), broker-restart 3,
+  payment-declines 3, postgres-latency 3, consumer-ramp 4 (three standard plus one single-show).
+  All 19 completed audits are listed individually in README. The original 13 audits remain
+  unchanged. 8GB and 16GB results are not pooled; failed and interrupted attempts remain separate.
+- After the resumed batch, both ScaledObjects read max 2 and Paused=False, consumers 1/1, with no
+  remaining collector or k6 process. Runtime readback: `verification/runtime-16gb-2026-11-08.log`.
+- Fresh Java 21 `mvn verify` (after all chaos load stopped) -> exit 0, `[INFO] BUILD SUCCESS`,
+  `[INFO] Total time:  15:37 min`. Parsed all 43 Surefire/Failsafe XML reports: 213 tests,
+  zero failures, errors or skips. Module counts: common 20, gateway 23, inventory 30, payment 11,
+  provider 13, order 70, notification 7, E2E 39. E2E: Oversell 1, DLT 21, Metrics 3, Failure 9,
+  Replay 2, PurchaseFlow 1, Outbox 2, all green. Counts and verbatim selected lines:
+  `verification/maven-16gb-counts.json`, `verification/maven-16gb-summary-2026-11-08.log`.
+  Full unmodified Maven output is the `runtime-2026-11-08/maven.log` member of `retry-raw-logs.zip`.
+- Latest `scripts/m6-chaos.sh --selftest` passes; `python3 scripts/m6-collector-test.py` passes
+  nine tests; `scripts/m6-chaos-test.sh --offline` -> `OK (skipped=9)`, 25 discovered tests.
+  Latest `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`.
+  Latest `scripts/m5-chart-check.sh` -> `RESULT: m5-chart-check passed`. Its first final check
+  rejected trailing whitespace in the untracked raw Maven output; preserving that output in the
+  ignored raw-log directory/ZIP made the unchanged hygiene check pass. The failed log is retained.
+  Shell syntax and Python compilation pass; the repository has no separate lint/typecheck command.
+- All raw archive members were CRC-tested and compared byte-for-byte with original local files:
+  `PASS archive CRC and original-byte comparison: 98 members`. SHA256/byte counts are in
+  `retry-raw-logs-index.json`; earlier `raw-logs.zip` is unchanged.
+- Final `scripts/m6-chaos-test.sh` -> exit 0, `OK (skipped=1)`, 25 tests, no failures or errors.
+  Only the opt-in regression wrapper is skipped; its unchanged Maven/chart commands passed
+  separately in this same run. Final log: `verification/full-harness-16gb-2026-11-08.log`.
+- **NOT done / unverified:** independent review and PR. No push, merge or M7/M8 work.
+  Six CPUs remain unchanged, CPU throttling and maximum
+  sustainable rate are not quantified, recovery includes remaining load and polling, and provider
+  after-restoration throughput is an idle audit window. This is not a simultaneous 8+8 benchmark.

@@ -125,7 +125,10 @@ persists before/after settings, command output, sampled stock/lag,
 k6 response IDs and provider charge audits under `docs/evidence/m6/`. The committed verbatim
 runtime logs are in [raw-logs.zip](docs/evidence/m6/raw-logs.zip), with a byte-count/SHA256
 [index](docs/evidence/m6/raw-logs-index.json); JSON/JSONL measurements are also stored directly.
-The ZIP is a snapshot of this partial execution, not an automatically refreshed log sink.
+The ZIP is a snapshot of the first partial execution, not an automatically refreshed log sink.
+The completed retry's [raw archive](docs/evidence/m6/retry-raw-logs.zip) and
+[byte/SHA256 index](docs/evidence/m6/retry-raw-logs-index.json) preserve its actual runtime and
+Maven output; all archive members were compared byte-for-byte with the original local files.
 Never run concurrent chaos runners or bootstrap/acceptance scripts against the same cluster.
 Python uses only its standard library, and all operators/images are the existing M5 pins.
 
@@ -136,15 +139,20 @@ The provider is configured to 0.3 before its audit baseline, stays there through
 restored only after reading its in-memory ledger. Its post-restoration window is deliberately
 idle (0/s), not evidence of post-restoration capacity.
 
-**Do not rerun the live ramp until the runtime blocker below is resolved.** The implemented ramp
-attempts inventory 1 -> 8 -> 1, then payment 1 -> 8, independently, not 8+8 simultaneously.
-Temporary 128Mi requests, 256Mi limits and a 96Mi Java heap were intended to fit this 8GB VM, but
-the first rollout stalled before eight Ready pods were verified. The sizing is NOT validated.
+The ramp attempts inventory 1 -> 8 -> 1, then payment 1 -> 8, independently, not 8+8 simultaneously.
+It readies one new pod at a time and waits for terminating pods before starting the next phase.
+After Phuong increased the Docker VM from 8GB to 16GB on 2026-11-08, the runner stopped applying
+artificially small heaps and now retains the chart's 384Mi memory requests, 512Mi limits and
+`-XX:+UseSerialGC -XX:MaxRAMPercentage=60`. No M5 defaults are changed. The earlier 256Mi pods
+were observed OOMKilled after Docker recovery; the 384Mi / 96Mi-heap incremental retry on the
+8GB VM still timed out at four Ready / five desired inventory replicas. Those failed measurements
+are preserved separately, not pooled with the larger-VM runs.
+
 The collector restores resources, JVM options, replicas and full ScaledObject settings on normal
-completion; the failed ramp has no successful after-snapshot or cleanup acceptance. Chart defaults
-remain unchanged. The reused M5 purchase flow keeps its strict thresholds and 8/s offered rate.
-M6 preallocates 64 VUs, uses opt-in response-ID-only logs, and allows 240s for the sequential ramp
-(120s otherwise).
+completion. The reused M5 purchase flow keeps its strict thresholds and 8/s offered rate. M6
+preallocates 64 VUs, uses opt-in response-ID-only logs, and allows 360s for the incremental
+sequential ramp (120s otherwise). Six CPUs remain unchanged; the memory increase is not a CPU
+capacity increase or evidence of simultaneous 16-consumer performance.
 
 ### Measurement definitions
 
@@ -164,9 +172,12 @@ M6 preallocates 64 VUs, uses opt-in response-ID-only logs, and allows 240s for t
 
 ### Measured results
 
-Completed real audits: inventory-kill **4**, broker-restart **3**, payment-declines **3**,
-Postgres-latency **3**. Every completed raw run is listed below; these partial results do not
-satisfy M6's fifth-experiment, cleanup, bottleneck or full-regression requirements.
+Completed real audits: inventory-kill **6**, broker-restart **3**, payment-declines **3**,
+Postgres-latency **3**, consumer-ramp **4** (three 24-show repetitions plus one single-show
+comparison). The inventory count includes the two independently audited post-abort reruns.
+All 19 completed runs are listed separately below. The original 13 audits were measured on
+2026-11-04; the six new audits ran after the owner increased the VM to 16GB on 2026-11-08.
+These environments are not pooled into an average or a capacity claim.
 
 | Experiment | Fault | Invariants | Recovery seconds | Before / during / after terminal outcomes per second | Run | Date |
 |---|---|---|---|---|---|---|
@@ -183,7 +194,14 @@ satisfy M6's fifth-experiment, cleanup, bottleneck or full-regression requiremen
 | postgres-latency | 4s table lock | PASS | 99.0099709033966 | 7.968758703143042 / 1.123929637778963 / 8.146084871587771 | [raw run](docs/evidence/m6/run-m6-postgres-latency-1793787705384289000.json) | 2026-11-04 |
 | postgres-latency | 4s table lock | PASS | 100.20807814598083 | 7.968703131968767 / 2.519447882597236 / 8.004480087882593 | [raw run](docs/evidence/m6/run-m6-postgres-latency-1793787838420505000.json) | 2026-11-04 |
 | postgres-latency | 4s table lock | PASS | 101.07388591766357 | 7.984156179217333 / 1.5774957246344925 / 8.027990817777965 | [raw run](docs/evidence/m6/run-m6-postgres-latency-1793787970340420000.json) | 2026-11-04 |
+| consumer-ramp | staged inventory/payment 1->8, then restore | PASS | 340.56781005859375 | 7.935919222191438 / 8.003876473464302 / 7.906196245522607 | [raw run](docs/evidence/m6/run-m6-consumer-ramp-1794135562105823000.json) | 2026-11-08 |
+| consumer-ramp | staged inventory/payment 1->8, then restore | PASS | 339.5589737892151 | 7.984634497280194 / 7.995837685399253 / 7.940884004802306 | [raw run](docs/evidence/m6/run-m6-consumer-ramp-1794135942702742000.json) | 2026-11-08 |
+| consumer-ramp | staged inventory/payment 1->8, then restore | PASS | 340.2294728755951 | 7.9776487615252805 / 7.995914077496762 / 7.865059752674633 | [raw run](docs/evidence/m6/run-m6-consumer-ramp-1794136322769364000.json) | 2026-11-08 |
+| consumer-ramp | single-show staged inventory/payment 1->8 | PASS | 345.0931408405304 | 7.999579402694281 / 7.996894881265104 / 7.72771416400147 | [raw run](docs/evidence/m6/run-m6-consumer-ramp-1794137002893522000.json) | 2026-11-08 |
+| inventory-kill | post-SIGINT inventory pod deletion | PASS | 98.6995952129364 | 7.9742217093620225 / 0.4918175496175186 / 8.937379497914712 | [raw run](docs/evidence/m6/run-m6-inventory-kill-1794136718792903000.json) | 2026-11-08 |
+| inventory-kill | post-timeout inventory pod deletion | PASS | 99.85872197151184 | 7.998282194608636 / 0.2832771288938411 / 8.75041284157138 | [raw run](docs/evidence/m6/run-m6-inventory-kill-1794136871523725000.json) | 2026-11-08 |
 | consumer-ramp | first inventory rollout toward 8 | NOT VERIFIED | not measured | no valid windows | [failed attempt](docs/evidence/m6/m6-consumer-ramp-1793788102587266000/) | 2026-11-04 |
+| consumer-ramp | incremental retry, stopped at 4 Ready / 5 desired | NOT VERIFIED | not measured | no valid windows | [failed retry](docs/evidence/m6/m6-consumer-ramp-1794134769312914000/) | 2026-11-08 |
 
 Payment outcomes, in the listed run order: 671 confirmed / 290 failed, 672 / 288, and 667 / 294.
 Each confirmed order had one charge; each failed order had zero charges and its reservation was
@@ -191,7 +209,38 @@ released once. The first payment audit was initially rejected by a collector-onl
 (PROVIDER_DECLINED in SQL versus PAYMENT_FAILED in the synthetic release-reason fixture). The
 unchanged measured JSON passed after a test-first evaluator correction and is counted once above.
 
+The standard 24-show ramp repetitions each acknowledged 2,881 orders. Per-phase end-to-end
+terminal-outcome rates below are measured while the named service has the stated Ready count;
+they are not isolated per-consumer rates. The single-show run also acknowledged 2,881 orders.
+Raw run IDs map to the links in the main table.
+
+| Ramp run ID | Inventory 1 Ready | Inventory 8 Ready | Payment 1 Ready | Payment 8 Ready |
+|---|---|---|---|---|
+| m6-consumer-ramp-1794135562105823000 | 7.95498392906822 | 8.010592654731957 | 7.95498392906822 | 8.297111295594132 |
+| m6-consumer-ramp-1794135942702742000 | 7.951054647555332 | 7.978460030525333 | 7.951054647555332 | 7.952851902904059 |
+| m6-consumer-ramp-1794136322769364000 | 7.939652499960554 | 7.995722081090355 | 7.939652499960554 | 7.987268064865741 |
+| m6-consumer-ramp-1794137002893522000 (single show) | 8.007817878304666 | 8.025785165011973 | 8.007817878304666 | 8.022036884171643 |
+
+Both [SIGINT](docs/evidence/m6/cleanup-SIGINT.json) and
+[timeout](docs/evidence/m6/cleanup-timeout.json) probes mutated scaler settings after acknowledged
+load, exited nonzero as intended, restored the exact effective baseline, and completed a separately
+audited inventory-kill rerun with disjoint order IDs. These are cleanup evidence, not accepted chaos
+runs for the aborted first loads.
+
 ### Failed and interrupted attempts
+
+- [Incremental ramp retry](docs/evidence/m6/m6-consumer-ramp-1794134769312914000/), 2026-11-08:
+  963 acknowledged orders, 794 dropped iterations, 851 failed HTTP requests, 235 failed checks.
+  Rollout timed out with four Ready / five desired inventory pods, before payment scaling.
+  Kubelet log retrieval hit a TLS handshake timeout; VM memory available was 967Mi and swap used
+  590Mi. These observations do not prove the cause of the node slowdown or any invariant violation.
+  Cleanup commands completed; all pods subsequently became Ready. No complete invariant audit.
+  Verbatim logs are also preserved in `docs/evidence/m6/retry-raw-logs.zip`.
+- The preserved [earlier interrupted retry](docs/evidence/m6/m6-consumer-ramp-1793799411923024000/)
+  has no completed audit and is not counted. It predates this run; its raw files were not modified.
+- On 2026-11-08 `scripts/m5-up.sh` failed twice downloading its pinned monitoring chart (HTTP 503).
+  The project stack already existed. Its original baseline was explicitly restored and read back
+  before the incremental ramp; no replacement cluster or dependency upgrade was used.
 
 - [Initial inventory attempt](docs/evidence/m6/m6-inventory-kill-1793785168604883000/): 948 acknowledgments,
   13 dropped k6 iterations, zero HTTP/check failures. No completed invariant audit.
@@ -209,15 +258,19 @@ unchanged measured JSON passed after a test-first evaluator correction and is co
   then timed out. Recovery, invariant results and throughput-at-eight are NOT verified. Desired
   replica/resource/scaler settings received best-effort restoration patches, but rollout completion
   and the final baseline snapshot could not be verified. The collector was stopped; it is not left
-  generating load. The tool approval gate refused a project-node stop/start, so operator recovery
-  is required. No lifecycle bypass was attempted.
+  generating load. The tool approval gate refused a project-node stop/start at that time; operator
+  recovery was required. The owner later recovered the runtime and increased VM memory. No
+  lifecycle bypass was attempted.
 
 ### Bottlenecks and limits
 
 - **Single-show inventory uses one Kafka partition.** Additional inventory replicas cannot process
-  that key in parallel. The required real 1-versus-8 single-show comparison is NOT measured because
-  the first ramp stalled; there is no bottleneck.json and no invented scaling number. The measured
-  multi-show rates above are end-to-end outcomes at an offered 8/s, not maximum inventory capacity.
+  that key in parallel. The real [single-show comparison](docs/evidence/m6/bottleneck.json) measured
+  7.999579402694281 terminal outcomes/s at one Ready inventory replica (175 completions) versus
+  8.025785165011973/s at eight (124 completions in its shorter window). Both windows used the
+  same offered 8/s. This shows no eightfold gain at this load, not a measured saturation ceiling
+  or proof that inventory was the active bottleneck. Multi-show rates are likewise end-to-end
+  outcomes at the offered load, not maximum inventory or payment capacity.
 - Inventory deletion caused a real drop in completion rate during replacement, followed by backlog
   catch-up (the table records every run rather than hiding this behind an average). A single broker
   deletion kept completion rates near the offered load with RF=3 and min ISR=2.
@@ -225,7 +278,10 @@ unchanged measured JSON passed after a test-first evaluator correction and is co
   0.08587195799918845 / 4.016240458004177, 0.07906504100537859 / 3.7067007919831667, and
   0.07849620800698176 / 4.01285149998148. These include kubectl/psql overhead and represent a short
   table-lock stall, not general network latency or long DB outages/DLT recovery.
-- The local 8GB VM could not complete the first eight-consumer rollout. Resource pressure or
-  simultaneous startup is a hypothesis, not a proven OOM diagnosis. The resource reduction and
-  sequential plan are not accepted sizing guidance. SIGINT/timeout cleanup probes, full Maven
-  regression verification, and independent review are still outstanding. M7/M8 are not started.
+- The 8GB VM failed the earlier rollouts. Some 256Mi pods were specifically observed OOMKilled;
+  the separate node slowdowns are not conclusively diagnosed. After the owner increased Docker
+  memory to 15.64GiB, the staged chart-default ramp and both cleanup probes passed. Six CPUs
+  were unchanged; CPU throttling and maximum sustainable arrival rates were not quantified.
+  Fresh Java 21 `mvn verify` passed 213 tests (zero failures/errors/skips), the M3/M5 chart checks
+  passed, and the full M6 harness passed (only its separately executed regression wrapper skipped).
+  Independent review remains pending. M7/M8 are not started.

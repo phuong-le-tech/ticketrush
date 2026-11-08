@@ -1,0 +1,38 @@
+PASS AC5_selftestRejectsFalsePass valid fixture accepted (offline only)
+PASS rejects empty samples
+PASS rejects malformed samples
+PASS rejects absent lag
+PASS rejects equal threshold
+PASS rejects no up
+PASS rejects no down
+PASS rejects timeout
+PASS rejects elapsed timeout
+PASS rejects k6 failure
+PASS rejects query failure
+PASS rejects query empty
+PASS rejects query missing
+PASS rejects oversell
+PASS rejects stock leak
+PASS rejects double charge
+PASS rejects missing charge
+PASS rejects duplicate order
+PASS rejects lost acknowledgment
+PASS rejects empty stack
+PASS rejects not Ready
+PASS rejects changed node
+PASS rejects changed credentials
+PASS rejects one service only
+PASS rejects up before high
+PASS rejects early down
+PASS rejects wrong topic
+PASS rejects NaN lag
+PASS rejects replica string
+PASS rejects provider restart
+PASS rejects inventory-service no high lag
+PASS rejects inventory-service no up
+PASS rejects inventory-service no down
+PASS rejects payment-service no high lag
+PASS rejects payment-service no up
+PASS rejects payment-service no down
+PASS public --evaluate accepts valid JSON and rejects malformed evidence
+RESULT: m5-acceptance selftest passed

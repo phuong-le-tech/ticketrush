@@ -1,0 +1,182 @@
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-inventory-kill-1793785612760753000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-inventory-kill-1793786175805766000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-inventory-kill-1793786312088218000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-inventory-kill-1793786446569085000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-broker-restart-1793786582291791000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-broker-restart-1793786713567421000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-broker-restart-1793786843651282000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-payment-declines-1793787117900791000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-payment-declines-1793787407150655000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-payment-declines-1793787555934552000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-postgres-latency-1793787705384289000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-postgres-latency-1793787838420505000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-postgres-latency-1793787970340420000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-consumer-ramp-1794135562105823000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-consumer-ramp-1794135942702742000.json
+PASS re-evaluated prior live run docs/evidence/m6/run-m6-consumer-ramp-1794136322769364000.json
+SAMPLE {"at": 1794136723.6224651, "stock": 11999, "event_stocks": [499, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136726.836416, "stock": 11974, "event_stocks": [498, 498, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136730.233932, "stock": 11946, "event_stocks": [497, 497, 497, 497, 497, 497, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136733.428291, "stock": 11921, "event_stocks": [496, 496, 496, 496, 496, 496, 496, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136736.6166348, "stock": 11895, "event_stocks": [495, 495, 495, 495, 495, 495, 495, 495, 495, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136739.8164248, "stock": 11870, "event_stocks": [494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136743.023371, "stock": 11844, "event_stocks": [493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136746.174172, "stock": 11819, "event_stocks": [492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493], "inventory_lag": 1.0, "payment_lag": 0.0}
+FAULT {"provider_baseline_at": 1794136720.121587, "replicas": [{"service": "inventory-service", "at": 1794136746.190209, "ready": 1, "orders_per_second": 7.975297580441333}, {"service": "payment-service", "at": 1794136746.190209, "ready": 1, "orders_per_second": 7.975297580441333}], "at": 1794136746.190209, "target": "inventory-service-6fd5dc695b-wbdsp", "uid_before": "59c27d8b-71ef-4ce9-ac01-623f3446bec7", "uid_after": "a60b42c5-acfb-4d06-98cf-5a4709428058", "restored_at": 1794136758.389855}
+SAMPLE {"at": 1794136761.493119, "stock": 11813, "event_stocks": [492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 492, 493, 493, 493, 493, 493], "inventory_lag": 99.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136764.8489652, "stock": 11776, "event_stocks": [492, 492, 488, 486, 492, 488, 488, 492, 487, 492, 492, 492, 492, 492, 492, 492, 487, 487, 492, 493, 493, 493, 493, 489], "inventory_lag": 143.0, "payment_lag": 3.0}
+SAMPLE {"at": 1794136768.0443819, "stock": 11644, "event_stocks": [485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 486, 486, 486, 486], "inventory_lag": 143.0, "payment_lag": 3.0}
+SAMPLE {"at": 1794136771.1667042, "stock": 11619, "event_stocks": [484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 485, 485, 485], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136774.3174841, "stock": 11594, "event_stocks": [483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 484, 484], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136777.4577549, "stock": 11569, "event_stocks": [482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 483], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136780.6717298, "stock": 11543, "event_stocks": [480, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136783.777071, "stock": 11518, "event_stocks": [479, 479, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136787.84505, "stock": 11490, "event_stocks": [478, 478, 478, 478, 478, 479, 479, 478, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136791.049854, "stock": 11460, "event_stocks": [477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136794.20662, "stock": 11435, "event_stocks": [476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136797.3879411, "stock": 11409, "event_stocks": [475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 476, 476, 476, 476, 476, 476, 476, 476, 476], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136800.5462232, "stock": 11384, "event_stocks": [474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 475, 475, 475, 475, 475, 475, 475, 475], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136803.787207, "stock": 11358, "event_stocks": [473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 474, 474, 474, 474, 474, 474], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136807.0215821, "stock": 11332, "event_stocks": [472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 473, 473, 473, 473], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136810.216249, "stock": 11307, "event_stocks": [471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 472, 472, 472], "inventory_lag": 1.0, "payment_lag": 3.0}
+SAMPLE {"at": 1794136813.404477, "stock": 11281, "event_stocks": [470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 471], "inventory_lag": 1.0, "payment_lag": 3.0}
+SAMPLE {"at": 1794136816.559971, "stock": 11256, "event_stocks": [469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136819.713592, "stock": 11231, "event_stocks": [467, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136822.8252292, "stock": 11206, "event_stocks": [466, 466, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136825.925519, "stock": 11181, "event_stocks": [465, 465, 465, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136829.147626, "stock": 11155, "event_stocks": [464, 464, 464, 464, 464, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136832.286321, "stock": 11130, "event_stocks": [463, 463, 463, 463, 463, 463, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136835.450979, "stock": 11105, "event_stocks": [462, 462, 462, 462, 462, 462, 462, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136838.584664, "stock": 11080, "event_stocks": [461, 461, 461, 461, 461, 461, 461, 461, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136841.6813061, "stock": 11055, "event_stocks": [460, 460, 460, 460, 460, 460, 460, 460, 460, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136844.792154, "stock": 11039, "event_stocks": [459, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136844.8898041, "stock": 11039, "event_stocks": [459, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460], "inventory_lag": 0.0, "payment_lag": 0.0}
+PASS inventory-kill m6-inventory-kill-1794136718792903000 recovery 98.6995952129364 evidence docs/evidence/m6/run-m6-inventory-kill-1794136718792903000.json
+PASS cleanup SIGINT and independently audited rerun docs/evidence/m6/run-m6-inventory-kill-1794136718792903000.json
+SAMPLE {"at": 1794136876.3337789, "stock": 12000, "event_stocks": [500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136879.511078, "stock": 11974, "event_stocks": [498, 498, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499, 499], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136882.617882, "stock": 11949, "event_stocks": [497, 497, 497, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498, 498], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136885.740743, "stock": 11924, "event_stocks": [496, 496, 496, 496, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497, 497], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136888.8325682, "stock": 11899, "event_stocks": [495, 495, 495, 495, 495, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496, 496], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136891.926624, "stock": 11875, "event_stocks": [494, 494, 494, 494, 494, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495, 495], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136895.099583, "stock": 11849, "event_stocks": [493, 493, 493, 493, 493, 493, 493, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494, 494], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136898.254563, "stock": 11824, "event_stocks": [492, 492, 492, 492, 492, 492, 492, 492, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493, 493], "inventory_lag": 1.0, "payment_lag": 1.0}
+FAULT {"provider_baseline_at": 1794136872.232011, "replicas": [{"service": "inventory-service", "at": 1794136898.262541, "ready": 1, "orders_per_second": 8.007919643781714}, {"service": "payment-service", "at": 1794136898.262541, "ready": 1, "orders_per_second": 8.007919643781714}], "at": 1794136898.262541, "target": "inventory-service-6fd5dc695b-qh2kx", "uid_before": "a60b42c5-acfb-4d06-98cf-5a4709428058", "uid_after": "22bb42ca-85fc-43d9-bb97-98c1684102e3", "restored_at": 1794136908.8528771}
+SAMPLE {"at": 1794136911.963593, "stock": 11729, "event_stocks": [488, 488, 488, 488, 488, 491, 488, 488, 488, 488, 488, 488, 488, 489, 491, 489, 488, 489, 489, 491, 489, 489, 489, 489], "inventory_lag": 85.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136916.100416, "stock": 11687, "event_stocks": [486, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487, 487], "inventory_lag": 10.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136919.48098, "stock": 11654, "event_stocks": [485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 486, 486, 486, 486, 486, 486, 486, 486, 486, 486, 486, 486, 486, 486], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136922.6229188, "stock": 11629, "event_stocks": [484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136925.747097, "stock": 11604, "event_stocks": [483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484, 484], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136928.917801, "stock": 11579, "event_stocks": [482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483, 483], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136932.018551, "stock": 11554, "event_stocks": [481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 481, 482, 482, 482, 482, 482, 482, 482, 482, 482, 482], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136935.144994, "stock": 11529, "event_stocks": [480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 480, 481, 481, 481, 481, 481, 481, 481, 481, 481], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136938.247725, "stock": 11504, "event_stocks": [479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 479, 480, 480, 480, 480, 480, 480, 480, 480], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136941.369329, "stock": 11479, "event_stocks": [478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 478, 479, 479, 479, 479, 479, 479, 479], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136944.5292192, "stock": 11454, "event_stocks": [477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 478, 478, 478, 478, 478, 478], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136947.611899, "stock": 11429, "event_stocks": [476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 476, 477, 477, 477, 477, 477], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136950.769037, "stock": 11404, "event_stocks": [475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 475, 476, 476, 476, 476], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136953.9255822, "stock": 11379, "event_stocks": [474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 474, 475, 475, 475], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136957.032789, "stock": 11354, "event_stocks": [473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 473, 474, 474], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136960.132617, "stock": 11329, "event_stocks": [472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 472, 473], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136963.251571, "stock": 11304, "event_stocks": [471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471, 471], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136966.351275, "stock": 11279, "event_stocks": [469, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470, 470], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136969.517476, "stock": 11254, "event_stocks": [468, 468, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469, 469], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136972.673772, "stock": 11229, "event_stocks": [467, 467, 467, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468, 468], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136975.7768261, "stock": 11204, "event_stocks": [466, 466, 466, 466, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467, 467], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136978.883445, "stock": 11179, "event_stocks": [465, 465, 465, 465, 465, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466, 466], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136982.168999, "stock": 11153, "event_stocks": [464, 464, 464, 464, 464, 464, 464, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465, 465], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136985.353488, "stock": 11127, "event_stocks": [463, 463, 463, 463, 463, 463, 463, 463, 463, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464, 464], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136988.493037, "stock": 11102, "event_stocks": [462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794136991.627521, "stock": 11077, "event_stocks": [461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462, 462], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136994.713299, "stock": 11052, "event_stocks": [460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461, 461], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136998.020919, "stock": 11039, "event_stocks": [459, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794136998.121263, "stock": 11039, "event_stocks": [459, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460, 460], "inventory_lag": 0.0, "payment_lag": 0.0}
+PASS inventory-kill m6-inventory-kill-1794136871523725000 recovery 99.85872197151184 evidence docs/evidence/m6/run-m6-inventory-kill-1794136871523725000.json
+PASS cleanup timeout and independently audited rerun docs/evidence/m6/run-m6-inventory-kill-1794136871523725000.json
+SAMPLE {"at": 1794137004.4770849, "stock": 5000, "event_stocks": [5000], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137007.586159, "stock": 4975, "event_stocks": [4975], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137010.742041, "stock": 4949, "event_stocks": [4949], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137013.831166, "stock": 4925, "event_stocks": [4925], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137016.932344, "stock": 4900, "event_stocks": [4900], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137020.038031, "stock": 4875, "event_stocks": [4875], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137023.191231, "stock": 4850, "event_stocks": [4850], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137026.286618, "stock": 4825, "event_stocks": [4825], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137093.8688252, "stock": 4284, "event_stocks": [4284], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137096.9669719, "stock": 4259, "event_stocks": [4259], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137100.05268, "stock": 4235, "event_stocks": [4235], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137103.1464052, "stock": 4210, "event_stocks": [4210], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137106.234488, "stock": 4185, "event_stocks": [4185], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137152.9798021, "stock": 3811, "event_stocks": [3811], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137156.0511942, "stock": 3787, "event_stocks": [3787], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137159.193797, "stock": 3762, "event_stocks": [3762], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137162.287956, "stock": 3737, "event_stocks": [3737], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137165.374231, "stock": 3712, "event_stocks": [3712], "inventory_lag": 1.0, "payment_lag": 1.0}
+FAULT {"provider_baseline_at": 1794137003.568862, "replicas": [{"service": "inventory-service", "at": 1794137026.2951732, "ready": 1, "orders_per_second": 8.007817878304666}, {"service": "payment-service", "at": 1794137026.2951732, "ready": 1, "orders_per_second": 8.007817878304666}, {"service": "inventory-service", "at": 1794137109.2426188, "ready": 8, "orders_per_second": 8.025785165011973}, {"service": "payment-service", "at": 1794137168.382614, "ready": 8, "orders_per_second": 8.022036884171643}], "at": 1794137026.2951732, "method": "staged inventory 1->8->1, then payment 1->8; unchanged chart resources/JVM", "measurements": [{"service": "inventory-service", "started_at": 1794137093.792417, "finished_at": 1794137109.2426188, "completions": 124, "orders_per_second": 8.025785165011973, "ready": 8}, {"service": "payment-service", "started_at": 1794137152.925193, "finished_at": 1794137168.382614, "completions": 124, "orders_per_second": 8.022036884171643, "ready": 8}], "restored_at": 1794137168.475359}
+SAMPLE {"at": 1794137171.57054, "stock": 3663, "event_stocks": [3663], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137174.6736472, "stock": 3638, "event_stocks": [3638], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137177.756858, "stock": 3613, "event_stocks": [3613], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137180.833576, "stock": 3589, "event_stocks": [3589], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137184.0052018, "stock": 3563, "event_stocks": [3563], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137187.131989, "stock": 3538, "event_stocks": [3538], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137190.2484312, "stock": 3513, "event_stocks": [3513], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137193.332572, "stock": 3489, "event_stocks": [3489], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137196.499844, "stock": 3463, "event_stocks": [3463], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137199.666625, "stock": 3438, "event_stocks": [3438], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137202.7546098, "stock": 3413, "event_stocks": [3413], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137205.837466, "stock": 3389, "event_stocks": [3389], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137208.937881, "stock": 3364, "event_stocks": [3364], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137212.082736, "stock": 3339, "event_stocks": [3339], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137215.2515688, "stock": 3313, "event_stocks": [3313], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137218.384074, "stock": 3288, "event_stocks": [3288], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137221.50877, "stock": 3263, "event_stocks": [3263], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137224.641023, "stock": 3238, "event_stocks": [3238], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137227.7382011, "stock": 3213, "event_stocks": [3213], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137230.8820732, "stock": 3188, "event_stocks": [3188], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137233.979313, "stock": 3163, "event_stocks": [3163], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137237.1250181, "stock": 3138, "event_stocks": [3138], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137240.279386, "stock": 3113, "event_stocks": [3113], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137243.3721979, "stock": 3088, "event_stocks": [3088], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137246.50459, "stock": 3063, "event_stocks": [3063], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137249.596859, "stock": 3038, "event_stocks": [3038], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137252.710648, "stock": 3014, "event_stocks": [3014], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137255.842874, "stock": 2988, "event_stocks": [2988], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137258.921825, "stock": 2964, "event_stocks": [2964], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137262.066154, "stock": 2939, "event_stocks": [2939], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137265.1749032, "stock": 2914, "event_stocks": [2914], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137268.2897868, "stock": 2889, "event_stocks": [2889], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137271.3781388, "stock": 2864, "event_stocks": [2864], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137274.4738429, "stock": 2839, "event_stocks": [2839], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137277.6138299, "stock": 2814, "event_stocks": [2814], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137280.774359, "stock": 2789, "event_stocks": [2789], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137283.884372, "stock": 2764, "event_stocks": [2764], "inventory_lag": 1.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137286.9670742, "stock": 2740, "event_stocks": [2740], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137290.1337411, "stock": 2714, "event_stocks": [2714], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137293.227978, "stock": 2689, "event_stocks": [2689], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137296.3344152, "stock": 2665, "event_stocks": [2665], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137299.428267, "stock": 2640, "event_stocks": [2640], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137302.52336, "stock": 2615, "event_stocks": [2615], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137305.630614, "stock": 2590, "event_stocks": [2590], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137308.792268, "stock": 2565, "event_stocks": [2565], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137311.88684, "stock": 2540, "event_stocks": [2540], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137314.993352, "stock": 2515, "event_stocks": [2515], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137318.1057558, "stock": 2490, "event_stocks": [2490], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137321.194562, "stock": 2466, "event_stocks": [2466], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137324.304003, "stock": 2441, "event_stocks": [2441], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137327.389728, "stock": 2416, "event_stocks": [2416], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137330.493643, "stock": 2391, "event_stocks": [2391], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137333.663757, "stock": 2366, "event_stocks": [2366], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137336.7684438, "stock": 2341, "event_stocks": [2341], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137339.872771, "stock": 2316, "event_stocks": [2316], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137342.971884, "stock": 2291, "event_stocks": [2291], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137346.0731158, "stock": 2267, "event_stocks": [2267], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137349.171683, "stock": 2242, "event_stocks": [2242], "inventory_lag": 1.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137352.3429382, "stock": 2217, "event_stocks": [2217], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137355.482136, "stock": 2191, "event_stocks": [2191], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137358.574163, "stock": 2167, "event_stocks": [2167], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137361.742399, "stock": 2141, "event_stocks": [2141], "inventory_lag": 0.0, "payment_lag": 0.0}
+SAMPLE {"at": 1794137364.83631, "stock": 2119, "event_stocks": [2119], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137364.914581, "stock": 2119, "event_stocks": [2119], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137368.11714, "stock": 2119, "event_stocks": [2119], "inventory_lag": 0.0, "payment_lag": 1.0}
+SAMPLE {"at": 1794137371.388314, "stock": 2119, "event_stocks": [2119], "inventory_lag": 0.0, "payment_lag": 0.0}
+PASS consumer-ramp m6-consumer-ramp-1794137002893522000 recovery 345.0931408405304 evidence docs/evidence/m6/run-m6-consumer-ramp-1794137002893522000.json
+RESULT: m6-chaos passed

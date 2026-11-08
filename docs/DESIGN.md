@@ -151,7 +151,11 @@ Rationale:
   across partitions and pods. Keying it by eventId would put a whole sale on one partition.
 - **Known limit (document it in M6):** a single show's sale goes through one inventory partition,
   so more inventory pods do not speed up one show. Acceptable because a Redis decrement takes
-  microseconds. Payment and order processing do scale.
+  microseconds. Payment and order processing do scale. M6's single-show comparison at an offered
+  8/s measured 7.999579402694281 terminal outcomes/s with one Ready inventory replica versus
+  8.025785165011973/s with eight ([raw comparison](evidence/m6/bottleneck.json), 2026-11-08).
+  This is not a saturation benchmark: input rate already caps the measured outcomes and does not
+  establish inventory as the active bottleneck.
 - **12 partitions**: divides evenly across 1, 2, 3, 4, 6 pods and covers the 8-pod chaos test.
   Partitions can be added but never removed, and adding them remaps keys.
 - **Replication**: Compose = 1 broker, RF 1. Kubernetes (M3) = 3 brokers, RF 3, `min.insync.replicas=2`.
@@ -220,6 +224,8 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-11-04 | M6 attempts inventory 1 -> 8 -> 1, then payment 1 -> 8, independently, with temporary 128Mi requests, 256Mi limits and -Xmx96m; restoration records replicas, resources, JVM options and scaler settings | Default consumers measured about 304MB each. The first reduced-footprint rollout still stalled before eight Ready pods were verified; this is NOT validated sizing or simultaneous 16-consumer capacity evidence. Chart defaults are unchanged. |
 | 2026-11-04 | M6 preallocates 64 k6 VUs and extends only the sequential ramp to 240s; keeps the M5 8/s offered rate, purchase/retry logic and strict thresholds | Two initial attempts dropped arrivals (13 and 5), without HTTP/check failures. Failed attempts remain evidence, not acceptance; M5's normal invocation is unchanged. |
 | 2026-11-04 | M6 reports end-to-end terminal-outcome throughput and conservative fault-to-post-load-settlement recovery, with independent resumed_at progress | Recovery includes remaining load/polling, not isolated minimum MTTR. The provider's post-restoration window is idle because its in-memory ledger must be audited before rollout. Single-show numbers do not establish maximum inventory capacity. |
+| 2026-11-08 | M6 retry stages JVM startup one new Ready replica at a time, waits for surplus pods to terminate, uses a temporary 384Mi limit and a 360s ramp load | The preserved 256Mi pods were observed OOMKilled after Docker recovery. The staged 384Mi retry still timed out at four Ready / five desired, with kubelet TLS timeouts and VM swap activity. This is NOT validated eight-pod sizing; further ramp attempts require operator resource/runtime diagnosis. No M5 defaults changed. |
+| 2026-11-08 | After owner increased Docker VM to 16GB (six CPUs unchanged), M6 retains the chart memory requests/limits and JVM options during the staged ramp | Avoid adding an artificial 96Mi heap constraint to a rebalance experiment once the machine has headroom. Only replica counts and temporary scaler settings change; original resources/JVM settings are still snapshotted and restored. The earlier 8GB failures remain separate evidence. |
 
 ### M6 tool observation (2026-11-04)
 

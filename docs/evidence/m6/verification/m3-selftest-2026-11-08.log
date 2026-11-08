@@ -1,0 +1,17 @@
+==> Linting deploy/helm/ticketrush
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+ok   selftest_AC8_missing_DLT (rejected by check_AC8_dltTopology)
+ok   selftest_AC8_DLT_bad_partitions (rejected by check_AC8_dltTopology)
+ok   selftest_AC8_DLT_bad_RF (rejected by check_AC8_dltTopology)
+ok   selftest_AC8_compose_missing_DLT (rejected by check_AC8_dltTopology)
+ok   selftest_AC8_compose_bad_partitions (rejected by check_AC8_dltTopology)
+ok   selftest_AC8_compose_bad_RF (rejected by check_AC8_dltTopology)
+ok   selftest_AC1_mutation_fails_one_broker (rejected by check_AC1_kafka)
+ok   selftest_AC1_mutation_fails_min_isr (rejected by check_AC1_kafka)
+ok   selftest_AC1_mutation_fails_topic_6_partitions (rejected by check_AC1_topics)
+ok   selftest_AC2_mutation_fails_no_readiness_probe (rejected by check_AC2_hardening)
+ok   selftest_AC2_mutation_fails_grace_30 (rejected by check_AC2_hardening)
+ok   selftest_AC3_mutation_fails_literal_password (rejected by check_AC3_no_plaintext)
+RESULT: m3-chart-check selftest passed

@@ -1,0 +1,22 @@
+{
+  "source": "live",
+  "context": "kind-ticketrush",
+  "event_count": 1,
+  "run_evidence": "docs/evidence/m6/run-m6-consumer-ramp-1794137002893522000.json",
+  "measurements": [
+    {
+      "started_at": 1794137004.419023,
+      "finished_at": 1794137026.2951732,
+      "completions": 175,
+      "orders_per_second": 7.999579402694281,
+      "ready_inventory_replicas": 1
+    },
+    {
+      "started_at": 1794137093.792417,
+      "finished_at": 1794137109.2426188,
+      "completions": 124,
+      "orders_per_second": 8.025785165011973,
+      "ready_inventory_replicas": 8
+    }
+  ]
+}

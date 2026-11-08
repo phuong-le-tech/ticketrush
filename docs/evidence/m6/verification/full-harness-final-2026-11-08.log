@@ -1,0 +1,30 @@
+test_AC1_rejectCorruption (__main__.ContractTests) ... ok
+test_AC1_rejectDuplicateIdempotencyTuple (__main__.ContractTests) ... ok
+test_AC1_rejectMalformedEvidence (__main__.ContractTests) ... ok
+test_AC1_selftestIsOffline (__main__.ContractTests) ... ok
+test_AC1_validBoundaries (__main__.ContractTests) ... ok
+test_AC2_contextRefusal (__main__.ContractTests) ... ok
+test_AC2_inventoryKillRequiresTerminalConservation (__main__.ContractTests) ... ok
+test_AC3_brokerRestartRequiresChangedUID (__main__.ContractTests) ... ok
+test_AC3_brokerRestartRequiresTerminalConservation (__main__.ContractTests) ... ok
+test_AC4_declinesCannotBeCharged (__main__.ContractTests) ... ok
+test_AC4_declinesRelease (__main__.ContractTests) ... ok
+test_AC4_failureRateAndBaseline (__main__.ContractTests) ... ok
+test_AC4_requiresObservedSuccessAndDecline (__main__.ContractTests) ... ok
+test_AC5_DLTRequiresAcknowledgedOrderCorrelation (__main__.ContractTests) ... ok
+test_AC5_postgresLatency (__main__.ContractTests) ... ok
+test_AC6_rebalanceRamp (__main__.ContractTests) ... ok
+test_AC2_inventoryKill (__main__.RealEvidenceTests) ... ok
+test_AC3_brokerRestart (__main__.RealEvidenceTests) ... ok
+test_AC4_realDeclinesRelease (__main__.RealEvidenceTests) ... ok
+test_AC5_realPostgresLatency (__main__.RealEvidenceTests) ... ok
+test_AC6_abortRestores (__main__.RealEvidenceTests) ... ok
+test_AC6_realRebalanceRamp (__main__.RealEvidenceTests) ... ok
+test_AC7_resultsTraceable (__main__.RealEvidenceTests) ... ok
+test_AC9_honestReport (__main__.RealEvidenceTests) ... ok
+test_AC8_regressions (__main__.RegressionTests) ... skipped 'Select --regressions to run the unchanged Maven/chart suite'
+
+----------------------------------------------------------------------
+Ran 25 tests in 3.914s
+
+OK (skipped=1)

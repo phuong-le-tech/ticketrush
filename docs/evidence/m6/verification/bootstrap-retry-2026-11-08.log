@@ -1,0 +1,6 @@
+==> kind cluster ticketrush
+cluster already exists
+==> namespace ticketrush
+namespace/ticketrush unchanged
+==> Prometheus Operator 0.94.2 (kube-prometheus-stack 92.16.1)
+Error: failed to fetch https://github.com/prometheus-community/helm-charts/releases/download/kube-prometheus-stack-92.16.1/kube-prometheus-stack-92.16.1.tgz : 503 Service Unavailable
