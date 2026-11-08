@@ -238,11 +238,7 @@ class Live:
         return sorted(set(re.findall(r'M6_ACK ([a-f0-9-]{36})', (self.work / 'k6.log').read_text())))
 
     def ramp(self, service):
-        self.patch('deployment', service, dict(spec=dict(template=dict(spec=dict(containers=[dict(
-            name=service, resources=dict(requests=dict(cpu='50m', memory='128Mi'),
-            limits=dict(cpu='1', memory='384Mi')), env=[dict(name='JAVA_TOOL_OPTIONS',
-            value='-XX:+UseSerialGC -Xmx96m')])])))))
-        # Finish the template replacement at one replica, then bound concurrent JVM startup to one.
+        # Keep the chart's memory/JVM settings; bound concurrent startup instead of shrinking heaps.
         self.rollout(service)
         for replicas in range(2, 9):
             self.patch('scaledobject', service, dict(metadata=dict(annotations={
@@ -299,7 +295,7 @@ class Live:
             f.update(injected_query_seconds=time.monotonic() - begin, method='postgres-lock: ACCESS EXCLUSIVE for pg_sleep(4)')
             check(proc.wait(timeout=10) == 0, 'Postgres lock command failed')
         elif experiment == 'consumer-ramp':
-            f['method'] = 'sequential inventory 1->8->1, then payment 1->8; isolated to fit 8GB kind'
+            f['method'] = 'staged inventory 1->8->1, then payment 1->8; unchanged chart resources/JVM'
             f['measurements'] = []
             for service in SERVICES:
                 self.ramp(service)
