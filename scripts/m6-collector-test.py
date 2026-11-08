@@ -39,6 +39,36 @@ class CleanupTest(unittest.TestCase):
                 c[3]['metadata']['annotations'].get('autoscaling.keda.sh/paused-replicas') == '1'
                 for c in earlier), 'KEDA must remain paused at the original count while shrinking')
 
+    def test_ramp_readies_small_pod_before_incremental_scaling(self):
+        self.live.get = Mock(return_value={'status': {'readyReplicas': 8}})
+        self.live.ramp(SERVICES[0])
+        scales = [c for c in self.calls if c[:2] == ('kubectl', 'scale')]
+        self.assertEqual(['--replicas=' + str(n) for n in range(2, 9)], [c[-1] for c in scales])
+        first_scale = self.calls.index(scales[0])
+        self.assertIn(('ready', SERVICES[0]), self.calls[:first_scale])
+        for call in scales:
+            index = self.calls.index(call)
+            self.assertEqual(('ready', SERVICES[0]), self.calls[index + 1])
+
+    def test_ramp_memory_limit_covers_observed_startup_usage(self):
+        self.live.get = Mock(return_value={'status': {'readyReplicas': 8}})
+        self.live.ramp(SERVICES[0])
+        template = next(c[3]['spec']['template'] for c in self.calls
+                        if c[:3] == ('patch', 'deployment', SERVICES[0]))
+        self.assertEqual('384Mi', template['spec']['containers'][0]['resources']['limits']['memory'])
+
+    def test_rollout_waits_for_terminating_pods_before_next_phase(self):
+        self.live.rollout = Live.rollout.__get__(self.live)
+        self.live.kc = Mock()
+        self.live.get = Mock(side_effect=[
+            {'spec': {'replicas': 1, 'selector': {'matchLabels': {'app': 'inventory'}}}},
+            {'items': [{'metadata': {'deletionTimestamp': 'synthetic'}}, {'metadata': {}}]},
+            {'items': [{'metadata': {}}]},
+        ])
+        self.live.rollout(SERVICES[0])
+        self.assertEqual(3, self.live.get.call_count,
+                         'A deployment rollout alone does not wait for old pods to exit')
+
     def test_decline_audit_accepts_actual_provider_reason(self):
         evidence = synthetic_evidence()
         evidence['experiment'] = 'payment-declines'

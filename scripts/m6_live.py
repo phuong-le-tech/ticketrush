@@ -87,6 +87,17 @@ class Live:
 
     def rollout(self, service):
         self.kc('rollout', 'status', 'deployment/' + service, '--timeout=180s', timeout=190)
+        deployment = self.get('deployment', service)
+        selector = deployment['spec']['selector']['matchLabels']
+        until = time.monotonic() + 90
+        while time.monotonic() < until:
+            pods = self.get('pods', '-l', ','.join(k + '=' + v for k, v in selector.items()))['items']
+            # Rollout status can succeed while surplus JVMs still consume memory during termination.
+            if len(pods) == deployment['spec']['replicas'] and all(
+                    not p['metadata'].get('deletionTimestamp') for p in pods):
+                return
+            time.sleep(1)
+        raise Failure('old pods did not terminate: ' + service)
 
     def pause(self, replicas):
         for service in SERVICES:
@@ -226,6 +237,20 @@ class Live:
         # These are real response bodies, not IDs reconstructed from database totals.
         return sorted(set(re.findall(r'M6_ACK ([a-f0-9-]{36})', (self.work / 'k6.log').read_text())))
 
+    def ramp(self, service):
+        self.patch('deployment', service, dict(spec=dict(template=dict(spec=dict(containers=[dict(
+            name=service, resources=dict(requests=dict(cpu='50m', memory='128Mi'),
+            limits=dict(cpu='1', memory='384Mi')), env=[dict(name='JAVA_TOOL_OPTIONS',
+            value='-XX:+UseSerialGC -Xmx96m')])])))))
+        # Finish the template replacement at one replica, then bound concurrent JVM startup to one.
+        self.rollout(service)
+        for replicas in range(2, 9):
+            self.patch('scaledobject', service, dict(metadata=dict(annotations={
+                'autoscaling.keda.sh/paused-replicas': str(replicas)}), spec=dict(maxReplicaCount=8)))
+            self.kc('scale', 'deployment/' + service, '--replicas=' + str(replicas))
+            self.rollout(service)
+        check(self.get('deployment', service)['status'].get('readyReplicas') == 8, 'not eight Ready')
+
     def fault(self, experiment, e, events):
         f = e['fault']
         if experiment in ('inventory-kill', 'broker-restart'):
@@ -277,15 +302,7 @@ class Live:
             f['method'] = 'sequential inventory 1->8->1, then payment 1->8; isolated to fit 8GB kind'
             f['measurements'] = []
             for service in SERVICES:
-                self.patch('deployment', service, dict(spec=dict(template=dict(spec=dict(containers=[dict(
-                    name=service, resources=dict(requests=dict(cpu='50m', memory='128Mi'),
-                    limits=dict(cpu='1', memory='256Mi')), env=[dict(name='JAVA_TOOL_OPTIONS',
-                    value='-XX:+UseSerialGC -Xmx96m')])])))))
-                self.patch('scaledobject', service, dict(metadata=dict(annotations={
-                    'autoscaling.keda.sh/paused-replicas': '8'}), spec=dict(maxReplicaCount=8)))
-                self.kc('scale', 'deployment/' + service, '--replicas=8')
-                self.rollout(service)
-                check(self.get('deployment', service)['status'].get('readyReplicas') == 8, 'not eight Ready')
+                self.ramp(service)
                 a = time.time()
                 while time.time() - a < 15:
                     self.sample(e, events)
