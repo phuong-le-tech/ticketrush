@@ -1,0 +1,381 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-11-04T13:38:36Z",
+                "generateName": "inventory-service-7b98d88fd4-",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/name": "inventory-service",
+                    "pod-template-hash": "7b98d88fd4"
+                },
+                "name": "inventory-service-7b98d88fd4-75hgf",
+                "namespace": "ticketrush",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "inventory-service-7b98d88fd4",
+                        "uid": "ad8cdd45-94eb-476f-b436-f5122ae478fa"
+                    }
+                ],
+                "resourceVersion": "155516",
+                "uid": "c020c9b9-8497-4276-a613-1f514a3f25c6"
+            },
+            "spec": {
+                "automountServiceAccountToken": false,
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "JAVA_TOOL_OPTIONS",
+                                "value": "-XX:+UseSerialGC -Xmx96m"
+                            },
+                            {
+                                "name": "KAFKA_BOOTSTRAP_SERVERS",
+                                "value": "ticketrush-kafka-bootstrap:9092"
+                            },
+                            {
+                                "name": "CONSUMER_PROCESSING_DELAY_MS",
+                                "value": "0"
+                            },
+                            {
+                                "name": "INVENTORY_SEED_CURRENCY",
+                                "value": "EUR"
+                            },
+                            {
+                                "name": "INVENTORY_SEED_EVENT_ID",
+                                "value": "concert-1"
+                            },
+                            {
+                                "name": "INVENTORY_SEED_PRICE_CENTS",
+                                "value": "5000"
+                            },
+                            {
+                                "name": "INVENTORY_SEED_STOCK",
+                                "value": "1000"
+                            },
+                            {
+                                "name": "REDIS_HOST",
+                                "value": "redis"
+                            },
+                            {
+                                "name": "REDIS_PORT",
+                                "value": "6379"
+                            }
+                        ],
+                        "image": "ticketrush/inventory-service:eec48385d639",
+                        "imagePullPolicy": "IfNotPresent",
+                        "livenessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/actuator/health/liveness",
+                                "port": "http",
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 10,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "name": "inventory-service",
+                        "ports": [
+                            {
+                                "containerPort": 8081,
+                                "name": "http",
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/actuator/health/readiness",
+                                "port": "http",
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "cpu": "1",
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "50m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                                "drop": [
+                                    "ALL"
+                                ]
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 36,
+                            "httpGet": {
+                                "path": "/actuator/health/liveness",
+                                "port": "http",
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "initContainers": [
+                    {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "until redis-cli -h redis ping | grep -q PONG; do sleep 2; done"
+                        ],
+                        "image": "redis:8.10.2",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "wait-for-redis",
+                        "resources": {
+                            "limits": {
+                                "cpu": "100m",
+                                "memory": "64Mi"
+                            },
+                            "requests": {
+                                "cpu": "10m",
+                                "memory": "16Mi"
+                            }
+                        },
+                        "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                                "drop": [
+                                    "ALL"
+                                ]
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "nodeName": "ticketrush-control-plane",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {
+                    "runAsNonRoot": true,
+                    "runAsUser": 10001,
+                    "seccompProfile": {
+                        "type": "RuntimeDefault"
+                    }
+                },
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 60,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ]
+            },
+            "status": {
+                "allocatedResources": {
+                    "cpu": "50m",
+                    "memory": "128Mi"
+                },
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-08T10:39:31Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-04T13:38:36Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-08T10:43:35Z",
+                        "message": "containers with unready status: [inventory-service]",
+                        "observedGeneration": 1,
+                        "reason": "ContainersNotReady",
+                        "status": "False",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-08T10:43:35Z",
+                        "message": "containers with unready status: [inventory-service]",
+                        "observedGeneration": 1,
+                        "reason": "ContainersNotReady",
+                        "status": "False",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-04T13:38:36Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "50m",
+                            "memory": "128Mi"
+                        },
+                        "containerID": "containerd://18dda8b039c59368e9a66fa39f78b1fabf2562b1af31b979e586819fa4e11e0a",
+                        "image": "docker.io/ticketrush/inventory-service:eec48385d639",
+                        "imageID": "docker.io/library/import-2026-11-04@sha256:1d724ec79996fab0a46aa71da778c09da1a2718156ac16b692d45bb1506b79e3",
+                        "lastState": {
+                            "terminated": {
+                                "containerID": "containerd://18dda8b039c59368e9a66fa39f78b1fabf2562b1af31b979e586819fa4e11e0a",
+                                "exitCode": 137,
+                                "finishedAt": "2026-11-08T10:43:35Z",
+                                "reason": "OOMKilled",
+                                "startedAt": "2026-11-08T10:43:20Z"
+                            }
+                        },
+                        "name": "inventory-service",
+                        "ready": false,
+                        "resources": {
+                            "limits": {
+                                "cpu": "1",
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "50m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "restartCount": 7,
+                        "started": false,
+                        "state": {
+                            "waiting": {
+                                "message": "back-off 2m40s restarting failed container=inventory-service pod=inventory-service-7b98d88fd4-75hgf_ticketrush(c020c9b9-8497-4276-a613-1f514a3f25c6)",
+                                "reason": "CrashLoopBackOff"
+                            }
+                        },
+                        "user": {
+                            "linux": {
+                                "gid": 999,
+                                "supplementalGroups": [
+                                    999
+                                ],
+                                "uid": 10001
+                            }
+                        }
+                    }
+                ],
+                "hostIP": "172.19.0.4",
+                "hostIPs": [
+                    {
+                        "ip": "172.19.0.4"
+                    }
+                ],
+                "initContainerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "10m",
+                            "memory": "16Mi"
+                        },
+                        "containerID": "containerd://0e0ef37e18faa6ec978dc10cce5714df286828e72ed9ccc1ec063a6aeb6ce213",
+                        "image": "docker.io/library/redis:8.10.2",
+                        "imageID": "docker.io/library/redis@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901",
+                        "lastState": {
+                            "terminated": {
+                                "containerID": "containerd://85232352c8dd0b4f3b782fb3faadec4b04d235c7fda3b7d61bc648eac02e47d3",
+                                "exitCode": 0,
+                                "finishedAt": "2026-11-04T13:38:36Z",
+                                "reason": "Completed",
+                                "startedAt": "2026-11-04T13:38:36Z"
+                            }
+                        },
+                        "name": "wait-for-redis",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "cpu": "100m",
+                                "memory": "64Mi"
+                            },
+                            "requests": {
+                                "cpu": "10m",
+                                "memory": "16Mi"
+                            }
+                        },
+                        "restartCount": 1,
+                        "started": false,
+                        "state": {
+                            "terminated": {
+                                "containerID": "containerd://0e0ef37e18faa6ec978dc10cce5714df286828e72ed9ccc1ec063a6aeb6ce213",
+                                "exitCode": 0,
+                                "finishedAt": "2026-11-08T10:40:06Z",
+                                "reason": "Completed",
+                                "startedAt": "2026-11-08T10:39:31Z"
+                            }
+                        },
+                        "user": {
+                            "linux": {
+                                "gid": 0,
+                                "supplementalGroups": [
+                                    0
+                                ],
+                                "uid": 10001
+                            }
+                        }
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.244.0.7",
+                "podIPs": [
+                    {
+                        "ip": "10.244.0.7"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "resources": {
+                    "limits": {
+                        "cpu": "1",
+                        "memory": "256Mi"
+                    },
+                    "requests": {
+                        "cpu": "28m",
+                        "memory": "128Mi"
+                    }
+                },
+                "startTime": "2026-11-04T13:38:36Z"
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}

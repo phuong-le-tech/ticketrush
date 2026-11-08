@@ -1,0 +1,124 @@
+{
+  "status": "implementation_verified_review_pending",
+  "date": "2026-11-08",
+  "notice": "Latest command records identify actual invocations explicitly. Historical failures and not-run states are preserved separately. All implementation acceptance checks pass; independent review and PR remain pending.",
+  "commands": {
+    "scripts/m6-chaos.sh --selftest": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/selftest-16gb-2026-11-08.log",
+      "summary": "RESULT: m6-chaos selftest passed (offline synthetic evidence only)"
+    },
+    "scripts/m6-chaos.sh": {
+      "exit_code": 0,
+      "actual_command": "scripts/m6-chaos.sh --resume",
+      "log": "docs/evidence/m6/verification/resume-16gb-2026-11-08.log",
+      "summary": "RESULT: m6-chaos passed",
+      "note": "Successful whole-runner invocation used --resume to re-evaluate completed live runs, then actually execute cleanup probes and the single-show comparison. The earlier unqualified batch failure remains in additional_commands."
+    },
+    "mvn verify": {
+      "exit_code": 0,
+      "actual_command": "JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home mvn verify",
+      "log": "docs/evidence/m6/verification/maven-16gb-summary-2026-11-08.log",
+      "summary": "[INFO] BUILD SUCCESS",
+      "tests": 213,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_report_count": 43,
+      "counts": "docs/evidence/m6/verification/maven-16gb-counts.json",
+      "archive": "docs/evidence/m6/retry-raw-logs.zip",
+      "log_archive_member": "docs/evidence/m6/runtime-2026-11-08/maven.log"
+    },
+    "scripts/m3-chart-check.sh": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/m3-chart-16gb-2026-11-08.log",
+      "summary": "RESULT: m3-chart-check passed"
+    },
+    "scripts/m5-chart-check.sh": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/m5-chart-16gb-final-2026-11-08.log",
+      "summary": "RESULT: m5-chart-check passed"
+    }
+  },
+  "retry_8gb_2026_11_08": {
+    "status": "blocked_runtime_pressure",
+    "implementation_commit": "5f4842e",
+    "ramp": {
+      "command": "scripts/m6-chaos.sh --experiment consumer-ramp --runs 1 --timeout-seconds 900",
+      "exit_code": 1,
+      "log_archive_member": "docs/evidence/m6/m6-consumer-ramp-1794134769312914000/runner.log",
+      "archive": "docs/evidence/m6/retry-raw-logs.zip",
+      "raw_directory": "docs/evidence/m6/m6-consumer-ramp-1794134769312914000",
+      "summary": "Rollout timed out at four Ready / five desired inventory replicas; no completed invariant audit."
+    },
+    "verification": {
+      "collector_tests": {"exit_code": 0, "tests": 9, "log": "docs/evidence/m6/verification/collector-retry-2026-11-08.log"},
+      "offline_contract": {"exit_code": 0, "tests": 25, "skipped": 9, "log": "docs/evidence/m6/verification/offline-retry-2026-11-08.log"},
+      "full_contract": {"exit_code": 1, "tests": 25, "failures": 7, "skipped": 1, "log": "docs/evidence/m6/verification/full-harness-retry-2026-11-08.log"},
+      "mvn_verify": {"exit_code": null, "status": "not_run_after_runtime_pressure"},
+      "m3_chart": {"exit_code": 0, "log": "docs/evidence/m6/verification/m3-chart-retry-2026-11-08.log"},
+      "m5_chart": {"exit_code": 0, "log": "docs/evidence/m6/verification/m5-chart-retry-2026-11-08.log"}
+    },
+    "bootstrap_attempts": [
+      {"exit_code": 1, "log": "docs/evidence/m6/verification/bootstrap-2026-11-08.log", "reason": "Pinned monitoring chart download HTTP 503"},
+      {"exit_code": 1, "log": "docs/evidence/m6/verification/bootstrap-retry-2026-11-08.log", "reason": "Pinned monitoring chart download HTTP 503"}
+    ],
+    "restoration": "Cleanup commands succeeded; readbacks show all pods Ready, consumers 1/1, max 2 and unpaused. Exact after-snapshot comparison did not run because the combined command hit the user jq environment deny rule.",
+    "raw_logs_archive": "docs/evidence/m6/retry-raw-logs.zip"
+  },
+  "additional_commands": {
+    "full_harness_16gb": {
+      "actual_command": "scripts/m6-chaos-test.sh",
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/full-harness-16gb-2026-11-08.log",
+      "summary": "OK (skipped=1)",
+      "tests": 25,
+      "note": "Only the opt-in regression wrapper is skipped; unchanged root Maven and chart commands were run separately and passed in this same run."
+    },
+    "collector_16gb": {
+      "actual_command": "python3 scripts/m6-collector-test.py",
+      "exit_code": 0,
+      "tests": 9,
+      "log": "docs/evidence/m6/verification/collector-16gb-2026-11-08.log"
+    },
+    "ramp_16gb": {
+      "actual_command": "scripts/m6-chaos.sh --experiment consumer-ramp --runs 3 --timeout-seconds 900",
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/ramp-16gb-2026-11-08.log",
+      "summary": "RESULT: m6-chaos passed"
+    },
+    "historical_unqualified_batch_2026_11_04": {
+      "actual_command": "scripts/m6-chaos.sh",
+      "exit_code": 1,
+      "log": "docs/evidence/m6/verification/default-batch.log",
+      "summary": "FAIL m6-chaos: provider audit requires one pod"
+    },
+    "historical_mvn_2026_11_04": {
+      "exit_code": null,
+      "status": "not_run_after_runtime_failure",
+      "log": "docs/evidence/m6/blocked.txt"
+    },
+    "scripts/m6-chaos-test.sh": {
+      "exit_code": 1,
+      "log": "docs/evidence/m6/verification/full-harness.log",
+      "summary": "FAILED (failures=7, skipped=1)"
+    },
+    "scripts/m6-chaos-test.sh --offline": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/offline.log",
+      "summary": "OK (skipped=9)"
+    },
+    "python3 scripts/m6-collector-test.py": {
+      "exit_code": 0,
+      "log": "docs/evidence/m6/verification/collector-tests.log",
+      "summary": "OK"
+    },
+    "scripts/m6-chaos.sh --resume": {
+      "exit_code": null,
+      "status": "stopped_after_runtime_failure_and_best_effort_restoration",
+      "log_archive_member": "verification-history/m6-live-resume-final.log",
+      "archive": "docs/evidence/m6/raw-logs.zip",
+      "summary": "The final resumed collector was stopped; no successful whole-batch result is claimed."
+    }
+  }
+}

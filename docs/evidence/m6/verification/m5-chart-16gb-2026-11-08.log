@@ -1,0 +1,6 @@
+==> Linting deploy/helm/ticketrush
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+FAIL check_AC6_hygiene: trailing whitespace in new file: docs/evidence/m6/verification/maven-16gb-2026-11-08.log
+RESULT: m5-chart-check failed

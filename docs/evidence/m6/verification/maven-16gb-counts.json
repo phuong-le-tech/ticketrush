@@ -1,0 +1,104 @@
+{
+  "report_count": 43,
+  "totals": {
+    "tests": 213,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "modules": {
+    "api-gateway": {
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "common": {
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-tests": {
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "fake-payment-provider": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "inventory-service": {
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "notification-service": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "order-service": {
+      "tests": 70,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "payment-service": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "reports": [
+    "api-gateway/target/failsafe-reports/TEST-com.ticketrush.gateway.ActuatorProbesIT.xml",
+    "api-gateway/target/failsafe-reports/TEST-com.ticketrush.gateway.OrderPublishIT.xml",
+    "api-gateway/target/failsafe-reports/TEST-com.ticketrush.gateway.PrometheusIT.xml",
+    "api-gateway/target/surefire-reports/TEST-com.ticketrush.gateway.KafkaUnavailableTest.xml",
+    "api-gateway/target/surefire-reports/TEST-com.ticketrush.gateway.OrderIdempotencyTest.xml",
+    "api-gateway/target/surefire-reports/TEST-com.ticketrush.gateway.OrderValidationTest.xml",
+    "common/target/surefire-reports/TEST-com.ticketrush.common.EventJsonRoundTripTest.xml",
+    "common/target/surefire-reports/TEST-com.ticketrush.common.EventTypeHeaderTest.xml",
+    "common/target/surefire-reports/TEST-com.ticketrush.common.TopicsTest.xml",
+    "e2e-tests/target/surefire-reports/TEST-com.ticketrush.e2e.DltE2ETest.xml",
+    "e2e-tests/target/surefire-reports/TEST-com.ticketrush.e2e.FailureE2ETest.xml",
+    "e2e-tests/target/surefire-reports/TEST-com.ticketrush.e2e.MetricsE2ETest.xml",
+    "e2e-tests/target/surefire-reports/TEST-com.ticketrush.e2e.OutboxE2ETest.xml",
+    "e2e-tests/target/surefire-reports/TEST-com.ticketrush.e2e.OversellE2ETest.xml",
+    "e2e-tests/target/surefire-reports/TEST-com.ticketrush.e2e.PurchaseFlowE2ETest.xml",
+    "e2e-tests/target/surefire-reports/TEST-com.ticketrush.e2e.ReplayE2ETest.xml",
+    "fake-payment-provider/target/failsafe-reports/TEST-com.ticketrush.provider.ActuatorProbesIT.xml",
+    "fake-payment-provider/target/failsafe-reports/TEST-com.ticketrush.provider.ChargeControllerIT.xml",
+    "fake-payment-provider/target/failsafe-reports/TEST-com.ticketrush.provider.PrometheusIT.xml",
+    "inventory-service/target/failsafe-reports/TEST-com.ticketrush.inventory.ActuatorProbesIT.xml",
+    "inventory-service/target/failsafe-reports/TEST-com.ticketrush.inventory.InventoryRepositoryIT.xml",
+    "inventory-service/target/failsafe-reports/TEST-com.ticketrush.inventory.PrometheusIT.xml",
+    "inventory-service/target/failsafe-reports/TEST-com.ticketrush.inventory.ReleaseIT.xml",
+    "inventory-service/target/failsafe-reports/TEST-com.ticketrush.inventory.ReservationFlowIT.xml",
+    "inventory-service/target/surefire-reports/TEST-com.ticketrush.inventory.MetricsTest.xml",
+    "inventory-service/target/surefire-reports/TEST-com.ticketrush.inventory.PricingTest.xml",
+    "notification-service/target/failsafe-reports/TEST-com.ticketrush.notification.ActuatorProbesIT.xml",
+    "notification-service/target/failsafe-reports/TEST-com.ticketrush.notification.NotificationIT.xml",
+    "notification-service/target/failsafe-reports/TEST-com.ticketrush.notification.PrometheusIT.xml",
+    "notification-service/target/surefire-reports/TEST-com.ticketrush.notification.MetricsTest.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.ActuatorProbesIT.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.MigrationCompatibilityIT.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.OrderSagaIT.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.OrderSchemaIT.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.OutboxIT.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.PrometheusIT.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.SagaMetricsIT.xml",
+    "order-service/target/failsafe-reports/TEST-com.ticketrush.order.SagaReaperIT.xml",
+    "order-service/target/surefire-reports/TEST-com.ticketrush.order.MetricsTest.xml",
+    "payment-service/target/failsafe-reports/TEST-com.ticketrush.payment.ActuatorProbesIT.xml",
+    "payment-service/target/failsafe-reports/TEST-com.ticketrush.payment.PaymentFlowIT.xml",
+    "payment-service/target/failsafe-reports/TEST-com.ticketrush.payment.PrometheusIT.xml",
+    "payment-service/target/surefire-reports/TEST-com.ticketrush.payment.MetricsTest.xml"
+  ]
+}

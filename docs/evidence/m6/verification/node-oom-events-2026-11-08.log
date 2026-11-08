@@ -1,0 +1,5 @@
+NAMESPACE   LAST SEEN   TYPE      REASON      OBJECT                          MESSAGE
+default     3d21h       Warning   SystemOOM   node/ticketrush-control-plane   System OOM encountered, victim process: java, pid: 77035
+default     3d21h       Warning   SystemOOM   node/ticketrush-control-plane   System OOM encountered, victim process: java, pid: 77091
+default     3d21h       Warning   SystemOOM   node/ticketrush-control-plane   System OOM encountered, victim process: java, pid: 77045
+default     3d21h       Warning   SystemOOM   node/ticketrush-control-plane   System OOM encountered, victim process: java, pid: 83605

@@ -1,0 +1,82 @@
+test_AC1_rejectCorruption (__main__.ContractTests) ... ok
+test_AC1_rejectDuplicateIdempotencyTuple (__main__.ContractTests) ... ok
+test_AC1_rejectMalformedEvidence (__main__.ContractTests) ... ok
+test_AC1_selftestIsOffline (__main__.ContractTests) ... ok
+test_AC1_validBoundaries (__main__.ContractTests) ... ok
+test_AC2_contextRefusal (__main__.ContractTests) ... ok
+test_AC2_inventoryKillRequiresTerminalConservation (__main__.ContractTests) ... ok
+test_AC3_brokerRestartRequiresChangedUID (__main__.ContractTests) ... ok
+test_AC3_brokerRestartRequiresTerminalConservation (__main__.ContractTests) ... ok
+test_AC4_declinesCannotBeCharged (__main__.ContractTests) ... ok
+test_AC4_declinesRelease (__main__.ContractTests) ... ok
+test_AC4_failureRateAndBaseline (__main__.ContractTests) ... ok
+test_AC4_requiresObservedSuccessAndDecline (__main__.ContractTests) ... ok
+test_AC5_DLTRequiresAcknowledgedOrderCorrelation (__main__.ContractTests) ... ok
+test_AC5_postgresLatency (__main__.ContractTests) ... ok
+test_AC6_rebalanceRamp (__main__.ContractTests) ... ok
+test_AC2_inventoryKill (__main__.RealEvidenceTests) ... ok
+test_AC3_brokerRestart (__main__.RealEvidenceTests) ... ok
+test_AC4_realDeclinesRelease (__main__.RealEvidenceTests) ... ok
+test_AC5_realPostgresLatency (__main__.RealEvidenceTests) ... ok
+test_AC6_abortRestores (__main__.RealEvidenceTests) ... test_AC6_realRebalanceRamp (__main__.RealEvidenceTests) ... FAIL
+test_AC7_resultsTraceable (__main__.RealEvidenceTests) ... FAIL
+test_AC9_honestReport (__main__.RealEvidenceTests) ... FAIL
+test_AC8_regressions (__main__.RegressionTests) ... skipped 'Select --regressions to run the unchanged Maven/chart suite'
+
+======================================================================
+FAIL: test_AC6_abortRestores (__main__.RealEvidenceTests) (cause='SIGINT')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<stdin>", line 320, in test_AC6_abortRestores
+AssertionError: False is not true : Real abort/timeout cleanup evidence missing: /Users/phuong/Documents/Tech/GitHub/ticketrush-worktrees/milestone-6/docs/evidence/m6/cleanup-SIGINT.json
+
+======================================================================
+FAIL: test_AC6_abortRestores (__main__.RealEvidenceTests) (cause='timeout')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<stdin>", line 320, in test_AC6_abortRestores
+AssertionError: False is not true : Real abort/timeout cleanup evidence missing: /Users/phuong/Documents/Tech/GitHub/ticketrush-worktrees/milestone-6/docs/evidence/m6/cleanup-timeout.json
+
+======================================================================
+FAIL: test_AC6_realRebalanceRamp (__main__.RealEvidenceTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<stdin>", line 314, in test_AC6_realRebalanceRamp
+  File "<stdin>", line 294, in audit
+  File "<stdin>", line 289, in runs
+AssertionError: 0 not greater than or equal to 3 : consumer-ramp: at least three real runs required
+
+======================================================================
+FAIL: test_AC7_resultsTraceable (__main__.RealEvidenceTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<stdin>", line 348, in test_AC7_resultsTraceable
+  File "<stdin>", line 289, in runs
+AssertionError: 0 not greater than or equal to 3 : consumer-ramp: at least three real runs required
+
+======================================================================
+FAIL: test_AC9_honestReport (__main__.RealEvidenceTests) (command='scripts/m6-chaos.sh')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<stdin>", line 389, in test_AC9_honestReport
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_AC9_honestReport (__main__.RealEvidenceTests) (command='mvn verify')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<stdin>", line 389, in test_AC9_honestReport
+AssertionError: 0 != None
+
+======================================================================
+FAIL: test_AC9_honestReport (__main__.RealEvidenceTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<stdin>", line 397, in test_AC9_honestReport
+  File "<stdin>", line 289, in runs
+AssertionError: 0 not greater than or equal to 3 : consumer-ramp: at least three real runs required
+
+----------------------------------------------------------------------
+Ran 25 tests in 4.442s
+
+FAILED (failures=7, skipped=1)

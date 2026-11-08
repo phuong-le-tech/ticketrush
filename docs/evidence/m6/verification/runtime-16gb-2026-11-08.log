@@ -1,0 +1,8 @@
+6 CPUs 16788209664 bytes
+running 2026-11-08T10:56:12.6753005Z
+NAME                READY   UP-TO-DATE   AVAILABLE   AGE
+inventory-service   1/1     1            1           8d
+payment-service     1/1     1            1           8d
+NAME                SCALETARGETKIND      SCALETARGETNAME     MIN   MAX   READY   ACTIVE   FALLBACK   PAUSED   TRIGGERS   AUTHENTICATIONS   AGE
+inventory-service   apps/v1.Deployment   inventory-service   1     2     True    False    False      False    kafka                        8d
+payment-service     apps/v1.Deployment   payment-service     1     2     True    False    False      False    kafka                        8d
