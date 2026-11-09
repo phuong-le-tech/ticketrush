@@ -22,7 +22,9 @@ describe('App', () => {
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/events/concert-1/stock').flush({ eventId: 'concert-1', stock: 37 });
-    http.expectOne('/api/orders/activity').flush({ windowSeconds: 10, ordersInWindow: 0, orders: [] });
+    http
+      .expectOne('/api/orders/activity')
+      .flush({ windowSeconds: 10, ordersInWindow: 0, orders: [] });
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('h1')?.textContent?.trim()).toBe('Ticket operations');
