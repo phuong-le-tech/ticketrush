@@ -1,1 +1,71 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  color-scheme: dark;
+  --bg: #0c111c;
+  --surface: #101722;
+  --raised: #202936;
+  --fg: #eef6ff;
+  --muted: #b1bfce;
+  --border: #303b49;
+  --accent: #0ea5e9;
+  --warning: #f5bf63;
+  --danger: #ff9a94;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    15px/1.5 'IBM Plex Sans',
+    'Segoe UI',
+    Helvetica,
+    sans-serif;
+}
+button,
+input {
+  font: inherit;
+}
+button,
+input {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  background: var(--surface);
+}
+input {
+  padding: 8px 12px;
+  width: 100%;
+}
+button {
+  padding: 0 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+input:disabled {
+  opacity: 0.65;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+h1 {
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: 17px;
+}
