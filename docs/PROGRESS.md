@@ -11,7 +11,7 @@ result, and what is NOT done or not verified.
 | 4 | Failure handling | PR #18 (`6a5a3b0`) | Done |
 | 5 | Observability and autoscaling | PR #19 (`aa465d5`) | Done |
 | 6 | Chaos experiments and results | PR #20 (`f409c88`) | Done |
-| 7 | Minimal Angular dashboard | - | Not started |
+| 7 | Minimal Angular dashboard | - | In progress: backend implemented, review pending; design approved |
 | 8 | Portfolio polish | - | Not started |
 
 ## Milestone 1 checklist (done)
@@ -593,3 +593,48 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   Six CPUs remain unchanged, CPU throttling and maximum
   sustainable rate are not quantified, recovery includes remaining load and polling, and provider
   after-restoration throughput is an idle audit window. This is not a simultaneous 8+8 benchmark.
+
+### Milestone 7 backend implementation - 2026-11-09
+
+- Backend phase only, independent same-card review pending on `t_31ecab6c`. M7 is not accepted.
+  Open Design reference approval is recorded in `docs/design/m7/README.md`; Angular and serving
+  work remain downstream. No M8 work.
+- Implemented inventory-service `GET /events/{eventId}/stock` with one Redis HGET, long stock,
+  blank/overlength validation and unknown-event 404. Implemented order-service
+  `GET /orders/activity?limit=20` with limit 1..50, explicit public projection, newest-first
+  `created_at` ordering and a strict PostgreSQL ten-second count independent of limit/status.
+  No customer id/idempotency key in the projection. Nullable saga metadata remains null.
+- Commits: `516dacb` (stock), `d03f922` (order activity). No test-writer test changed, no new
+  dependency, no write path, Lua, topic, event/DB schema, key or M5/M6 default changed.
+  DESIGN.md records API contracts, M7 decisions, scan/sort cost and the UI container pin.
+- RED reproduced in this run, Java 21.0.10:
+  `mvn verify -fae -pl inventory-service,order-service -am -Dgroups=m7-red` -> expected exit 1,
+  26 cases, 25 assertion failures, zero errors. Missing routes returned 404; the repository count
+  threw its placeholder exception, captured as an assertion failure. Unknown-event 404 already passed.
+- GREEN: `mvn verify -fae -pl inventory-service,order-service -am` -> exit 0, BUILD SUCCESS,
+  146 tests, zero failures/errors/skips, 01:24 min. Includes StockEndpointIT 8,
+  OrderActivityIT 11 and OrderActivityWindowIT 7; all existing module tests also passed.
+- Full unfiltered root verification in this run:
+  ```sh
+  export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home
+  export PATH="$JAVA_HOME/bin:$PATH"
+  mvn verify
+  ```
+  -> exit 0; all 46 Surefire/Failsafe XML reports aggregated with xmllint:
+  ```text
+  Reports=46 tests=239 failures=0 errors=0 skipped=0
+  [INFO] BUILD SUCCESS
+  [INFO] Total time:  15:21 min
+  ```
+  Includes contention, replay, failure, DLT, metrics, outbox, schema/migration and happy-path E2E.
+  The first foreground root attempt was interrupted by the tool's 420s call deadline and ended
+  BUILD FAILURE without test assertion failures. The successful rerun used a tracked background
+  process and completed normally; no code/test changes were needed between attempts.
+- `git diff --check` passes. No separate lint/typecheck command exists in CLAUDE.md/AGENTS.md;
+  Maven compiled all modules. Docker daemon 29.9.2 was reachable. Verified the downstream pin:
+  `docker run --rm node:24.22.2 node --version` -> `v24.22.2`; no npm command or host upgrade.
+- NOT done / unverified: Angular/Vitest, nginx/Compose serving, real running-dashboard screenshot,
+  `scripts/m7-acceptance.sh`, M2 ten-run acceptance, kind/k6 or capacity testing. Root verification
+  includes contention/replay once only. No UI/deployment AC is checked off for this backend phase.
+  Order count and recent rows are separate snapshots, no new index bounds large-table query cost,
+  no outage response contract or performance claim. Review and owner approval remain gates.

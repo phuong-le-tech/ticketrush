@@ -22,6 +22,8 @@ Checked against Maven Central and Docker Hub on 2026-10-16. Re-check tools for l
 | Helm | 4.x (local tool) | M3. Chart in `deploy/helm/ticketrush`. Installed with `brew install helm`. |
 | kind | 0.33 (local tool) | M3. Local cluster `ticketrush`. Installed with `brew install kind`. |
 | PostgreSQL / Redis in Kubernetes | 18.6 / 8.10.2 | M3. Same images as Compose, as plain single-replica StatefulSets with a PVC (no Bitnami, no HA). |
+| Angular / test runner (M7 UI lane) | 22.2.x / default Vitest | Approved M7 target (22.2.5 at specification time); exact package pins and installation verification land with the frontend scaffold. |
+| Node build/test image (M7) | `node:24.22.2` | Verified with `docker run --rm node:24.22.2 node --version` -> `v24.22.2`, satisfying Angular 22's Node ^24.15 requirement. Every npm command runs in this container; do not upgrade host Node. |
 
 ### M5 version and compatibility check (2026-10-31)
 
@@ -181,6 +183,29 @@ Rationale:
   - payment: provider idempotency key = `orderId`; order-service: conditional upserts (M1).
 - 429 + `Retry-After` arrives with overload handling.
 
+### M7 service-owned read APIs
+
+The gateway remains write-only and has no database or Redis access. No new backend dependency.
+
+- inventory-service: `GET /events/{eventId}/stock` -> `200 {"eventId","stock"}`.
+  `stock` is a long read with HGET from `inventory:event:{eventId}`; missing stock -> 404.
+  Blank or longer than 255-character event ids -> 400. Reads never seed or reserve.
+- order-service: `GET /orders/activity?limit=20` -> `200 {"windowSeconds":10,
+  "ordersInWindow":<long>,"orders":[...]}`. Limit defaults to 20, allowed 1..50, else 400.
+  Orders are sorted by `created_at DESC` and expose only `orderId`, `eventId`, `quantity`,
+  `status`, `failureReason`, `amountCents`, `currency`, `createdAt`, `updatedAt`.
+  Nullable saga metadata stays null; money is long cents, never floating point.
+  Customer ids and idempotency keys are neither selected nor returned.
+- The count is independent of limit/status/updated_at: `created_at > now() - interval '10 seconds'`
+  using PostgreSQL time. Count and recent rows are separate reads, not a shared snapshot.
+- Known limit: no new index or schema change. The window count can scan the order table,
+  and the recent-order query can scan and sort it. Reassess cost/indexing before large-table use;
+  a bounded response does not bound database work. No throughput claim.
+- Planned UI serving: nginx same-origin proxies `/api/orders` exactly to gateway `/orders`,
+  `/api/orders/activity` to order-service, `/api/events/` to inventory-service; no Actuator
+  proxy or CORS. The app polls every 2 seconds and marks failed reads stale while continuing.
+  Compose port 4200 and `/healthz` are for the downstream dashboard stage, not implemented here.
+
 ## 6. Decision log
 
 Append new decisions here (date, decision, reason). Keep entries one or two lines.
@@ -226,6 +251,11 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-11-04 | M6 reports end-to-end terminal-outcome throughput and conservative fault-to-post-load-settlement recovery, with independent resumed_at progress | Recovery includes remaining load/polling, not isolated minimum MTTR. The provider's post-restoration window is idle because its in-memory ledger must be audited before rollout. Single-show numbers do not establish maximum inventory capacity. |
 | 2026-11-08 | M6 retry stages JVM startup one new Ready replica at a time, waits for surplus pods to terminate, uses a temporary 384Mi limit and a 360s ramp load | The preserved 256Mi pods were observed OOMKilled after Docker recovery. The staged 384Mi retry still timed out at four Ready / five desired, with kubelet TLS timeouts and VM swap activity. This is NOT validated eight-pod sizing; further ramp attempts require operator resource/runtime diagnosis. No M5 defaults changed. |
 | 2026-11-08 | After owner increased Docker VM to 16GB (six CPUs unchanged), M6 retains the chart memory requests/limits and JVM options during the staged ramp | Avoid adding an artificial 96Mi heap constraint to a rebalance experiment once the machine has headroom. Only replica counts and temporary scaler settings change; original resources/JVM settings are still snapshotted and restored. The earlier 8GB failures remain separate evidence. |
+| 2026-11-09 | M7 reads live in inventory-service (Redis stock) and order-service (public recent-order projection and strict PostgreSQL ten-second count); gateway gets no data access | Preserve state ownership, no new service/dependency or write-path/topic/schema/key change; no new index, scan/sort cost is a known large-table limit. |
+| 2026-11-09 | M7 UI polls every 2 seconds, failed reads mark data stale and polling continues; no SSE | Redis/Postgres are pull-based; SSE would add server polling and long-lived proxy connections without benefit here. Implementation belongs to the UI lane. |
+| 2026-11-09 | M7 dashboard is a non-root multi-stage Angular/nginx-unprivileged Compose deployable on 4200, same-origin API proxies only, `/healthz` 200 and equivalent ng serve proxy | No CORS or Actuator exposure; Helm and ServiceMonitor are out of scope. Serving configuration lands in the UI lane. |
+| 2026-11-09 | M7 targets Angular 22.2.x with default Vitest; all npm commands use pinned `node:24.22.2` (verified v24.22.2), host Node unchanged | Angular requires Node ^24.15; package installation and exact Angular pins remain the frontend scaffold's verification. |
+| 2026-11-09 | Phuong approved the Open Design `frontend-design` / `dashboard` reference, project `ticketrush-m7-dashboard`, before Angular work | HTML, PNG and exact MCP provenance in `docs/design/m7/`; reference only, no build dependency or M5 default change. Render real FAILED/RESERVED states, not illustrative PAYMENT_FAILED; stock API supplies no price. |
 
 ### M6 tool observation (2026-11-04)
 
