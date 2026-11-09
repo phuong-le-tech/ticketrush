@@ -1,6 +1,11 @@
 # M7 dashboard design reference
 
-Status: awaiting Phuong's validation. This is not the Angular application or milestone acceptance.
+Status: approved by Phuong on 2026-11-09, as recorded on card `t_3464a761`: "Ok pour moi le design". This is the validated implementation reference, not the Angular application or milestone acceptance.
+
+Approval conditions for the UI lane:
+- Render the real API statuses, including `FAILED` and `RESERVED`; do not change backend enums to match illustrative `PAYMENT_FAILED` rows.
+- Do not invent a stock price: the stock endpoint has no price. Omit it unless an explicit configuration value is assumed and documented.
+- Keep local resource usage measured: no kind or k6 load runs during M7.
 
 ## View
 
