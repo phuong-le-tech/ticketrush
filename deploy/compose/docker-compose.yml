@@ -74,6 +74,26 @@ services:
       timeout: 3s
       retries: 20
 
+  dashboard:
+    build:
+      context: ../../dashboard
+      dockerfile: Dockerfile
+    depends_on:
+      api-gateway:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    ports:
+      - "4200:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      start_period: 5s
+      retries: 12
+
   # ---- application services (built from the repo root with each module Dockerfile) ----
   # Inside the compose network Kafka is reached on the INTERNAL listener (kafka:19092).
 
