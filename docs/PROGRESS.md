@@ -11,7 +11,7 @@ result, and what is NOT done or not verified.
 | 4 | Failure handling | PR #18 (`6a5a3b0`) | Done |
 | 5 | Observability and autoscaling | PR #19 (`aa465d5`) | Done |
 | 6 | Chaos experiments and results | PR #20 (`f409c88`) | Done |
-| 7 | Minimal Angular dashboard | - | In progress: backend implemented, review pending; design approved |
+| 7 | Minimal Angular dashboard | - | In progress: implemented and accepted end to end 2026-11-09 on `docs/m7-acceptance`; PR pending. Owner merged the implementation without same-card review (defect) |
 | 8 | Portfolio polish | - | Not started |
 
 ## Milestone 1 checklist (done)
@@ -638,3 +638,142 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   includes contention/replay once only. No UI/deployment AC is checked off for this backend phase.
   Order count and recent rows are separate snapshots, no new index bounds large-table query cost,
   no outage response contract or performance claim. Review and owner approval remain gates.
+
+### Milestone 7 dashboard acceptance and docs - 2026-11-09
+
+- Branch `docs/m7-acceptance`, cut from `origin/main` `199bde2` (not `milestone-7`): Phuong had
+  already squash-merged PR #22 (M7 backend, head `a1eb727`) as `199bde2` before the same-card
+  review, so main already carried the backend, the dashboard and the serving commit. Working on
+  `milestone-7` would have produced a conflicting or duplicate PR.
+- The same-card review of the M7 backend card and of the Angular implementation card did not
+  happen before the owner merge. That is recorded here as a defect in the process, not as a
+  verified approval: this section reports execution evidence only.
+- What exists now: inventory-service `GET /events/{eventId}/stock`, order-service
+  `GET /orders/activity?limit=20` (public projection, no customer id or idempotency key),
+  the Angular 22.2.5 dashboard in `dashboard/`, the nginx-unprivileged Compose service on port
+  4200 with same-origin proxies, and `scripts/m7-acceptance.sh`.
+- `scripts/m7-acceptance.sh` is one command and proves by execution: preflight (Docker 29.9.2,
+  Java 21.0.10, `node:24.22.2` -> `v24.22.2`), backend module tests
+  (`mvn verify -pl inventory-service,order-service -am`), dashboard `npm ci` + Vitest + production
+  build in the pinned Node container, `docker compose up -d --build --wait` (it first resets the
+  local anonymous Postgres volume, because a container recreated from an older milestone kept an
+  outdated Flyway history and order-service refused to start), readiness waits on both read APIs
+  through the dashboard proxy, then the flow through http://localhost:4200. It does not touch
+  kind, Helm or k6.
+- Real output of the recorded run (exit 0, 2026-11-09 11:38 to 11:40 local):
+
+  ```text
+  ==> Step 1/5: preflight (Docker, Java 21, pinned Node image node:24.22.2)
+      Docker server 29.9.2
+      Java: java version "21.0.10" 2026-01-20 LTS
+      Node in container: v24.22.2
+      PASS: toolchain ready
+
+  ==> Step 2/5: backend module tests (inventory-service, order-service)
+      [INFO] BUILD SUCCESS
+      [INFO] Total time:  01:24 min
+      Surefire/Failsafe report files: 19
+      PASS: backend module tests green
+
+  ==> Step 3/5: dashboard npm ci + Vitest + production build in node:24.22.2
+      Application bundle generation complete. [1.028 seconds] - 2026-11-09T10:38:27.668Z
+       Test Files  3 passed (3)
+            Tests  25 passed (25)
+      Application bundle generation complete. [1.101 seconds] - 2026-11-09T10:38:31.515Z
+      PASS: dashboard tests and production build green
+
+  ==> Step 4/5: compose up with the dashboard (clean local data, build images, wait for health)
+      api-gateway running Up 9 seconds
+      dashboard running Up 5 seconds (healthy)
+      fake-payment-provider running Up 28 seconds
+      inventory-service running Up 5 seconds
+      kafka running Up 28 seconds (healthy)
+      notification-service running Up 9 seconds
+      order-service running Up 9 seconds
+      payment-service running Up 9 seconds
+      postgres running Up 28 seconds (healthy)
+      redis running Up 9 seconds (healthy)
+      dashboard container uid: 101
+      ready: GET /api/events/concert-1/stock -> 200
+      ready: GET /api/orders/activity -> 200
+      PASS: stack healthy, dashboard non-root (uid 101), read APIs answering
+
+  ==> Step 5/5: end-to-end through http://localhost:4200
+      GET /healthz -> 200 (ok)
+      GET /api/events/concert-1/stock -> 200 {"eventId":"concert-1","stock":1000}
+      GET /api/orders/activity -> 200 (windowSeconds=10, ordersInWindow=0, orders=0)
+      PASS: dashboard serves, stock read works, activity payload is public
+      POST /api/orders eventId=concert-1 quantity=1 customerId=web-0ebf60e2-da41-449b-a118-e0da81f85a2c Idempotency-Key=0aca0661-bde8-4e01-8d9c-d6cab3dd8496-m7-acceptance
+      POST /api/orders -> 202 {"orderId":"98a38be9-b6b4-5beb-9794-ddb5cee2a7ab"}
+      polling activity for order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab to become CONFIRMED (timeout 60s)
+      11:39:50 order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab -> absent from last 20
+      11:39:52 order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab -> absent from last 20
+      11:39:54 order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab -> PENDING
+      11:39:56 order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab -> CONFIRMED
+      saga row: orderId=98a38be9-b6b4-5beb-9794-ddb5cee2a7ab eventId=concert-1 quantity=1 status=CONFIRMED amountCents=5000 EUR
+      PASS: order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab CONFIRMED within 60s
+      GET /api/events/concert-1/stock -> 200 {"eventId":"concert-1","stock":999}
+      PASS: stock decreased by 1 (1000 -> 999)
+
+  ALL M7 ACCEPTANCE CHECKS PASSED
+  Dashboard still running at http://localhost:4200
+  Stop it with: docker compose -f deploy/compose/docker-compose.yml down
+  ```
+
+  The earlier first attempt failed at step 5 with a 502 on the stock read because
+  `docker compose --wait` only waits for services that declare a healthcheck and the Java
+  services do not; the script now polls both read APIs before asserting. That failure and its log
+  are real and were not hidden. The run above is the second, post-fix execution; a third full run
+  also passed with the same steps before the screenshot was taken.
+- Screenshot of the running page: `docs/design/m7/dashboard-running.png` (1440 x 1600 RGB PNG,
+  SHA-256 `e2ae9795f2f32b89de3101fa1603d3e8fd690932cb063004b5aa0bbdfacc2992`), captured with
+  headless Google Chrome against the live Compose dashboard:
+
+  ```sh
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
+    --hide-scrollbars --no-first-run --no-default-browser-check \
+    --user-data-dir="$HOME/.hermes/profiles/docs-devops/cache/scratch/chrome-m7" \
+    --window-size=1440,1600 --virtual-time-budget=4000 \
+    --screenshot=docs/design/m7/dashboard-running.png http://localhost:4200
+  ```
+
+  It shows stock 995, 0.1 orders/sec (1 order in the 10-second window) and four CONFIRMED rows
+  with EUR amounts. The exact command, hashes and the states that were not produced live are in
+  `docs/design/m7/README.md`.
+- Backend read contracts are proven by Testcontainers tests, not only by the script: the module
+  run above includes `StockEndpointIT` (8 cases: seeded stock, decrease after reservations,
+  unknown event 404, 256-character id 400, Redis unchanged before and after) and
+  `OrderActivityIT` (11) plus `OrderActivityWindowIT` (7: newest first, limit bounds 0/51 -> 400,
+  no customer id or idempotency key in JSON, ten-second window count). The UI idempotency and
+  polling behaviour is proven by the dashboard suite: 25 Vitest cases in 3 files, plus the
+  dependency-free Node proxy-routing test (1 passing) that checks the loaded Angular proxy config.
+- Root `mvn verify` on the whole reactor was run in this card as well, and it is NOT fully green
+  in this session. It ended `BUILD FAILURE` after 15:03 min with one failure in the pre-existing
+  M4 dead-letter test, not in an M7 path:
+
+  ```text
+  [ERROR]   DltE2ETest.AC5_eachConsumerMalformedJsonInvalidTypeAndPoisonReachSamePartitionDLTThenValidSucceeds:141
+  Expecting actual:
+    [1, 2, 1, 2, 3, 4]
+  to contain exactly (and in same order):
+    [1, 2, 3, 4]
+  but some elements were not expected:
+    [1, 2]
+  [ERROR] Tests run: 39, Failures: 1, Errors: 0, Skipped: 0
+  ```
+
+  Every other module reported SUCCESS. Re-running that single class against the same tree
+  (`mvn -B verify -pl e2e-tests -am -Dtest=DltE2ETest -Dsurefire.failIfNoSpecifiedTests=false`,
+  exit 0, `BUILD SUCCESS`, 08:19 min) gave `DltE2ETest` 21 tests, zero failures, so the failure
+  reproduces as a transient duplicate delivery under at-least-once semantics rather than a code
+  defect, but it is not proven flaky by a third run and the full green root run is still owed.
+  The M7 backend card had recorded a green root run (239 tests, 46 reports) on the same
+  application code before this branch was cut.
+- NOT done / unverified: the dashboard has no Helm chart and is not deployed to kind (explicit
+  out of scope); there is no SSE, auth or router; `FAILED`, `RESERVED` and `REJECTED` rows were
+  only exercised against mocked responses, never produced by a live failure during the capture;
+  no mobile, Firefox/Safari or accessibility audit; no performance, throughput or capacity claim,
+  and no new database index, so the activity query can scan and sort the order table; the
+  acceptance is a single sequential purchase, not the M2 ten-run contention command; the script
+  intentionally resets the local Compose database and leaves the stack running. Order count and
+  recent rows come from two separate reads and are not one snapshot.

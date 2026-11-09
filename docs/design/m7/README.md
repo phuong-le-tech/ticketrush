@@ -98,3 +98,29 @@ This artifact is a visual reference, not a new API contract. Do not copy its dem
 - Responsive styles and horizontal table scrolling exist, but mobile device rendering and a full accessibility audit were not independently exercised here.
 
 No Angular, Java, deployment, Maven, DESIGN.md or PROGRESS.md files were changed by this design card. No application dependency was added. Maven tests, container acceptance and a screenshot of the real running dashboard belong to later cards and were not run here.
+
+## Running application capture (M7 acceptance, 2026-11-09)
+
+[dashboard-running.png](dashboard-running.png) is the real Angular page served by the Compose
+dashboard container on http://localhost:4200, captured after `scripts/m7-acceptance.sh` passed.
+It is not the Open Design mock: every value comes from the live read APIs.
+
+Exact command, run from the repository root with the Compose stack up:
+
+```sh
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
+  --hide-scrollbars --no-first-run --no-default-browser-check \
+  --user-data-dir="$HOME/.hermes/profiles/docs-devops/cache/scratch/chrome-m7" \
+  --window-size=1440,1600 --virtual-time-budget=4000 \
+  --screenshot=docs/design/m7/dashboard-running.png http://localhost:4200
+```
+
+Google Chrome headless wrote `160064 bytes written to file docs/design/m7/dashboard-running.png`.
+The capture is a 1440 x 1600 RGB PNG, SHA-256
+`e2ae9795f2f32b89de3101fa1603d3e8fd690932cb063004b5aa0bbdfacc2992`.
+
+The image shows `concert-1` stock 995 (1000 seeded minus five tickets bought during the run),
+0.1 orders/sec (`1 orders in window / 10 seconds`), the Buy form, and four CONFIRMED rows with
+their amount in cents-derived EUR values and no customer or idempotency data. No field shows
+Loading or Unavailable. Only CONFIRMED rows were produced: `FAILED`, `RESERVED` and `REJECTED`
+rendering is covered by the Vitest suite against mocked responses, not by this live capture.
