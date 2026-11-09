@@ -1,7 +1,8 @@
-# M7 dashboard frontend RED handoff
+# M7 dashboard
 
-Angular CLI 22.2.5 scaffold, one standalone component, no router configuration or auth.
-The application still renders the generated placeholder. No purchase or polling logic is implemented.
+Angular 22.2.5 standalone page following the approved Open Design reference in `docs/design/m7/`.
+Live stock, orders per second and recent saga states poll independently every 2 seconds.
+The native form creates a new key per accepted Buy intent; Retry preserves the full failed purchase.
 Angular packages and CLI/build tools are pinned to 22.2.5; the lockfile resolves default Vitest to 5.1.0.
 
 ## Commands
@@ -14,10 +15,58 @@ docker run --rm -e NG_CLI_ANALYTICS=false -v "$PWD/dashboard":/app -w /app node:
 docker run --rm -e NG_CLI_ANALYTICS=false -v "$PWD/dashboard":/app -w /app node:24.22.2 npm run build
 ```
 
-`npm test` runs once (`ng test --watch=false`). The default Angular Vitest builder and jsdom are unchanged.
+`npm test` runs once (`ng test --watch=false`) plus the dependency-free Node proxy-routing test.
+The default Angular Vitest builder and jsdom are unchanged.
 Tests use Angular HttpTestingController: no real network, fixed time, fake timers and deterministic UUIDs.
+`npx prettier --check src proxy.conf.json proxy.test.cjs package.json` checks dashboard formatting.
+There is no configured ESLint target; strict TypeScript and Angular production compilation are the type checks.
 
-## Cases and observed RED output
+## Serving and local development
+
+- `docker compose -f deploy/compose/docker-compose.yml up -d --build` from the repo root serves the
+  production dashboard at http://localhost:4200. The healthcheck covers nginx, not backend readiness.
+- nginx proxies only POST `/api/orders`, GET `/api/orders/activity` and GET `/api/events/` to their
+  owning services. No Actuator proxy, CORS, authentication or router. Node is absent from the final image.
+- `cd dashboard && npx ng serve --proxy-config proxy.conf.json` requires host Node >=24.15, or run
+  the same command in the approved Node container. Do not upgrade host Node as part of M7.
+  The dev proxy expects host-running gateway/inventory/order at localhost 8080/8081/8084, or explicit
+  port forwards to those services. Compose does not publish inventory/order ports. In a Node container,
+  localhost means that container; a reachable backend network/forward must be arranged separately.
+- Quantity is an integer 1..4. Customer identity persists in localStorage as `web-<uuid>`.
+  Browser cryptography uses randomUUID or a getRandomValues v4 fallback. Storage/cryptography failure
+  blocks purchasing with a visible message instead of silently using a transient identity.
+- Retry intent survives network/5xx/429 failures and the 15-second request timeout, in memory only.
+  Reloading while acceptance is uncertain discards that key; finish Retry before reloading.
+  Other 4xx responses unlock the inputs for correction. A 202 is accepted, never shown as confirmed.
+- Reads time out after 8 seconds, retain last-good data with a source-specific stale marker and continue.
+  No overlapping reads per source; changing event cancels the old stock read and clears its display.
+- Money is displayed from integer API cents and currency, with no invented stock price. Amounts outside
+  JavaScript safe-integer precision are labeled unavailable rather than displaying rounded financial data.
+
+## Implementation verification
+
+25 Vitest cases pass: the original 16 plus 9 boundary/safety cases in `app.safety.spec.ts`.
+These add customer reload persistence, non-secure UUID fallback, invalid quantities, locked retry payload,
+independent source failure and cancellation on event change. The Node proxy test independently verifies
+Angular's loaded proxy configuration with Vite's first-match semantics, including query strings and private-path exclusion.
+The generated heading fixture now provides HTTP testing and flushes initialization requests; its heading
+assertion remains unchanged. The main `app.dashboard.spec.ts` assertions are unchanged.
+
+Container production build, strict test TypeScript check, image build, nginx configuration test and isolated
+non-root image health/static-route smoke checks passed in the implementation run. Full Compose purchase
+acceptance, live screenshot and browser/mobile accessibility verification remain the downstream acceptance
+card's job, not proven by these tests.
+
+Fresh root `mvn verify` with Java 21.0.10 in this implementation run exited 0:
+`BUILD SUCCESS`, `Total time: 14:48 min`. All 46 Surefire/Failsafe XML reports aggregate to
+239 tests, zero failures, errors or skips. This includes contention and replay once, not the M2 ten-run command.
+The final clean Node-container command (`npm ci`, Prettier check, test TypeScript check, `npm test`,
+production build) exited 0; npm audited 296 packages with zero vulnerabilities. npm warned about four
+scaffold dependency install scripts without allowScripts coverage; no script approval or package upgrade was made.
+
+## Historical RED handoff
+
+### Cases and observed RED output
 
 There was no frontend test plan in this card's parent handoffs. These cases are derived directly from AC5,
 AC6, decisions 1-4, and the approved reference under `docs/design/m7/`.
@@ -44,7 +93,7 @@ Final Vitest result: 16 tests, 15 failed, 1 passed. TypeScript test typecheck an
 both passed. The unmodified generated creation smoke test passes. The generated title assertion was replaced
 with the real approved heading contract before implementation, not removed to obtain a green run.
 
-## Implementation contract and limits
+### Implementation contract and limits (historical RED stage)
 
 - `src/app/app.dashboard.spec.ts` tests public DOM interactions and HTTP only, not component internals.
 - Keep reference ids `buy-button`, `stock-value`, `rate-value`, and a semantic `tbody` for testable zones.
