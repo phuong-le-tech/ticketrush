@@ -152,6 +152,11 @@ public class OrderRepository {
         return expired.size();
     }
 
+    /** Compile-only M7 contract for the strict PostgreSQL ten-second activity window. */
+    long countOrdersInWindow() {
+        throw new UnsupportedOperationException("M7 order activity count is not implemented");
+    }
+
     Optional<String> statusOf(UUID orderId) {
         return jdbc.sql("SELECT status FROM orders.orders WHERE order_id = :id")
                 .param("id", orderId).query(String.class).optional();
