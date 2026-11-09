@@ -3,6 +3,7 @@ package com.ticketrush.inventory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -37,6 +38,11 @@ public class InventoryRepository {
         reserveScript.setResultType(List.class);
         releaseScript.setLocation(new ClassPathResource("release.lua"));
         releaseScript.setResultType(Long.class);
+    }
+
+    Optional<Long> stockOf(String eventId) {
+        Object stock = redis.opsForHash().get(EVENT_KEY_PREFIX + eventId, "stock");
+        return Optional.ofNullable(stock).map(value -> Long.parseLong(value.toString()));
     }
 
     /** Ecrit les 3 champs seulement si la cle n'existe pas (atomique). */

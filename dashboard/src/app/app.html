@@ -1,0 +1,199 @@
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">▣</span>TicketRush <span class="version">M7</span>
+    </div>
+    <span class="helper">Local operations / Polling dashboard</span>
+  </header>
+  <main>
+    <div class="page-head">
+      <h1>Ticket operations</h1>
+      <p class="helper">Stock, throughput and the order saga in one place.</p>
+    </div>
+    <aside class="notice">
+      <p>
+        <strong>Live local stack.</strong> Buy submits a real order to the configured fake payment
+        provider. Acceptance is not a confirmed purchase.
+      </p>
+    </aside>
+    <div class="controls" role="status" [class.warning]="stale()">
+      <span class="dot" aria-hidden="true"></span>
+      @if (stale()) {
+        <span
+          >Stale data / {{ stockStale() ? 'Stock read failed. ' : ''
+          }}{{ activityStale() ? 'Activity read failed. ' : '' }}Retrying automatically.</span
+        >
+      } @else {
+        <span>{{
+          stock() === null || activity() === null ? 'Loading snapshot' : 'Polling every 2 seconds'
+        }}</span>
+      }
+    </div>
+    <div class="summary">
+      <section class="panel metric" aria-labelledby="stock-heading">
+        <div class="panel-head">
+          <h2 id="stock-heading">Stock</h2>
+          <span class="event">{{ eventId().trim() || 'Enter an event' }}</span>
+        </div>
+        <div class="metric-value">
+          <strong class="number" id="stock-value">{{
+            stock() ?? (stockStale() ? 'Unavailable' : 'Loading')
+          }}</strong
+          ><span class="helper">tickets available</span>
+        </div>
+        <p class="helper">Latest available stock for the selected event.</p>
+        <div class="metric-foot helper">Price is not returned by the stock API.</div>
+      </section>
+      <section class="panel metric" aria-labelledby="throughput-heading">
+        <div class="panel-head">
+          <h2 id="throughput-heading">Orders per second</h2>
+          <span class="eyebrow">All events</span>
+        </div>
+        <div class="metric-value">
+          <strong class="number" id="rate-value">{{
+            activity() ? rate() : activityStale() ? 'Unavailable' : 'Loading'
+          }}</strong
+          ><span class="helper">orders / sec</span>
+        </div>
+        <p class="helper">
+          {{ activity()?.ordersInWindow ?? '?' }} orders in window /
+          {{ activity()?.windowSeconds ?? '?' }} seconds
+        </p>
+        <div class="metric-foot helper">Polling cadence <strong>Every 2 seconds</strong></div>
+      </section>
+    </div>
+    <section class="panel buy-panel" aria-labelledby="buy-heading">
+      <div>
+        <h2 id="buy-heading">Buy tickets</h2>
+        <p class="helper">
+          One purchase at a time. Follow accepted orders in the saga table below.
+        </p>
+      </div>
+      <form (submit)="buy($event)" [attr.aria-busy]="pending()">
+        <div>
+          <label for="event-id">Event id</label
+          ><input
+            id="event-id"
+            name="eventId"
+            [value]="eventId()"
+            (input)="changeEvent($any($event.target).value)"
+            [disabled]="pending() || !!attempt()"
+            maxlength="255"
+            required
+            autocomplete="off"
+          />
+        </div>
+        <div>
+          <label for="quantity">Quantity</label
+          ><input
+            id="quantity"
+            name="quantity"
+            type="number"
+            [value]="quantity()"
+            (input)="changeQuantity($any($event.target).value)"
+            [disabled]="pending() || !!attempt()"
+            min="1"
+            max="4"
+            step="1"
+            required
+          />
+        </div>
+        <button
+          class="primary"
+          id="buy-button"
+          type="submit"
+          [disabled]="pending() || (!attempt() && !validInput())"
+        >
+          {{ pending() ? 'Pending...' : attempt() ? 'Retry' : 'Buy' }}
+        </button>
+        <p class="form-note" [class.error]="buyError()" id="buy-message" role="status">
+          {{ buyMessage() }}
+        </p>
+        <p class="form-note helper">
+          Network, 5xx or 429 failure: Retry keeps the same key, event and quantity. Inputs stay
+          locked until acknowledged. The key is never displayed.
+        </p>
+      </form>
+    </section>
+    <section class="panel saga" aria-labelledby="orders-heading">
+      <div class="table-head">
+        <div>
+          <h2 id="orders-heading">Recent orders</h2>
+          <p class="helper">All events, newest first. Timestamps in UTC.</p>
+        </div>
+        <span class="helper">{{ activity()?.orders?.length ?? 0 }} / 20 orders</span>
+      </div>
+      <div
+        class="table-scroll"
+        tabindex="0"
+        role="region"
+        aria-label="Recent orders, scroll horizontally on narrow screens"
+      >
+        <table>
+          <caption class="sr-only">
+            Latest order saga records from the order service
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Order id</th>
+              <th scope="col">Event id</th>
+              <th scope="col">Qty</th>
+              <th scope="col">Status</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Failure reason</th>
+              <th scope="col">Created</th>
+              <th scope="col">Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of activity()?.orders ?? []; track order.orderId) {
+              <tr>
+                <td>{{ order.orderId }}</td>
+                <td>{{ order.eventId }}</td>
+                <td>{{ order.quantity }}</td>
+                <td>
+                  <span
+                    class="status"
+                    [class.confirmed]="order.status === 'CONFIRMED'"
+                    [class.failed]="order.status === 'FAILED'"
+                    [class.pending]="order.status === 'PENDING' || order.status === 'RESERVED'"
+                    ><span class="dot" aria-hidden="true"></span>{{ order.status }}</span
+                  >
+                </td>
+                <td>{{ amount(order) }}</td>
+                <td>{{ order.failureReason ?? 'Not applicable' }}</td>
+                <td>
+                  <time [attr.datetime]="order.createdAt">{{
+                    order.createdAt | date: 'dd MMM yyyy HH:mm:ss' : 'UTC'
+                  }}</time>
+                </td>
+                <td>
+                  <time [attr.datetime]="order.updatedAt">{{
+                    order.updatedAt | date: 'dd MMM yyyy HH:mm:ss' : 'UTC'
+                  }}</time>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!activity() || activity()?.orders?.length === 0) {
+        <p class="state-message helper">
+          {{
+            activity()
+              ? 'No orders yet. Accepted purchases will appear here.'
+              : activityStale()
+                ? 'Activity unavailable. Retrying automatically.'
+                : 'Loading recent orders...'
+          }}
+        </p>
+      }
+      <div class="table-footer helper">
+        A pending or reserved order is not yet a confirmed purchase.
+      </div>
+    </section>
+  </main>
+  <footer class="helper">
+    <span>TicketRush M7 / Local operations</span><span>Service-owned reads / No auth</span>
+  </footer>
+</div>

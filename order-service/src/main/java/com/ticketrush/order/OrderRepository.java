@@ -152,6 +152,36 @@ public class OrderRepository {
         return expired.size();
     }
 
+    static final int ACTIVITY_WINDOW_SECONDS = 10;
+
+    record RecentOrder(UUID orderId, String eventId, Integer quantity, String status,
+                       String failureReason, Long amountCents, String currency,
+                       Instant createdAt, Instant updatedAt) { }
+
+    long countOrdersInWindow() {
+        return jdbc.sql("""
+                SELECT count(*) FROM orders.orders
+                WHERE created_at > now() - :windowSeconds * interval '1 second'
+                """)
+                .param("windowSeconds", ACTIVITY_WINDOW_SECONDS).query(Long.class).single();
+    }
+
+    List<RecentOrder> recentOrders(int limit) {
+        // shortcut: no created_at index, revisit query cost before using large order tables.
+        return jdbc.sql("""
+                SELECT order_id, event_id, quantity, status, failure_reason, amount_cents,
+                       currency, created_at, updated_at
+                FROM orders.orders ORDER BY created_at DESC LIMIT :limit
+                """)
+                .param("limit", limit)
+                .query((rs, row) -> new RecentOrder(rs.getObject("order_id", UUID.class),
+                        rs.getString("event_id"), (Integer) rs.getObject("quantity"),
+                        rs.getString("status"), rs.getString("failure_reason"),
+                        (Long) rs.getObject("amount_cents"), rs.getString("currency"),
+                        rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant()))
+                .list();
+    }
+
     Optional<String> statusOf(UUID orderId) {
         return jdbc.sql("SELECT status FROM orders.orders WHERE order_id = :id")
                 .param("id", orderId).query(String.class).optional();

@@ -1,0 +1,14 @@
+{
+  "^/api/orders(?:\\?.*)?$": {
+    "target": "http://localhost:8080",
+    "pathRewrite": { "^/api/orders": "/orders" }
+  },
+  "^/api/orders/activity(?:\\?.*)?$": {
+    "target": "http://localhost:8084",
+    "pathRewrite": { "^/api/orders/activity": "/orders/activity" }
+  },
+  "/api/events/**": {
+    "target": "http://localhost:8081",
+    "pathRewrite": { "^/api/events/": "/events/" }
+  }
+}

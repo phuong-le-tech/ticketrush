@@ -22,6 +22,9 @@ Checked against Maven Central and Docker Hub on 2026-10-16. Re-check tools for l
 | Helm | 4.x (local tool) | M3. Chart in `deploy/helm/ticketrush`. Installed with `brew install helm`. |
 | kind | 0.33 (local tool) | M3. Local cluster `ticketrush`. Installed with `brew install kind`. |
 | PostgreSQL / Redis in Kubernetes | 18.6 / 8.10.2 | M3. Same images as Compose, as plain single-replica StatefulSets with a PVC (no Bitnami, no HA). |
+| Angular / test runner (M7) | 22.2.5 / Vitest 5.1.0 | Angular and CLI/build/compiler packages pinned to 22.2.5; default Vitest runner, jsdom 30.1.3, TypeScript 6.0.3. Exact resolutions in dashboard/package-lock.json, verified by container npm ci and npm ls. |
+| Node build/test image (M7) | `node:24.22.2` | Verified with `docker run --rm node:24.22.2 node --version` -> `v24.22.2`, satisfying Angular 22's Node ^24.15 requirement. Every npm command runs in this container; do not upgrade host Node. |
+| nginx runtime image (M7) | `nginxinc/nginx-unprivileged:stable-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03` (nginx 1.30.6) | Stable Alpine image fetched on 2026-11-09; digest pins the multi-platform manifest. Official [unprivileged image](https://github.com/nginx/docker-nginx-unprivileged); verified nginx -v, nginx -t and runtime uid/gid 101. |
 
 ### M5 version and compatibility check (2026-10-31)
 
@@ -95,6 +98,9 @@ Rationale:
 | kube-prometheus-stack (operator only), Prometheus and Grafana | M5. ServiceMonitor reconciliation, app scraping and provisioned visualizations; bundled infrastructure dashboards/exporters and Alertmanager disabled to fit kind. |
 | KEDA | M5. Kafka-offset-driven HPA for existing inventory/payment Deployments. |
 | k6 (host CLI) | M5. Measured constant-arrival-rate load, strict request/check/dropped-iteration thresholds. |
+| Angular 22.2.5, RxJS 7.8.2, tslib 2.9.1 | M7. Approved single-page dashboard, signals, HTTP client and cancellable polling. CLI scaffold includes forms/router packages, but production imports no router and uses native form controls. |
+| Angular CLI/build/compiler, TypeScript 6.0.3, Vitest 5.1.0, jsdom 30.1.3, Prettier 3.9.10 (development only) | M7. Default Angular scaffold toolchain for strict compilation, DOM/HTTP tests, optimized builds and formatting; no additional implementation package. |
+| nginxinc/nginx-unprivileged (container only) | M7. Static dashboard serving and narrowly scoped same-origin proxies, non-root uid 101; Node is only a build/test dependency. |
 
 Any new dependency must be added to this table with a reason.
 
@@ -181,6 +187,38 @@ Rationale:
   - payment: provider idempotency key = `orderId`; order-service: conditional upserts (M1).
 - 429 + `Retry-After` arrives with overload handling.
 
+### M7 service-owned read APIs
+
+The gateway remains write-only and has no database or Redis access. No new backend dependency.
+
+- inventory-service: `GET /events/{eventId}/stock` -> `200 {"eventId","stock"}`.
+  `stock` is a long read with HGET from `inventory:event:{eventId}`; missing stock -> 404.
+  Blank or longer than 255-character event ids -> 400. Reads never seed or reserve.
+- order-service: `GET /orders/activity?limit=20` -> `200 {"windowSeconds":10,
+  "ordersInWindow":<long>,"orders":[...]}`. Limit defaults to 20, allowed 1..50, else 400.
+  Orders are sorted by `created_at DESC` and expose only `orderId`, `eventId`, `quantity`,
+  `status`, `failureReason`, `amountCents`, `currency`, `createdAt`, `updatedAt`.
+  Nullable saga metadata stays null; money is long cents, never floating point.
+  Customer ids and idempotency keys are neither selected nor returned.
+- The count is independent of limit/status/updated_at: `created_at > now() - interval '10 seconds'`
+  using PostgreSQL time. Count and recent rows are separate reads, not a shared snapshot.
+- Known limit: no new index or schema change. The window count can scan the order table,
+  and the recent-order query can scan and sort it. Reassess cost/indexing before large-table use;
+  a bounded response does not bound database work. No throughput claim.
+- The Angular app and nginx serving configuration live in `dashboard/`. Compose exposes port 4200,
+  with `/healthz` proving nginx is running, not backend readiness. Exact `/api/orders` proxies to
+  gateway `/orders`, exact `/api/orders/activity` to order-service, and `/api/events/` to
+  inventory-service `/events/`. No CORS or Actuator proxy; unknown API paths return 404.
+  Docker DNS resolution follows upstream recreation; nginx never automatically replays a POST.
+- Reads begin on initialization and poll independently every 2 seconds. Each source retains its
+  latest good data and its own stale marker. No overlapping reads per source, 8-second read timeout,
+  cancellation on destruction/event change. Missing data is loading/unavailable, never sample stock.
+- The dev proxy preserves the same route boundaries, with exact regex matches to prevent Vite's
+  prefix matching from routing activity to the gateway. Targets localhost 8080/8081/8084 require
+  host-running services or explicit port forwards; Compose only exposes the gateway directly.
+  The stock endpoint supplies no price. Table amounts remain API cents plus currency; unsafe
+  JavaScript integer amounts are labeled unavailable rather than silently rounded.
+
 ## 6. Decision log
 
 Append new decisions here (date, decision, reason). Keep entries one or two lines.
@@ -226,6 +264,15 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-11-04 | M6 reports end-to-end terminal-outcome throughput and conservative fault-to-post-load-settlement recovery, with independent resumed_at progress | Recovery includes remaining load/polling, not isolated minimum MTTR. The provider's post-restoration window is idle because its in-memory ledger must be audited before rollout. Single-show numbers do not establish maximum inventory capacity. |
 | 2026-11-08 | M6 retry stages JVM startup one new Ready replica at a time, waits for surplus pods to terminate, uses a temporary 384Mi limit and a 360s ramp load | The preserved 256Mi pods were observed OOMKilled after Docker recovery. The staged 384Mi retry still timed out at four Ready / five desired, with kubelet TLS timeouts and VM swap activity. This is NOT validated eight-pod sizing; further ramp attempts require operator resource/runtime diagnosis. No M5 defaults changed. |
 | 2026-11-08 | After owner increased Docker VM to 16GB (six CPUs unchanged), M6 retains the chart memory requests/limits and JVM options during the staged ramp | Avoid adding an artificial 96Mi heap constraint to a rebalance experiment once the machine has headroom. Only replica counts and temporary scaler settings change; original resources/JVM settings are still snapshotted and restored. The earlier 8GB failures remain separate evidence. |
+| 2026-11-09 | M7 reads live in inventory-service (Redis stock) and order-service (public recent-order projection and strict PostgreSQL ten-second count); gateway gets no data access | Preserve state ownership, no new service/dependency or write-path/topic/schema/key change; no new index, scan/sort cost is a known large-table limit. |
+| 2026-11-09 | M7 UI polls every 2 seconds, failed reads mark data stale and polling continues; no SSE | Redis/Postgres are pull-based; SSE would add server polling and long-lived proxy connections without benefit here. Implementation belongs to the UI lane. |
+| 2026-11-09 | M7 dashboard is a non-root multi-stage Angular/nginx-unprivileged Compose deployable on 4200, same-origin API proxies only, `/healthz` 200 and equivalent ng serve proxy | No CORS or Actuator exposure; Helm and ServiceMonitor are out of scope. Serving configuration lands in the UI lane. |
+| 2026-11-09 | M7 targets Angular 22.2.x with default Vitest; all npm commands use pinned `node:24.22.2` (verified v24.22.2), host Node unchanged | Angular requires Node ^24.15; package installation and exact Angular pins remain the frontend scaffold's verification. |
+| 2026-11-09 | Phuong approved the Open Design `frontend-design` / `dashboard` reference, project `ticketrush-m7-dashboard`, before Angular work | HTML, PNG and exact MCP provenance in `docs/design/m7/`; reference only, no build dependency or M5 default change. Render real FAILED/RESERVED states, not illustrative PAYMENT_FAILED; stock API supplies no price. |
+| 2026-11-09 | M7 UI keeps `web-<uuid>` in localStorage; each Buy intent gets a cryptographic v4 UUID, using getRandomValues when randomUUID is unavailable; network/5xx/429 retries retain the key and entire payload | Prevent an uncertain acceptance becoming a second order; lock event and quantity while pending or retryable. HTTP 202 clears the intent but is not confirmation. |
+| 2026-11-09 | M7 purchase timeout is 15 seconds and retains the retry intent; failed persistent identity/cryptography setup blocks the purchase with a visible error | Avoid a permanently disabled button or silently switching customer identity. Retry state is in memory only and does not survive reload. |
+| 2026-11-09 | M7 serving uses the pinned stable nginx 1.30.6 unprivileged Alpine digest, explicit uid/gid 101, narrow proxy routes and Docker DNS resolution | Reproducible non-root runtime; no Node in the final image, CORS, Actuator proxy, new environment variable or Helm change. |
+| 2026-11-09 | M7 scaffold verification resolves Angular 22.2.5, default Vitest 5.1.0 and TypeScript 6.0.3 using node:24.22.2 | All npm/test/build/format commands stay containerized; host Node unchanged and no extra implementation dependency. |
 
 ### M6 tool observation (2026-11-04)
 
