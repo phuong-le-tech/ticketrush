@@ -1,3 +1,5 @@
+// LOAD_RATE and LOAD_DURATION are read from the environment (used by live-dashboard-acceptance.sh).
+// They must be unset for the M5 and M6 runs, which rely on the defaults (8 per second, 120s).
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Counter } from 'k6/metrics';

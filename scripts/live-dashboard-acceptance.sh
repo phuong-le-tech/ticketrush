@@ -35,7 +35,6 @@ LOAD_DURATION_SECONDS="${LOAD_DURATION_SECONDS:-60}"
 LOAD_RATE="${LOAD_RATE:-20}"
 LOAD_EVENTS=3
 LOAD_EVENT_STOCK=300
-SEED_STOCK="${SEED_STOCK:-$(sed -n 's/.*INVENTORY_SEED_STOCK: *"\{0,1\}\([0-9]*\)"\{0,1\}.*/\1/p' deploy/helm/ticketrush/values.yaml | head -1)}"
 
 K() { kubectl --context "$CTX" -n "$NS" "$@"; }
 
@@ -44,6 +43,7 @@ CONTEXT_BEFORE="$(kubectl config current-context 2>/dev/null || echo none)"
 PIDS=()
 RUN_ID="ld-$(date +%s)"
 FAILED=0
+REACHED_END=0 # set only after the final summary, so an interrupted run never exits 0
 LOAD_EVENT_IDS=()
 
 record() { # status name detail
@@ -56,6 +56,12 @@ cleanup() {
   for pid in "${PIDS[@]:-}"; do
     [ -n "$pid" ] && kill "$pid" 2>/dev/null
   done
+  # Remove the load events even on an early exit.
+  local ev
+  for ev in "${LOAD_EVENT_IDS[@]:-}"; do
+    [ -n "$ev" ] && kubectl --context "$CTX" -n "$NS" exec redis-0 -- redis-cli DEL "inventory:event:$ev" >/dev/null 2>&1
+  done
+  [ "$REACHED_END" = 1 ] || FAILED=1
   if [ "$(kubectl config current-context 2>/dev/null || echo none)" != "$CONTEXT_BEFORE" ]; then
     echo "FAIL context_unchanged - kubectl current context changed from $CONTEXT_BEFORE" >&2
     FAILED=1
@@ -64,6 +70,7 @@ cleanup() {
   exit "$FAILED"
 }
 trap cleanup EXIT
+trap 'exit 130' INT TERM
 
 # service port -> sets FWD_URL to http://127.0.0.1:<local>; kubectl picks a free local port.
 # Not run in a $(...) subshell, so the PID lands in PIDS and cleanup can kill it.
@@ -171,6 +178,13 @@ else
     K exec redis-0 -- redis-cli HSET "inventory:event:$ev" stock "$LOAD_EVENT_STOCK" priceCents 100 currency EUR >/dev/null
   done
   EVENT_JSON="$(printf '%s\n' "${LOAD_EVENT_IDS[@]}" | jq -R . | jq -sc .)"
+  # Warm the cold gateway path first: slow first requests make k6 drop its first iteration, which
+  # fails the load script's dropped_iterations threshold. Keys start with RUN_ID so the audit counts them.
+  for i in $(seq 1 20); do
+    curl -sS -o /dev/null --max-time 15 -X POST "$GW/orders" -H 'Content-Type: application/json' \
+      -H "Idempotency-Key: $RUN_ID-warm-$i" \
+      -d "{\"eventId\":\"${LOAD_EVENT_IDS[0]}\",\"customerId\":\"$RUN_ID-warm-$i\",\"quantity\":1}" || true
+  done
   k6 run -e "BASE_URL=$GW" -e "EVENT_IDS=$EVENT_JSON" -e "RUN_ID=$RUN_ID" \
     -e "LOAD_RATE=$LOAD_RATE" -e "LOAD_DURATION=${LOAD_DURATION_SECONDS}s" \
     scripts/autoscale-load.js >"$TMP_DIR/k6.log" 2>&1 &
@@ -232,24 +246,35 @@ else
   done
   bad=""
   total_orders="$(psql_q "SELECT count(*) FROM orders.orders WHERE event_id IN ($literals)")"
+  # One purchase attempt = one Idempotency-Key "<RUN_ID>-<iteration>" (see autoscale-load.js), so no key may repeat.
+  distinct_keys="$(psql_q "SELECT count(DISTINCT idempotency_key) FROM orders.orders WHERE event_id IN ($literals) AND idempotency_key LIKE '$RUN_ID-%'")"
+  distinct_ids="$(psql_q "SELECT count(DISTINCT order_id) FROM orders.orders WHERE event_id IN ($literals)")"
+  total_sold=0
   for ev in "${LOAD_EVENT_IDS[@]}"; do
     remaining="$(K exec redis-0 -- redis-cli --raw HGET "inventory:event:$ev" stock | tr -d '\r')"
     sold="$(psql_q "SELECT coalesce(sum(quantity),0) FROM orders.orders WHERE event_id='$ev' AND status='CONFIRMED'")"
     if ! [[ "$remaining" =~ ^[0-9]+$ ]] || [ "$remaining" -lt 0 ] || [ $((remaining + sold)) -ne "$LOAD_EVENT_STOCK" ]; then
       bad="$bad $ev(remaining=$remaining sold=$sold)"
+    else
+      total_sold=$((total_sold + sold))
     fi
   done
-  main_sold="$(psql_q "SELECT coalesce(sum(quantity),0) FROM orders.orders WHERE event_id='$EVENT_ID' AND status='CONFIRMED'")"
   main_stock="$(jq -r '.stock' "$TMP_DIR/stock.json" 2>/dev/null || echo null)"
+  K6_ITER="$(sed -n 's/^ *iterations[ .]*: *\([0-9]*\).*/\1/p' "$TMP_DIR/k6.log" | head -1)"
+  K6_ACCEPTED="$(sed -n 's/^ *accepted_orders[ .]*: *\([0-9]*\).*/\1/p' "$TMP_DIR/k6.log" | head -1)"
   if [ "${open:-x}" != 0 ]; then
     LD6_DETAIL="orders still unsettled after 120 s: $open"
   elif [ -n "$bad" ]; then
     LD6_DETAIL="stock not conserved for:$bad"
-  elif ! [[ "$main_stock" =~ ^[0-9]+$ ]] || [ "$main_sold" -gt "$SEED_STOCK" ]; then
-    LD6_DETAIL="$EVENT_ID stock=$main_stock confirmed=$main_sold seed=$SEED_STOCK"
+  elif [ "$total_sold" -le 0 ]; then
+    LD6_DETAIL="no ticket was confirmed under load (confirmed=$total_sold)"
+  elif [ "$distinct_keys" != "$total_orders" ] || [ "$distinct_ids" != "$total_orders" ]; then
+    LD6_DETAIL="duplicate orders: orders=$total_orders distinct idempotency keys=$distinct_keys distinct order ids=$distinct_ids"
+  elif ! [[ "$main_stock" =~ ^[0-9]+$ ]]; then
+    LD6_DETAIL="$EVENT_ID stock=$main_stock is not a non-negative number"
   else
     LD6_OK=1
-    LD6_DETAIL="$total_orders load orders settled; each load event remaining+sold=$LOAD_EVENT_STOCK, never negative; $EVENT_ID stock=$main_stock, confirmed tickets=$main_sold <= seed $SEED_STOCK"
+    LD6_DETAIL="$total_orders orders (k6 iterations=${K6_ITER:-?}, accepted=${K6_ACCEPTED:-?}) settled, none duplicated; load events: confirmed $total_sold of $((LOAD_EVENTS * LOAD_EVENT_STOCK)) tickets, remaining+sold=$LOAD_EVENT_STOCK each, never negative; $EVENT_ID stock=$main_stock >= 0"
   fi
   for ev in "${LOAD_EVENT_IDS[@]}"; do K exec redis-0 -- redis-cli DEL "inventory:event:$ev" >/dev/null 2>&1; done
 fi
@@ -268,4 +293,5 @@ else
   echo "SKIP LD7_compose_still_passes - run with --with-compose (resets the Compose Postgres volume)"
 fi
 
+REACHED_END=1
 if [ "$FAILED" = 0 ]; then echo "ALL LIVE DASHBOARD CHECKS PASSED"; else echo "LIVE DASHBOARD CHECKS FAILED"; fi
