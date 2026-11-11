@@ -54,6 +54,17 @@
             }
             <dl class="kv">
               <div>
+                <dt>orders/s</dt>
+                <dd id="rate-value" [class.changed]="flash('rate')">
+                  {{ rate() }}
+                </dd>
+              </div>
+            </dl>
+            <p class="outcomes-label" id="outcomes-label">
+              Saga outcomes, all events, since order-service start
+            </p>
+            <dl class="kv kv-outcomes">
+              <div>
                 <dt>confirmed</dt>
                 <dd [class.changed]="flash('confirmed')">{{ outcomes().confirmed }}</dd>
               </div>
@@ -64,12 +75,6 @@
               <div>
                 <dt>failed</dt>
                 <dd [class.changed]="flash('failed')">{{ outcomes().failed }}</dd>
-              </div>
-              <div>
-                <dt>orders/s</dt>
-                <dd id="rate-value" [class.changed]="flash('rate')">
-                  {{ rate() }}
-                </dd>
               </div>
             </dl>
           </div>

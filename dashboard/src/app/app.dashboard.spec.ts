@@ -184,6 +184,17 @@ describe('M7 dashboard HTTP and user interactions', () => {
     expect(root.querySelector('#stock-value')?.textContent?.trim()).toBe('37');
   });
 
+  it('labels the saga outcome counters as all events since order-service start', () => {
+    stockRead().flush({ eventId: 'concert-1', stock: 37 });
+    activityRead().flush(EMPTY_ACTIVITY);
+
+    fixture.detectChanges();
+
+    expect(root.querySelector('#outcomes-label')?.textContent?.trim()).toBe(
+      'Saga outcomes, all events, since order-service start',
+    );
+  });
+
   it.each([
     { ordersInWindow: 32, windowSeconds: 10, expected: '3.2' },
     { ordersInWindow: 0, windowSeconds: 10, expected: '0.0' },
