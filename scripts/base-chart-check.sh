@@ -16,6 +16,7 @@
 #   check_AC2_hardening  every app Deployment: readiness and liveness probe paths, cpu/memory requests and
 #                        limits, runAsNonRoot, terminationGracePeriodSeconds > 30 (exactly 6 Java Deployments; the dashboard has its own check)
 #   check_M8_dashboard   Deployment and Service "dashboard": non-root uid 101, the three env vars the nginx template needs
+#   check_M8_scaledObjectMirror  both ScaledObjects have maxReplicaCount 2 and lagThreshold "10" (dashboard/src/app/app.ts mirrors them)
 #   check_AC3_no_plaintext  credential-looking env vars come from a Secret, never a literal; the Secret exists
 set -u
 cd "$(dirname "$0")/.."
@@ -160,6 +161,19 @@ check_M8_dashboard() {
   [ -z "$out" ] || while IFS= read -r line; do fail check_M8_dashboard "$line"; done <<< "$out"
 }
 
+# dashboard/src/app/app.ts hard-codes "of 2" pods and a lag threshold of 10; keep the chart in step with it.
+check_M8_scaledObjectMirror() {
+  local docs="$1" out
+  out=$(jq -r '
+    map(select(.kind == "ScaledObject")) as $s
+    | [ (if ($s | length) != 2 then "expected 2 ScaledObjects, found \($s | length)" else empty end),
+        ($s[] | .metadata.name as $n
+          | (if .spec.maxReplicaCount != 2 then "\($n): maxReplicaCount is \(.spec.maxReplicaCount), the dashboard shows \"of 2\"" else empty end),
+            (if (.spec.triggers[0].metadata.lagThreshold | tostring) != "10" then "\($n): lagThreshold is not \"10\", the dashboard chart draws a line at 10" else empty end))
+      ] | .[]' "$docs")
+  [ -z "$out" ] || while IFS= read -r line; do fail check_M8_scaledObjectMirror "$line"; done <<< "$out"
+}
+
 check_AC3_no_plaintext() {
   local docs="$1" out
   out=$(jq -r '
@@ -187,6 +201,7 @@ run_checks() {
   check_AC2_hardening "$1"
   check_AC3_no_plaintext "$1"
   check_M8_dashboard "$1"
+  check_M8_scaledObjectMirror "$1"
   check_AC8_dltTopology "$1" "${2:-$SCRATCH/compose-init.sh}"
   return $FAILED
 }
@@ -250,6 +265,10 @@ selftest() {
     'map(if .kind == "Deployment" and .metadata.name == "dashboard" then .spec.template.spec.containers[0].env |= map(select(.name != "UPSTREAM_SUFFIX")) else . end)'
   expect_failure selftest_M8_dashboard_no_readiness_probe check_M8_dashboard \
     'map(if .kind == "Deployment" and .metadata.name == "dashboard" then del(.spec.template.spec.containers[0].readinessProbe) else . end)'
+  expect_failure selftest_M8_mirror_max_replicas check_M8_scaledObjectMirror \
+    'map(if .kind == "ScaledObject" then .spec.maxReplicaCount = 12 else . end)'
+  expect_failure selftest_M8_mirror_lag_threshold check_M8_scaledObjectMirror \
+    'map(if .kind == "ScaledObject" then .spec.triggers[0].metadata.lagThreshold = "50" else . end)'
   expect_failure selftest_AC3_mutation_fails_literal_password check_AC3_no_plaintext \
     '(map(select(.kind == "Deployment" and .metadata.name != "dashboard")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then .spec.template.spec.containers[0].env += [{"name": "DB_PASSWORD", "value": "hunter2-literal"}] else . end)'
   return $SELFTEST_FAILED

@@ -864,7 +864,7 @@ second and a 20-purchase gateway warm-up was added; the cause (slow cold first r
 
 **Visual check by the controller** in the built-in browser at 1440px on 2026-11-11, on kind: fonts Geist and Geist Mono load
 from /fonts, no horizontal scroll, map fits its 1344px region, one Buy click produced an accent dot that crossed the map,
-stock 1000 -> 999, confirmed 1, table row CONFIRMED EUR 50.00. 
+stock 1000 -> 999, confirmed 1, table row CONFIRMED EUR 50.00.
 **Observed under load** by the controller on 2026-11-11 (built-in browser, 1440px, deployed dashboard on kind, k6 at 20 orders
 per second for 75 s on a dedicated 500-ticket event typed into the Event id field): stock fell from 500 to 0 in well under a
 minute and stayed flat at 0, and a manual Buy afterwards was REJECTED with reason SOLD_OUT; map node rates 13 to 40 per second,
