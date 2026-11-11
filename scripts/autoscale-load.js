@@ -13,9 +13,9 @@ export const options = {
   scenarios: {
     orders: {
       executor: 'constant-arrival-rate',
-      rate: 8,
+      rate: Number(__ENV.LOAD_RATE || 8),
       timeUnit: '1s',
-      duration: '120s',
+      duration: __ENV.LOAD_DURATION || '120s',
       preAllocatedVUs: 16,
       maxVUs: 64,
       gracefulStop: '30s',
