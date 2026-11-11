@@ -53,10 +53,12 @@ ticketrush/
   notification-service/       consumes orders.confirmed, logs a notification
   e2e-tests/                  Testcontainers test that runs every service in one JVM
   deploy/compose/docker-compose.yml
-  deploy/helm/ticketrush/     M3 chart: Strimzi Kafka + topics, Postgres, Redis, 6 services
+  deploy/helm/ticketrush/     M3 chart: Strimzi Kafka + topics, Postgres, Redis, 6 services, dashboard (M8)
+  dashboard/                  Angular live page + nginx image; fonts in public/fonts (M7, rebuilt in M8)
   scripts/kind-up.sh            kind cluster + Strimzi + images + chart, idempotent
   scripts/base-chart-check.sh   static chart checks (helm lint + template assertions)
   scripts/kind-acceptance.sh    kind-up.sh twice, order to CONFIRMED, graceful rollout restart
+  scripts/live-dashboard-acceptance.sh  M8: dashboard on kind, live Prometheus queries under load, invariant audit
   .env.example
 ```
 
@@ -102,6 +104,7 @@ Rationale:
 | Angular 22.2.5, RxJS 7.8.2, tslib 2.9.1 | M7. Approved single-page dashboard, signals, HTTP client and cancellable polling. CLI scaffold includes forms/router packages, but production imports no router and uses native form controls. |
 | Angular CLI/build/compiler, TypeScript 6.0.3, Vitest 5.1.0, jsdom 30.1.3, Prettier 3.9.10 (development only) | M7. Default Angular scaffold toolchain for strict compilation, DOM/HTTP tests, optimized builds and formatting; no additional implementation package. |
 | nginxinc/nginx-unprivileged (container only) | M7. Static dashboard serving and narrowly scoped same-origin proxies, non-root uid 101; Node is only a build/test dependency. |
+| Geist and Geist Mono variable woff2 (official `geist` npm package 1.9.2, SIL OFL 1.1) | M8. Typeface of the live dashboard. Self-hosted in `dashboard/public/fonts` with `OFL.txt`; not an npm dependency, no CDN request. |
 
 Any new dependency must be added to this table with a reason.
 
@@ -209,7 +212,7 @@ The gateway remains write-only and has no database or Redis access. No new backe
 - The Angular app and nginx serving configuration live in `dashboard/`. Compose exposes port 4200,
   with `/healthz` proving nginx is running, not backend readiness. Exact `/api/orders` proxies to
   gateway `/orders`, exact `/api/orders/activity` to order-service, and `/api/events/` to
-  inventory-service `/events/`. No CORS or Actuator proxy; unknown API paths return 404.
+  inventory-service `/events/`. M8 adds two GET-only routes to Prometheus: exact `/api/metrics/query` and `/api/metrics/query_range` (POST is 403). No CORS or Actuator proxy; unknown API paths, including other `/api/metrics/...` paths, return 404.
   Docker DNS resolution follows upstream recreation; nginx never automatically replays a POST.
 - Reads begin on initialization and poll independently every 2 seconds. Each source retains its
   latest good data and its own stale marker. No overlapping reads per source, 8-second read timeout,
@@ -276,6 +279,10 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-11-09 | M7 scaffold verification resolves Angular 22.2.5, default Vitest 5.1.0 and TypeScript 6.0.3 using node:24.22.2 | All npm/test/build/format commands stay containerized; host Node unchanged and no extra implementation dependency. |
 | 2026-11-11 | M8 adds a short CI workflow: backend unit tests (`mvn test -pl '!e2e-tests'`), dashboard `npm ci`/test/build, and the two chart checks. The 15 minute Testcontainers suite (`mvn verify`) stays a local gate recorded in PROGRESS.md | Owner approved the short CI. A full Testcontainers run on every pull request would be slow and was not requested. SonarCloud keeps running separately. |
 | 2026-11-11 | README split: setup and results detail moved to `docs/OPERATIONS.md` and `docs/CHAOS-RESULTS.md`; README now carries the stack table, a Mermaid architecture diagram, proof summary, run instructions and an honest limits list | Owner approved the M8 plan and asked for the tech stack to be visible to recruiters. No code, topic, schema or key change. |
+| 2026-11-11 | M8 live dashboard: Prometheus is proxied through the dashboard origin, GET only, exactly two paths (`/api/metrics/query`, `/api/metrics/query_range`), address from `PROMETHEUS_ADDR` | The browser needs live metrics without CORS or exposing the Prometheus admin API. Verified: POST 403, other `/api/metrics/...` 404, `/actuator` 404. No Java change. |
+| 2026-11-11 | M8: the dashboard is part of the Helm chart (Deployment, Service `dashboard:8080`, non-root, probes), built and loaded by `kind-up.sh` and `observability-up.sh` | The page must show the real kind cluster, including the second consumer pod under load. Reach it with `kubectl port-forward svc/dashboard 4200:8080`. |
+| 2026-11-11 | M8: ready pod counts come from `count by (job) (up{...} == 1)`, not from Kubernetes pod metrics | kube-state-metrics is disabled (2026-10-31 decision), so `kube_deployment_status_replicas_ready` does not exist. A scrape target that is up is the nearest honest signal and the page says so. |
+| 2026-11-11 | M8: no charting library and no animation library; charts are hand-written SVG, motion is CSS transform and opacity | No new npm dependency (owner constraint); the series count is small and bounded. |
 
 ### M6 tool observation (2026-11-04)
 

@@ -74,6 +74,7 @@ Filled in as milestones land. Keep this list accurate.
 | M5 acceptance (kind, KEDA, k6) | `M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/autoscale-acceptance.sh` |
 | M6 chaos experiments (reuses the M5 stack) | `scripts/chaos.sh` |
 | M7 acceptance (Compose + dashboard on :4200) | `scripts/dashboard-acceptance.sh` |
+| M8 live dashboard acceptance (needs the kind stack; `--with-compose` also runs the M7 command) | `scripts/live-dashboard-acceptance.sh` |
 | Chart checks | `scripts/base-chart-check.sh`, `scripts/observability-chart-check.sh` |
 
 ## Environment notes

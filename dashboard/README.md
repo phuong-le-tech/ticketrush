@@ -1,6 +1,7 @@
 # Dashboard
 
-Angular 22.2.5 standalone page following the approved Open Design reference in `docs/design/dashboard/`.
+Angular 22.2.5 standalone page. The purchase and saga-table parts follow the M7 Open Design reference in
+`docs/design/dashboard/`; the live system map and chapters follow `docs/design/DESIGN.md`.
 Live stock, orders per second and recent saga states poll independently every 2 seconds.
 The native form creates a new key per accepted Buy intent; Retry preserves the full failed purchase.
 Angular packages and CLI/build tools are pinned to 22.2.5; the lockfile resolves default Vitest to 5.1.0.
@@ -42,6 +43,22 @@ There is no configured ESLint target; strict TypeScript and Angular production c
   No overlapping reads per source; changing event cancels the old stock read and clears its display.
 - Money is displayed from integer API cents and currency, with no invented stock price. Amounts outside
   JavaScript safe-integer precision are labeled unavailable rather than displaying rounded financial data.
+
+## Against kind (live metrics) and what Compose shows
+
+The page has a system map and four chapters (Concurrency, Kafka, Redis, Kubernetes). The chapters read
+Prometheus through two GET-only same-origin routes, `/api/metrics/query` and `/api/metrics/query_range`
+(address in `PROMETHEUS_ADDR`; POST is 403, other `/api/metrics/...` paths are 404). The eight query
+strings live in `src/app/metrics.ts`; each source shows loading, live, stale or unavailable, never a
+sample number.
+
+- kind: the dashboard is in the Helm chart. After `scripts/observability-up.sh` (or `kind-up.sh`):
+  `kubectl --context kind-ticketrush -n ticketrush port-forward svc/dashboard 4200:8080`, open
+  http://localhost:4200. Pod counts come from `up`, since kube-state-metrics is disabled.
+- Compose: there is no Prometheus, so the chapters show a named "needs the kind stack" state. Buying,
+  stock, orders per second and the saga table still work.
+- Fonts: Geist and Geist Mono 1.9.2 (SIL OFL) are self-hosted in `public/fonts`, not an npm dependency.
+- Acceptance: `scripts/live-dashboard-acceptance.sh [--with-compose]`.
 
 ## Status values and acceptance
 

@@ -119,3 +119,4 @@ chaos results table, a "what I would do differently" section, and a demo GIF scr
 | 2026-10-16 | Spring Boot 4.1.x instead of 3.x | The 3.5 line is out of open-source support. |
 | 2026-10-16 | Extra topic `orders.rejected` | Sold-out orders need a path to order-service that does not pass through payment. |
 | 2026-10-16 | `fake-payment-provider` runs as its own container | A real HTTP hop is needed to test timeouts and the "charged but no reply" double-charge case. |
+| 2026-11-11 | M8 widened to include the live explanatory dashboard (system map, four chapters fed by Prometheus, deployed on kind by the Helm chart) | Owner decision. The M7 dashboard did not explain the system; the portfolio needs a page that shows the flow and the scaling. Spec: `docs/superpowers/specs/2026-11-11-live-dashboard-design.md`. No new service, topic, schema or Java endpoint. |

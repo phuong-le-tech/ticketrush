@@ -12,7 +12,7 @@ result, and what is NOT done or not verified.
 | 5 | Observability and autoscaling | PR #19 (`aa465d5`) | Done |
 | 6 | Chaos experiments and results | PR #20 (`f409c88`) | Done |
 | 7 | Minimal Angular dashboard | PRs #22, #23, #24 (`6335f62`) | Done. Accepted end to end 2026-11-09 with `scripts/dashboard-acceptance.sh`. #22 was merged without same-card review (process defect, see M7 report); #24 changes no file. Owed: one fully green root `mvn verify` (a transient `DltE2ETest` duplicate-delivery failure was seen once, the class passed on rerun) |
-| 8 | Portfolio polish | - | Not started |
+| 8 | Portfolio polish and live dashboard | not merged | Work done on branch `milestone-8` (README, CI workflow, demo script, live explanatory dashboard on kind, `scripts/live-dashboard-acceptance.sh`). Awaiting the owner's review, GIF re-recording and go-ahead; see the M8 section |
 
 ## Milestone 1 checklist (done)
 
@@ -777,3 +777,100 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   acceptance is a single sequential purchase, not the M2 ten-run contention command; the script
   intentionally resets the local Compose database and leaves the stack running. Order count and
   recent rows come from two separate reads and are not one snapshot.
+
+### Milestone 8 - live explanatory dashboard and portfolio polish (branch `milestone-8`, not merged)
+
+**What exists** (committed on `milestone-8`; nothing pushed or merged):
+
+- README restructure, `docs/OPERATIONS.md`, `docs/CHAOS-RESULTS.md`, the short CI workflow, and `docs/DEMO.md` (earlier M8 commits).
+- The rebuilt dashboard (`dashboard/`): a system map with one travelling dot per order, four chapters
+  (Concurrency, Kafka, Redis, Kubernetes) fed by Prometheus through two GET-only same-origin nginx routes
+  (`/api/metrics/query`, `/api/metrics/query_range`), self-hosted Geist fonts, no charting or animation library.
+  Spec: `docs/superpowers/specs/2026-11-11-live-dashboard-design.md`; visual rules: `docs/design/DESIGN.md`.
+- The dashboard in the Helm chart (Deployment, Service `dashboard:8080`), built and loaded by `scripts/kind-up.sh`
+  and `scripts/observability-up.sh`.
+- `scripts/live-dashboard-acceptance.sh` (checks LD1 to LD7). `scripts/autoscale-load.js` gained two optional
+  env vars (`LOAD_RATE`, `LOAD_DURATION`, defaults unchanged at 8 and 120s) so the acceptance load can run 60 s.
+- Records: SPEC.md approved deviation, DESIGN.md decision log (4 rows), dependency table (Geist), M7 route list and
+  repo layout, AGENTS.md commands table, DEMO.md kind demo, dashboard/README.md.
+
+**Acceptance command** (kind stack up; `--with-compose` also runs the M7 command and resets the Compose Postgres volume):
+
+```sh
+scripts/live-dashboard-acceptance.sh --with-compose
+```
+
+Real output of the final passing run, 2026-11-11 (kubectl current context `docker-desktop` before and after):
+
+```text
+PASS LD1_unit - Tests  92 passed (92); production build ok
+PASS LD2_deployed - deploy/dashboard rolled out on kind-ticketrush, /healthz 200 via http://127.0.0.1:51812
+PASS LD3_proxy_boundaries - POST query 403; admin/tsdb, metrics/, querymore, actuator 404
+PASS LD4_live_queries - all 8 queries succeeded non-empty during 60s at 20 orders/s; ordersRate=10.399; readyPods>=1 for inventory and payment; k6 ok
+PASS LD5_reads - stock(concert-1)=999, activity 200
+PASS LD6_invariant - 1201 load orders settled; each load event remaining+sold=300, never negative; concert-1 stock=999, confirmed tickets=1 <= seed 1000
+PASS LD7_compose_still_passes - ALL M7 ACCEPTANCE CHECKS PASSED
+ALL LIVE DASHBOARD CHECKS PASSED
+```
+
+LD7 (Compose) ran after LD1 to LD6 with the kind cluster still running; both fitted in the 16 GB Docker VM.
+Checks: LD1 dashboard unit tests and build; LD2 deployed on kind; LD3 nginx boundaries; LD4 all 8 `QUERIES`
+(parsed from `dashboard/src/app/metrics.ts`) succeed non-empty while 60 s of k6 load runs, `ordersRate` > 0,
+`readyPods` >= 1 for inventory and payment; LD5 stock and activity reads; LD6 load on 3 isolated events of 300 tickets
+(1200 orders, so sold-out contention) conserves stock per event and `concert-1` confirmed tickets stay within the 1000 seed;
+LD7 M7 still passes. The script exits 0 only if every check passes and asserts the kubectl current context is unchanged.
+
+**Proof that it can fail.** The Deployment env was changed with
+`kubectl --context kind-ticketrush -n ticketrush set env deploy/dashboard PROMETHEUS_ADDR=prometheus-wrong.ticketrush.svc.cluster.local:9090`,
+rolled out, and the script run (exit 1, LD4 FAIL):
+
+```text
+deployment.apps/dashboard env updated
+deployment "dashboard" successfully rolled out
+PASS LD1_unit - Tests  92 passed (92); production build ok
+PASS LD2_deployed - deploy/dashboard rolled out on kind-ticketrush, /healthz 200 via http://127.0.0.1:51405
+PASS LD3_proxy_boundaries - POST query 403; admin/tsdb, metrics/, querymore, actuator 404
+FAIL LD4_live_queries - queries failing during load: consumerRate lagByGroup ordersRate partitionLag readyPods redisLatency redisOps sagaOutcomes
+PASS LD5_reads - stock(concert-1)=999, activity 200
+PASS LD6_invariant - 1200 load orders settled; each load event remaining+sold=300, never negative; concert-1 stock=999, confirmed tickets=1 <= seed 1000
+SKIP LD7_compose_still_passes - run with --with-compose (resets the Compose Postgres volume)
+LIVE DASHBOARD CHECKS FAILED
+exit=1
+```
+
+Then the exact original value (`prometheus.ticketrush.svc.cluster.local:9090`, read beforehand) was restored, rolled out
+(`prometheus.ticketrush.svc.cluster.local:9090` confirmed), and the script passed (output above). `helm get manifest` shows the
+same `PROMETHEUS_ADDR` value as the live Deployment, so the Deployment is as the chart renders it.
+
+Flake seen once: an earlier run at 30 orders per second failed only on the k6 `dropped_iterations` threshold
+(LD4 reported `k6 exited 99`, the dashboard queries were fine). The default rate was lowered to 20 per second and
+the final runs above pass. The failing output is not kept; the cause (the host k6 and port-forward under load) is a
+reading, not a measurement.
+
+**Visual check by the controller** in the built-in browser at 1440px on 2026-11-11, on kind: fonts Geist and Geist Mono load
+from /fonts, no horizontal scroll, map fits its 1344px region, one Buy click produced an accent dot that crossed the map,
+stock 1000 -> 999, confirmed 1, table row CONFIRMED EUR 50.00. Not seen: behaviour under load in the browser (second pod
+appearing, lag chart moving), the stale state, reduced motion, and the Compose "needs the kind stack" state.
+
+**NOT done / not verified:**
+
+- Owner review, PR and merge of `milestone-8`; nothing pushed.
+- `scripts/kind-up.sh` change (dashboard build and load) was only syntax-checked (`bash -n`); it was not run end to end.
+  The renamed lowercase `dashboard_tag` variable was not re-run in a bring-up.
+- The demo GIF (`docs/design/demo/ticketrush-demo.gif`) and the README screenshot show the previous dashboard; the owner
+  must re-record them from the new page.
+- The dot animation covers a whole path at once: the saga finishes faster than the 2 s activity poll, so dots show an
+  order's path, not live hop-by-hop positions.
+- Scaling shows 1 to 2 pods only (KEDA `maxReplicas` 2). With no artificial consumer delay a second pod is not guaranteed,
+  so LD4 does not require one; the dashboard under load was not watched in a browser.
+- `kube-state-metrics` is disabled, so ready pods are scrape targets that are up, not scheduler state.
+- The full root `mvn verify` was not re-run for M8; the M7 note about one transient `DltE2ETest` failure still stands.
+- No mobile, light-theme, Firefox/Safari or accessibility audit.
+- Deferred minor review findings, not fixed:
+  - Task 1: `.env.example` does not say the three nginx vars are image-level overrides not read by Compose; two single-line location blocks in `nginx.conf.template` differ from the file's style.
+  - Task 2: `metrics.ts` uses `ReturnType<typeof signal<...>>` instead of `WritableSignal`; the 8000 ms read timeout has no test.
+  - Task 3: the sliding group is unclipped and draws past the plot's right edge for 600 ms, and the slide plays on first render; the slide step is approximate while the buffer fills; no test for the fewer-than-2-points case and the y regex in `chart.spec` is brittle.
+  - Task 4: `.status` gap 6px and padding 4px 10px are off the spacing scale; 13px helper text and 15px rail h2 are outside the DESIGN.md role list; an `&ngsp;` hack in the top bar keeps "stale" a separate word; order id and amount table cells are not mono; `index.html` title is still "Ticket operations".
+  - Task 5: the flash effect registers a new `onDestroy` per flash; four helper paragraphs under stock and rate were dropped (visible copy change); figure styles moved from `app.css` to global `styles.css` to stay under the 4 kB component style budget.
+  - Task 6: `Dot.id` (`orderId:status`) can repeat if an order leaves and re-enters the activity window; two flashes on one stage within 600 ms cut the second short; the order node is not drawn in `--bad` at rest; names over 17 characters use `textLength` 136 (slightly condensed).
+  - Task 7: `build_dashboard` is duplicated across `kind-up.sh` and `observability-up.sh` (matches the existing `build_image` duplication).
