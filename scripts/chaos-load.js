@@ -1,4 +1,4 @@
-import purchase, { options as baseline } from './m5-load.js';
+import purchase, { options as baseline } from './autoscale-load.js';
 
 // Allocate upfront: creating VUs during a pod restart can itself drop arrivals on a busy laptop.
 // The M5 request flow, 8/s arrival rate and strict thresholds stay unchanged.

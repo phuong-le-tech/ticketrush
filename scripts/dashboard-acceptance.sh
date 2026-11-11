@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # M7 acceptance: proves the dashboard and the service-owned read APIs by execution.
 #
-#   scripts/m7-acceptance.sh
+#   scripts/dashboard-acceptance.sh
 #
 # Steps, in order:
 #   1. preflight: Docker daemon, Java 21, the pinned Node image (DESIGN.md section 1)
@@ -154,7 +154,7 @@ printf '    GET /api/orders/activity -> %s (windowSeconds=%s, ordersInWindow=%s,
   "$(jq -r '.orders | length' "$TMP_DIR/activity-before.json")"
 ok "dashboard serves, stock read works, activity payload is public"
 
-KEY="$(uuidgen | tr '[:upper:]' '[:lower:]')-m7-acceptance"
+KEY="$(uuidgen | tr '[:upper:]' '[:lower:]')-dashboard-acceptance"
 CUSTOMER="web-$(uuidgen | tr '[:upper:]' '[:lower:]')"
 printf '    POST /api/orders eventId=%s quantity=%s customerId=%s Idempotency-Key=%s\n' \
   "$EVENT_ID" "$QTY" "$CUSTOMER" "$KEY"

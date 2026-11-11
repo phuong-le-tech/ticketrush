@@ -11,12 +11,12 @@ result, and what is NOT done or not verified.
 | 4 | Failure handling | PR #18 (`6a5a3b0`) | Done |
 | 5 | Observability and autoscaling | PR #19 (`aa465d5`) | Done |
 | 6 | Chaos experiments and results | PR #20 (`f409c88`) | Done |
-| 7 | Minimal Angular dashboard | PRs #22, #23, #24 (`6335f62`) | Done. Accepted end to end 2026-11-09 with `scripts/m7-acceptance.sh`. #22 was merged without same-card review (process defect, see M7 report); #24 changes no file. Owed: one fully green root `mvn verify` (a transient `DltE2ETest` duplicate-delivery failure was seen once, the class passed on rerun) |
+| 7 | Minimal Angular dashboard | PRs #22, #23, #24 (`6335f62`) | Done. Accepted end to end 2026-11-09 with `scripts/dashboard-acceptance.sh`. #22 was merged without same-card review (process defect, see M7 report); #24 changes no file. Owed: one fully green root `mvn verify` (a transient `DltE2ETest` duplicate-delivery failure was seen once, the class passed on rerun) |
 | 8 | Portfolio polish | - | Not started |
 
 ## Milestone 1 checklist (done)
 
-Checklist (see [DESIGN.md](DESIGN.md) for the approved layout, schemas and topics):
+Checklist (see [DESIGN.md](../DESIGN.md) for the approved layout, schemas and topics):
 
 - [x] Parent `pom.xml` (Boot 4.1.1 BOM, Java 21) and all modules from DESIGN.md section 2
 - [x] `common`: event records, topic name constants, JSON type mappings
@@ -61,20 +61,20 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - Bottlenecks or surprises: JacksonJsonDeserializer strips the `__TypeId__` header by default, so test consumers must call `dontRemoveTypeHeaders()` to assert on it (test fix commit in this PR).
 
 ### Milestone 2 - 2026-10-22
-- Verified with: `scripts/m2-acceptance.sh` (builds once with `mvn install -DskipTests`, then runs
+- Verified with: `scripts/oversell-acceptance.sh` (builds once with `mvn install -DskipTests`, then runs
   `OversellE2ETest` + `ReplayE2ETest` in 10 separate Maven runs, fresh JVM and containers each) -> 10/10:
   ```
   Building once (mvn install -DskipTests)...
-  run 1/10: PASS in 135s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-1.log)
-  run 2/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-2.log)
-  run 3/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-3.log)
-  run 4/10: PASS in 137s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-4.log)
-  run 5/10: PASS in 144s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-5.log)
-  run 6/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-6.log)
-  run 7/10: PASS in 124s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-7.log)
-  run 8/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-8.log)
-  run 9/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-9.log)
-  run 10/10: PASS in 127s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-10.log)
+  run 1/10: PASS in 135s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-1.log)
+  run 2/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-2.log)
+  run 3/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-3.log)
+  run 4/10: PASS in 137s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-4.log)
+  run 5/10: PASS in 144s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-5.log)
+  run 6/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-6.log)
+  run 7/10: PASS in 124s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-7.log)
+  run 8/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-8.log)
+  run 9/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-9.log)
+  run 10/10: PASS in 127s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-10.log)
   RESULT: 10/10 runs passed
   ```
   Per run, surefire time (includes booting containers and the 6 services): OversellE2ETest
@@ -118,19 +118,19 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   replay), ReservationFlowIT `unknownThenSeededEventAC6BothRejectedStockUnchanged` (Kafka path).
 - Verified with: `mvn verify` (repo root) -> BUILD SUCCESS, 86 tests, 0 failures (OversellE2ETest
   98.2 s, ReplayE2ETest 27.5 s, PurchaseFlowE2ETest 9.6 s).
-- Verified with: `scripts/m2-acceptance.sh` -> 10/10:
+- Verified with: `scripts/oversell-acceptance.sh` -> 10/10:
   ```
   Building once (mvn install -DskipTests)...
-  run 1/10: PASS in 139s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-1.log)
-  run 2/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-2.log)
-  run 3/10: PASS in 127s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-3.log)
-  run 4/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-4.log)
-  run 5/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-5.log)
-  run 6/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-6.log)
-  run 7/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-7.log)
-  run 8/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-8.log)
-  run 9/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-9.log)
-  run 10/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-10.log)
+  run 1/10: PASS in 139s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-1.log)
+  run 2/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-2.log)
+  run 3/10: PASS in 127s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-3.log)
+  run 4/10: PASS in 129s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-4.log)
+  run 5/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-5.log)
+  run 6/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-6.log)
+  run 7/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-7.log)
+  run 8/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-8.log)
+  run 9/10: PASS in 128s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-9.log)
+  run 10/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-10.log)
   RESULT: 10/10 runs passed
   ```
   Per run, surefire time: OversellE2ETest 108.7 / 98.5 / 96.5 / 95.9 / 100.3 / 100.7 / 101.5 / 98.2 /
@@ -144,21 +144,21 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - What exists: Helm chart `deploy/helm/ticketrush` (Strimzi Kafka KRaft with 3 brokers, 6 KafkaTopic CRs
   with 12 partitions and RF 3, Postgres and Redis StatefulSets, 6 service Deployments with startup,
   readiness and liveness probes, requests and limits, non-root, grace period 60 s, credentials from a
-  chart-generated Secret); `scripts/m3-up.sh` (idempotent), `scripts/m3-chart-check.sh`,
-  `scripts/m3-acceptance.sh`; actuator probes in every service.
+  chart-generated Secret); `scripts/kind-up.sh` (idempotent), `scripts/base-chart-check.sh`,
+  `scripts/kind-acceptance.sh`; actuator probes in every service.
 - Restart cause found: on a cold start order-service (Flyway) and inventory-service (Redis seeding)
   exited 1 because Postgres and Redis were not reachable yet (7-8 restarts each). Fixed with init
   containers (`waitFor`). The Docker VM was also restarted by the host during that session (uptime
   10 min), which restarted the control plane pods; not a chart problem.
-- Verified with `scripts/m3-chart-check.sh` and `--selftest`: both pass.
+- Verified with `scripts/base-chart-check.sh` and `--selftest`: both pass.
 - Verified with `mvn verify` (repo root): BUILD SUCCESS, 98 tests, 0 failures, 6 ActuatorProbesIT included.
-- Verified with `scripts/m3-acceptance.sh` (deletes the cluster first), exit 0:
+- Verified with `scripts/kind-acceptance.sh` (deletes the cluster first), exit 0:
   ```
   PASS AC4_clean_up - 13 pods Ready
   PASS AC4_second_run - same node, 0 restarts
   PASS AC5_order_confirmed - POST 202, 0d47129f-400a-5583-8484-2b823ae56800 CONFIRMED in Postgres and on orders.confirmed
   PASS AC6_graceful_restart - old pod logged 'Graceful shutdown complete', rollout completed
-  RESULT: m3-acceptance passed
+  RESULT: kind-acceptance passed
   ```
   Cold start to all Ready took about 2.5 min (images built from cache).
 - NOT done / not verified: Compose stack not re-run (files untouched); a first run with an empty
@@ -170,7 +170,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - Verified with Java 21: `mvn test-compile -DskipTests` -> exit 0. `mvn verify -DexcludedGroups=m4-red` -> BUILD SUCCESS, 98 existing tests pass, including M2 contention and replay once.
 - RED verification: `mvn verify -fae -pl inventory-service,fake-payment-provider,order-service -am -Dgroups=m4-red` -> BUILD FAILURE as expected: inventory 2 missing-consumer timeouts; provider 1 failure/4 passes; order 35 missing-outbox assertion failures.
 - RED verification: targeted E2E command -> 21 missing-DLT timeouts, 8 failure-handling RED invocations, 1 missing-outbox failure. Final OutboxE2ETest rerun -> AC4 RED, AC9 real-container/log-capture test PASS.
-- `scripts/m3-chart-check.sh` -> Helm lint passes, topology RED: six DLT topics missing from Helm and Compose.
+- `scripts/base-chart-check.sh` -> Helm lint passes, topology RED: six DLT topics missing from Helm and Compose.
 - Full commands, AC mapping, observed failures, skeleton contracts and deviations: [M4-TEST-HANDOFF.md](M4-TEST-HANDOFF.md).
 - NOT done / not verified: M4 implementation, deeper outbox/race assertions beyond the missing-migration guards, a fully green default `mvn verify`, M2 x10 rerun, M3 cluster acceptance and chart mutation phase. AC7 has a documented randomness limitation until an approved seed hook exists. This is RED-step evidence, not milestone acceptance.
 
@@ -206,32 +206,32 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   ```
   Module ITs in the same run: OutboxIT 3, SagaReaperIT 32, OrderSagaIT 10, ReleaseIT 2,
   PaymentFlowIT 5, ChargeControllerIT 10, all green.
-- Verified with `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`, and `--selftest` ->
-  `RESULT: m3-chart-check selftest passed` (the six AC8 DLT mutations are all rejected).
-- Verified with `scripts/m2-acceptance.sh` (M2 contention and replay, 10 separate Maven runs) -> 10/10:
+- Verified with `scripts/base-chart-check.sh` -> `RESULT: base-chart-check passed`, and `--selftest` ->
+  `RESULT: base-chart-check selftest passed` (the six AC8 DLT mutations are all rejected).
+- Verified with `scripts/oversell-acceptance.sh` (M2 contention and replay, 10 separate Maven runs) -> 10/10:
   ```
-  run 1/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-1.log)
-  run 2/10: PASS in 135s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-2.log)
-  run 3/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-3.log)
-  run 4/10: PASS in 134s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-4.log)
-  run 5/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-5.log)
-  run 6/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-6.log)
-  run 7/10: PASS in 131s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-7.log)
-  run 8/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-8.log)
-  run 9/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-9.log)
-  run 10/10: PASS in 130s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/m2-acceptance/run-10.log)
+  run 1/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-1.log)
+  run 2/10: PASS in 135s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-2.log)
+  run 3/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-3.log)
+  run 4/10: PASS in 134s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-4.log)
+  run 5/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-5.log)
+  run 6/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-6.log)
+  run 7/10: PASS in 131s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-7.log)
+  run 8/10: PASS in 133s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-8.log)
+  run 9/10: PASS in 132s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-9.log)
+  run 10/10: PASS in 130s - Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 (log: e2e-tests/target/oversell-acceptance/run-10.log)
   RESULT: 10/10 runs passed
   ```
   OversellE2ETest per run: 99.1 / 101.8 / 100.4 / 101.5 / 100.0 / 99.4 / 99.4 / 99.7 / 99.6 / 98.2 s;
   ReplayE2ETest (2 tests): 28.9 / 29.1 / 29.4 / 29.0 / 29.3 / 29.5 / 28.5 / 28.8 / 29.0 / 29.0 s.
-- Verified with `scripts/m3-acceptance.sh` (deletes and recreates the kind cluster; the old node
+- Verified with `scripts/kind-acceptance.sh` (deletes and recreates the kind cluster; the old node
   container had exited 4 days earlier), exit 0:
   ```
   PASS AC4_clean_up - 13 pods Ready
   PASS AC4_second_run - same node, 0 restarts
   PASS AC5_order_confirmed - POST 202, 121fe014-a107-554b-9c0a-6973ae86e301 CONFIRMED in Postgres and on orders.confirmed
   PASS AC6_graceful_restart - old pod logged 'Graceful shutdown complete', rollout completed
-  RESULT: m3-acceptance passed
+  RESULT: kind-acceptance passed
   ```
   After it, `kubectl get kafkatopics` shows the 6 sources and 6 `.DLT` topics, 12 partitions, RF 3, Ready.
 - NOT done / not verified:
@@ -282,8 +282,8 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   Parsed per-class results: 175 tests, 0 failures, 0 errors, 0 skipped. Includes
   MigrationCompatibilityIT 2, SagaReaperIT 32, OutboxIT 3, FailureE2ETest 9, DltE2ETest 21,
   OversellE2ETest 1, ReplayE2ETest 2, PurchaseFlowE2ETest 1, OutboxE2ETest 2.
-- `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`;
-  `scripts/m3-chart-check.sh --selftest` -> `RESULT: m3-chart-check selftest passed`.
+- `scripts/base-chart-check.sh` -> `RESULT: base-chart-check passed`;
+  `scripts/base-chart-check.sh --selftest` -> `RESULT: base-chart-check selftest passed`.
   `git diff --check origin/main...HEAD` and recovery added-line dash check -> clean.
   No separate lint or typecheck command is defined in CLAUDE.md/AGENTS.md; Maven compiled all modules.
 - Compatibility limits: this retains the legacy writer's status value, not a full schema downgrade
@@ -306,14 +306,14 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - New metrics tests compile on Java 21. Service tests produced 35 assertion failures and zero
   errors; metrics E2E produced 3 assertion failures and zero errors. Missing meters and HTTP 404
   are the expected RED conditions. No production instrumentation or deployment code is added.
-- `scripts/m5-chart-check.sh` rejects the current chart's missing monitoring/scaling resources;
-  `scripts/m5-acceptance.sh` rejects missing `scripts/m5-up.sh` before touching kind.
+- `scripts/observability-chart-check.sh` rejects the current chart's missing monitoring/scaling resources;
+  `scripts/autoscale-acceptance.sh` rejects missing `scripts/observability-up.sh` before touching kind.
   Both scripts' offline `--selftest` modes pass. Synthetic fixtures prove only the evaluators.
-- AC7 regression: `scripts/m3-chart-check.sh` and its `--selftest` pass. The destructive
-  `scripts/m3-acceptance.sh` was not run in this test-only phase: cluster bootstrap/real k6 scaling
+- AC7 regression: `scripts/base-chart-check.sh` and its `--selftest` pass. The destructive
+  `scripts/kind-acceptance.sh` was not run in this test-only phase: cluster bootstrap/real k6 scaling
   belong to the downstream implementation run. This is a not-run limitation, not M3 acceptance.
 - NOT verified here: real M5 cluster, dashboard data, KEDA scale-up/down, or k6 conservation.
-  See `docs/M5-RED-RESULTS.md` for exact test commands, expected failures and plan deviations.
+  See `docs/internal/M5-RED-RESULTS.md` for exact test commands, expected failures and plan deviations.
 
 ### Milestone 5 implementation - 2026-10-31
 
@@ -324,9 +324,9 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   acknowledged gateway POST counter; after-commit saga outcome counters (replays/rollbacks add zero).
   Strimzi exporter supplies real group/topic lag. The chart provisions six ServiceMonitors, exporter
   PodMonitor, Prometheus, a Secret-backed Grafana with a four-panel ConfigMap dashboard, and Kafka
-  KEDA ScaledObjects for inventory/payment (min 1, max 2 <= 12 partitions). `m5-up.sh` installs pinned
+  KEDA ScaledObjects for inventory/payment (min 1, max 2 <= 12 partitions). `observability-up.sh` installs pinned
   operators before the chart, reuses content-tagged builds, and preserves generated credentials.
-  `m5-load.js` drives 24 events with strict k6 thresholds; optional 200ms consumer delay creates lag.
+  `autoscale-load.js` drives 24 events with strict k6 thresholds; optional 200ms consumer delay creates lag.
 - Full unfiltered root verification in this run, Java 21.0.10:
   ```sh
   export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home
@@ -341,26 +341,26 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   ```
   All six PrometheusIT, four MetricsTest classes, SagaMetricsIT (8) and MetricsE2ETest (3) passed.
   Existing contention, replay, failure, DLT, outbox and migration suites passed unchanged.
-  Per-class counts and reactor output: [maven-summary.txt](evidence/m5/maven-summary.txt).
+  Per-class counts and reactor output: [maven-summary.txt](../evidence/autoscaling/maven-summary.txt).
   No separate lint/typecheck command is defined in CLAUDE.md/AGENTS.md; Maven compiled all modules.
-- `scripts/m5-chart-check.sh`, `scripts/m5-chart-check.sh --selftest`,
-  `scripts/m5-acceptance.sh --selftest`, `scripts/m3-chart-check.sh` and its `--selftest` -> exit 0.
-  Helm lint/template and resource mutation checks pass. `bash -n scripts/m5-up.sh
-  scripts/m5-acceptance.sh` and added-line typography/`git diff --check` -> clean.
+- `scripts/observability-chart-check.sh`, `scripts/observability-chart-check.sh --selftest`,
+  `scripts/autoscale-acceptance.sh --selftest`, `scripts/base-chart-check.sh` and its `--selftest` -> exit 0.
+  Helm lint/template and resource mutation checks pass. `bash -n scripts/observability-up.sh
+  scripts/autoscale-acceptance.sh` and added-line typography/`git diff --check` -> clean.
 - Real clean-kind acceptance, run in this implementation session:
   ```sh
-  M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/m5-acceptance.sh
+  M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/autoscale-acceptance.sh
   ```
   -> exit 0 in 492.626 seconds, clean Kubernetes 1.36.4 on kind 0.33.0, k6 2.3.0.
   ```text
   PASS warm-up - real confirmed order and committed, drained lag for both groups
   PASS AC4_cleanAndRepeat - Ready stack, stable node/Secret, four provisioned queries return data
   PASS AC5_scaleAndConserve - both services causal 1 -> >1 -> 1; stock/orders/charges conserved
-  RESULT: m5-acceptance passed
+  RESULT: autoscale-acceptance passed
   ```
-  Full raw output and measured audit: [acceptance.log](evidence/m5/acceptance.log),
-  [evidence.json](evidence/m5/evidence.json), [samples.jsonl](evidence/m5/samples.jsonl),
-  [k6-summary.json](evidence/m5/k6-summary.json). These are live outputs, not selftest fixtures.
+  Full raw output and measured audit: [acceptance.log](../evidence/autoscaling/acceptance.log),
+  [evidence.json](../evidence/autoscaling/evidence.json), [samples.jsonl](../evidence/autoscaling/samples.jsonl),
+  [k6-summary.json](../evidence/autoscaling/k6-summary.json). These are live outputs, not selftest fixtures.
   Representative raw epoch-second measurements (lag, ready replicas):
 
   | Service | Baseline | Above threshold at 1 | Scale-up | Drained | After load + >=30s drained |
@@ -390,7 +390,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   Raw per-partition lag can be -1 for uncommitted offsets; the documented sum omits unknown partitions.
 - NOT done / limitations: independent exact-head review and PR are downstream gates, not claimed here.
   M2 ten-run acceptance and Compose were not rerun (root verify includes contention/replay once).
-  Destructive `m3-acceptance.sh` was not rerun: it replaces the same local cluster and disables M5;
+  Destructive `kind-acceptance.sh` was not rerun: it replaces the same local cluster and disables M5;
   its static checks pass and clean M5 bootstrap exercised the shared app/Kafka/DB/probe paths, but
   M3's dedicated graceful-rollout assertion is not new evidence. Builds used the laptop's image/build
   caches; no empty-cache timing claim. Metrics/Grafana data are ephemeral and outcomes are counters,
@@ -403,36 +403,36 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - **NOT accepted and NOT handed to review.** Four experiment families have complete real audits:
   inventory-kill 4, broker-restart 3, payment-declines 3, postgres-latency 3. The first consumer ramp
   stalled before eight Ready pods were verified. No M7/M8 work, push or PR.
-- Implemented `scripts/m6-chaos.sh`, a shared offline evaluator, context refusal before live tool
+- Implemented `scripts/chaos.sh`, a shared offline evaluator, context refusal before live tool
   use, acknowledged-ID collection using the reused M5 k6 purchase flow, reversible fault handlers,
   command/ledger/sample evidence and resume-by-re-evaluation. No new dependency, application
   behavior, event/topic/key/schema/public API change or M5 chart-default change. The two new k6
   variables are documented in `.env.example`. Test-writer tests remain unchanged.
-- RED reproduced: `scripts/m6-chaos-test.sh --offline` -> 60 assertion failures, 9 skips, 0 errors,
+- RED reproduced: `scripts/chaos-test.sh --offline` -> 60 assertion failures, 9 skips, 0 errors,
   caused by the missing runner. Fresh offline GREEN -> `OK (skipped=9)`, 25 methods, no failures
-  or errors. `python3 scripts/m6-collector-test.py` -> six tests pass. Collector regressions were
+  or errors. `python3 scripts/chaos-collector-test.py` -> six tests pass. Collector regressions were
   observed RED first for restoration ordering, child-stop error handling, stale scrape acceptance,
   terminating rollout pods and the actual provider decline reason.
-- `scripts/m6-chaos.sh --selftest` -> `RESULT: m6-chaos selftest passed (offline synthetic evidence only)`.
+- `scripts/chaos.sh --selftest` -> `RESULT: m6-chaos selftest passed (offline synthetic evidence only)`.
   It rejects synthetic oversell, lost-order and duplicate-charge inputs, without Kubernetes access.
-- `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`.
-  `scripts/m5-chart-check.sh` -> `RESULT: m5-chart-check passed`.
-  Their selftests and `scripts/m5-acceptance.sh --selftest` also passed earlier in this run.
+- `scripts/base-chart-check.sh` -> `RESULT: base-chart-check passed`.
+  `scripts/observability-chart-check.sh` -> `RESULT: observability-chart-check passed`.
+  Their selftests and `scripts/autoscale-acceptance.sh --selftest` also passed earlier in this run.
   A later hygiene check caught extra blank lines at the new documentation EOFs; those were fixed
-  rather than changing a test. Final command logs are in `docs/evidence/m6/verification/`.
-- Real execution used `scripts/m5-up.sh` after restarting the previously stopped project node.
+  rather than changing a test. Final command logs are in `docs/evidence/chaos/verification/`.
+- Real execution used `scripts/observability-up.sh` after restarting the previously stopped project node.
   The first bootstrap met a transient API validation error; its retry completed with all pods Ready.
-  `scripts/m6-chaos.sh` then completed all three inventory and broker repetitions but exited 1:
+  `scripts/chaos.sh` then completed all three inventory and broker repetitions but exited 1:
   `FAIL m6-chaos: provider audit requires one pod`. A terminating old provider pod caused this
   pre-load collector refusal, fixed test-first without changing application code.
-- `scripts/m6-chaos.sh --resume` re-evaluated completed live files and collected only missing runs.
+- `scripts/chaos.sh --resume` re-evaluated completed live files and collected only missing runs.
   Its first payment audit was rejected by the checker expecting PAYMENT_FAILED (release-event
   reason) rather than SQL's PROVIDER_DECLINED. The unchanged real JSON passed after a new test
   and evaluator fix and was preserved under its normal run filename, counted only once. Later
   payment repetitions passed directly. The final resumed command was stopped after the ramp
   runtime failure and best-effort cleanup, not reported as exit 0.
 - Every completed run, date, exact recovery value and before/during/after completion rate is in
-  the [README table](CHAOS-RESULTS.md#measured-results), linked to its raw JSON. Confirmed orders
+  the [README table](../CHAOS-RESULTS.md#measured-results), linked to its raw JSON. Confirmed orders
   each have one charge; nonconfirmed orders zero, every accepted ID is conserved, stocks are
   nonnegative and conserved, and payment failures release held quantity once. These claims apply
   only to the completed audits, NOT the failed ramp or interrupted runs. k6 acknowledgments are
@@ -445,7 +445,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - Failed/interrupted attempts are retained and listed in README: two k6 arrival failures (13 and
   5 dropped iterations), one intentionally interrupted inventory audit, the pre-load provider
   baseline refusal and the failed ramp. Verbatim runtime logs are preserved in
-  `docs/evidence/m6/raw-logs.zip`; no whitespace cleanup or synthetic output replaced those bytes.
+  `docs/evidence/chaos/raw-logs.zip`; no whitespace cleanup or synthetic output replaced those bytes.
 - **Runtime blocker:** the first inventory rollout toward eight reported only 5 of 8 new replicas
   updated, then timed out. k6 recorded 381 acknowledgments, 923 dropped iterations and 960 failed
   HTTP attempts. API TLS handshakes and the project's containerd CRI subsequently timed out.
@@ -456,11 +456,11 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   rate 0, maxReplicaCount 2 and removal of pause annotations. A later API read still showed stale
   inventory reconciliation (5 up-to-date for desired 1) and Paused scaler status. **No successful
   after-snapshot or fully restored runtime is claimed.** Baseline and exact commands:
-  `docs/evidence/m6/m6-consumer-ramp-1793788102587266000/before.json` and `commands.jsonl`.
-- Final `scripts/m6-chaos-test.sh` -> `FAILED (failures=7, skipped=1)`, 25 tests, no errors.
+  `docs/evidence/chaos/m6-consumer-ramp-1793788102587266000/before.json` and `commands.jsonl`.
+- Final `scripts/chaos-test.sh` -> `FAILED (failures=7, skipped=1)`, 25 tests, no errors.
   All offline contract cases and four real experiment audit methods pass. Remaining failures are
   missing ramp/cleanup evidence, the incomplete results set and the manifest's honest nonzero/
-  not-run states. Raw output: `docs/evidence/m6/verification/full-harness.log`.
+  not-run states. Raw output: `docs/evidence/chaos/verification/full-harness.log`.
 - **NOT RUN: `mvn verify`** in this implementation run because the Docker/kind runtime became
   unhealthy. The required next command is
   `JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home mvn verify` after recovery.
@@ -473,7 +473,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   after-restoration window is idle because its in-memory charge audit precedes rollout.
 - Operator action: recover the local project Docker/kind runtime with an approved lifecycle action,
   verify baseline reconciliation, then investigate startup/resource pressure before retrying the
-  ramp. Do not rerun the same rollout blindly. [Blocker details](evidence/m6/blocked.txt) and
+  ramp. Do not rerun the same rollout blindly. [Blocker details](../evidence/chaos/blocked.txt) and
   `verification.json` record failures/not-run states explicitly; they are not a green milestone manifest.
 
 ### Milestone 6 retry - 2026-11-08, 8GB attempt (superseded by recovery below)
@@ -487,17 +487,17 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   M5 baseline before load and read back consumers 1/1 Ready, original 512Mi limits / 384Mi
   requests and MaxRAMPercentage=60, max 2 and Paused=False scalers, provider rate 0 and zero
   chaos DB sessions. All project pods were Ready before load.
-- `scripts/m5-up.sh` failed twice fetching its unchanged pinned Prometheus chart with HTTP 503.
+- `scripts/observability-up.sh` failed twice fetching its unchanged pinned Prometheus chart with HTTP 503.
   Logs: `verification/bootstrap-2026-11-08.log` and `bootstrap-retry-2026-11-08.log` under the M6
   evidence directory. Reused the existing healthy M5 stack as allowed by the spec; no new dependency.
 - Added two collector regressions, observed both fail, then implemented waiting for terminating
   surplus pods and a 384Mi experimental limit. Preserved the incremental startup work from the
   interrupted retry, extending ramp load to 360s without changing 8/s or strict k6 thresholds.
-  `python3 scripts/m6-collector-test.py` -> `Ran 9 tests in 1.009s`, `OK`.
-- `scripts/m6-chaos.sh --experiment consumer-ramp --runs 1 --timeout-seconds 900` -> exit 1:
+  `python3 scripts/chaos-collector-test.py` -> `Ran 9 tests in 1.009s`, `OK`.
+- `scripts/chaos.sh --experiment consumer-ramp --runs 1 --timeout-seconds 900` -> exit 1:
   `FAIL m6-chaos: command failed: kubectl --context kind-ticketrush -n ticketrush --request-timeout=30s rollout: error: timed out waiting for the condition`.
   Inventory reached four Ready / five desired; no eight-pod or payment-ramp result was collected.
-  Raw evidence: `docs/evidence/m6/m6-consumer-ramp-1794134769312914000/`.
+  Raw evidence: `docs/evidence/chaos/m6-consumer-ramp-1794134769312914000/`.
   k6 recorded 963 acknowledgments, 794 dropped iterations, 851 failed HTTP requests and 235 failed
   checks. These are failed-attempt observations, NOT a completed invariant audit or recovery result.
 - During slowdown, kubelet log retrieval timed out at TLS handshake. VM memory available was
@@ -512,13 +512,13 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   user-defined `jq *.env*` deny rule. It was not retried or rephrased. Earlier, a one-off Python
   `-c` restoration command was denied and did not run; restoration instead used direct baseline
   kubectl operations. Only the observed readbacks above are claimed, not exact cleanup acceptance.
-- Fresh `scripts/m6-chaos.sh --selftest` ->
+- Fresh `scripts/chaos.sh --selftest` ->
   `RESULT: m6-chaos selftest passed (offline synthetic evidence only)`.
-  Fresh `scripts/m6-chaos-test.sh --offline` -> `OK (skipped=9)`, 25 tests, no failures.
-  Fresh `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`.
-  Fresh `scripts/m5-chart-check.sh` -> `RESULT: m5-chart-check passed`.
+  Fresh `scripts/chaos-test.sh --offline` -> `OK (skipped=9)`, 25 tests, no failures.
+  Fresh `scripts/base-chart-check.sh` -> `RESULT: base-chart-check passed`.
+  Fresh `scripts/observability-chart-check.sh` -> `RESULT: observability-chart-check passed`.
   M3/M5 chart selftests and M5 acceptance selftest also passed in this retry.
-- Fresh full `scripts/m6-chaos-test.sh` -> `FAILED (failures=7, skipped=1)`, 25 tests.
+- Fresh full `scripts/chaos-test.sh` -> `FAILED (failures=7, skipped=1)`, 25 tests.
   The original 13 successful audits re-evaluate successfully, but no additional pass is claimed.
   All fresh verification logs use `*-2026-11-08.log` names, distinct from historical evidence.
   Verbatim raw logs for the preserved interrupted retry and this run are in `retry-raw-logs.zip`;
@@ -543,17 +543,17 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   test to forbid deployment-template changes; observed RED before the implementation removal.
   Commits: `b4bce0e` test contract correction and `7490fe4` implementation. Test-writer tests and
   application code remain unchanged; no new dependency or public/topic/schema/key change.
-- `scripts/m6-chaos.sh --experiment consumer-ramp --runs 3 --timeout-seconds 900` -> exit 0,
+- `scripts/chaos.sh --experiment consumer-ramp --runs 3 --timeout-seconds 900` -> exit 0,
   `RESULT: m6-chaos passed`. Each 24-show repetition acknowledged 2,881 IDs, reached eight Ready
   inventory and payment replicas in separate phases, passed terminal/stock/unique-order/charge
   invariants, and restored exact before/after settings. Recovery seconds:
   340.56781005859375, 339.5589737892151, 340.2294728755951. Before/during/after and per-Ready-count
   measurements are in README, with every JSON linked once. Log: `verification/ramp-16gb-2026-11-08.log`.
-- `scripts/m6-chaos.sh --resume` -> exit 0, `RESULT: m6-chaos passed`. This is the actual successful
-  whole-runner invocation; the earlier unqualified `scripts/m6-chaos.sh` exit 1 is retained as
+- `scripts/chaos.sh --resume` -> exit 0, `RESULT: m6-chaos passed`. This is the actual successful
+  whole-runner invocation; the earlier unqualified `scripts/chaos.sh` exit 1 is retained as
   historical failure, not rewritten as success. Resume re-evaluated completed live evidence,
   then actually ran both cleanup probes and the one-show comparison. Log:
-  `verification/resume-16gb-2026-11-08.log` under `docs/evidence/m6/`.
+  `verification/resume-16gb-2026-11-08.log` under `docs/evidence/chaos/`.
 - Real SIGINT and deadline-timeout probes both mutated effective settings after acknowledged
   load, exited 1 as intended, restored exact snapshots, then completed independently audited
   inventory-kill reruns with disjoint order IDs. Evidence: `cleanup-SIGINT.json`,
@@ -576,17 +576,17 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   Replay 2, PurchaseFlow 1, Outbox 2, all green. Counts and verbatim selected lines:
   `verification/maven-16gb-counts.json`, `verification/maven-16gb-summary-2026-11-08.log`.
   Full unmodified Maven output is the `runtime-2026-11-08/maven.log` member of `retry-raw-logs.zip`.
-- Latest `scripts/m6-chaos.sh --selftest` passes; `python3 scripts/m6-collector-test.py` passes
-  nine tests; `scripts/m6-chaos-test.sh --offline` -> `OK (skipped=9)`, 25 discovered tests.
-  Latest `scripts/m3-chart-check.sh` -> `RESULT: m3-chart-check passed`.
-  Latest `scripts/m5-chart-check.sh` -> `RESULT: m5-chart-check passed`. Its first final check
+- Latest `scripts/chaos.sh --selftest` passes; `python3 scripts/chaos-collector-test.py` passes
+  nine tests; `scripts/chaos-test.sh --offline` -> `OK (skipped=9)`, 25 discovered tests.
+  Latest `scripts/base-chart-check.sh` -> `RESULT: base-chart-check passed`.
+  Latest `scripts/observability-chart-check.sh` -> `RESULT: observability-chart-check passed`. Its first final check
   rejected trailing whitespace in the untracked raw Maven output; preserving that output in the
   ignored raw-log directory/ZIP made the unchanged hygiene check pass. The failed log is retained.
   Shell syntax and Python compilation pass; the repository has no separate lint/typecheck command.
 - All raw archive members were CRC-tested and compared byte-for-byte with original local files:
   `PASS archive CRC and original-byte comparison: 98 members`. SHA256/byte counts are in
   `retry-raw-logs-index.json`; earlier `raw-logs.zip` is unchanged.
-- Final `scripts/m6-chaos-test.sh` -> exit 0, `OK (skipped=1)`, 25 tests, no failures or errors.
+- Final `scripts/chaos-test.sh` -> exit 0, `OK (skipped=1)`, 25 tests, no failures or errors.
   Only the opt-in regression wrapper is skipped; its unchanged Maven/chart commands passed
   separately in this same run. Final log: `verification/full-harness-16gb-2026-11-08.log`.
 - **NOT done / unverified:** independent review and PR. No push, merge or M7/M8 work.
@@ -597,7 +597,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 ### Milestone 7 backend implementation - 2026-11-09
 
 - Backend phase only, independent same-card review pending on `t_31ecab6c`. M7 is not accepted.
-  Open Design reference approval is recorded in `docs/design/m7/README.md`; Angular and serving
+  Open Design reference approval is recorded in `docs/design/dashboard/README.md`; Angular and serving
   work remain downstream. No M8 work.
 - Implemented inventory-service `GET /events/{eventId}/stock` with one Redis HGET, long stock,
   blank/overlength validation and unknown-event 404. Implemented order-service
@@ -634,14 +634,14 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   Maven compiled all modules. Docker daemon 29.9.2 was reachable. Verified the downstream pin:
   `docker run --rm node:24.22.2 node --version` -> `v24.22.2`; no npm command or host upgrade.
 - NOT done / unverified: Angular/Vitest, nginx/Compose serving, real running-dashboard screenshot,
-  `scripts/m7-acceptance.sh`, M2 ten-run acceptance, kind/k6 or capacity testing. Root verification
+  `scripts/dashboard-acceptance.sh`, M2 ten-run acceptance, kind/k6 or capacity testing. Root verification
   includes contention/replay once only. No UI/deployment AC is checked off for this backend phase.
   Order count and recent rows are separate snapshots, no new index bounds large-table query cost,
   no outage response contract or performance claim. Review and owner approval remain gates.
 
 ### Milestone 7 dashboard acceptance and docs - 2026-11-09
 
-- Branch `docs/m7-acceptance`, cut from `origin/main` `199bde2` (not `milestone-7`): Phuong had
+- Branch `docs/dashboard-acceptance`, cut from `origin/main` `199bde2` (not `milestone-7`): Phuong had
   already squash-merged PR #22 (M7 backend, head `a1eb727`) as `199bde2` before the same-card
   review, so main already carried the backend, the dashboard and the serving commit. Working on
   `milestone-7` would have produced a conflicting or duplicate PR.
@@ -651,8 +651,8 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 - What exists now: inventory-service `GET /events/{eventId}/stock`, order-service
   `GET /orders/activity?limit=20` (public projection, no customer id or idempotency key),
   the Angular 22.2.5 dashboard in `dashboard/`, the nginx-unprivileged Compose service on port
-  4200 with same-origin proxies, and `scripts/m7-acceptance.sh`.
-- `scripts/m7-acceptance.sh` is one command and proves by execution: preflight (Docker 29.9.2,
+  4200 with same-origin proxies, and `scripts/dashboard-acceptance.sh`.
+- `scripts/dashboard-acceptance.sh` is one command and proves by execution: preflight (Docker 29.9.2,
   Java 21.0.10, `node:24.22.2` -> `v24.22.2`), backend module tests
   (`mvn verify -pl inventory-service,order-service -am`), dashboard `npm ci` + Vitest + production
   build in the pinned Node container, `docker compose up -d --build --wait` (it first resets the
@@ -703,7 +703,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
       GET /api/events/concert-1/stock -> 200 {"eventId":"concert-1","stock":1000}
       GET /api/orders/activity -> 200 (windowSeconds=10, ordersInWindow=0, orders=0)
       PASS: dashboard serves, stock read works, activity payload is public
-      POST /api/orders eventId=concert-1 quantity=1 customerId=web-0ebf60e2-da41-449b-a118-e0da81f85a2c Idempotency-Key=0aca0661-bde8-4e01-8d9c-d6cab3dd8496-m7-acceptance
+      POST /api/orders eventId=concert-1 quantity=1 customerId=web-0ebf60e2-da41-449b-a118-e0da81f85a2c Idempotency-Key=0aca0661-bde8-4e01-8d9c-d6cab3dd8496-dashboard-acceptance
       POST /api/orders -> 202 {"orderId":"98a38be9-b6b4-5beb-9794-ddb5cee2a7ab"}
       polling activity for order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab to become CONFIRMED (timeout 60s)
       11:39:50 order 98a38be9-b6b4-5beb-9794-ddb5cee2a7ab -> absent from last 20
@@ -725,7 +725,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   services do not; the script now polls both read APIs before asserting. That failure and its log
   are real and were not hidden. The run above is the second, post-fix execution; a third full run
   also passed with the same steps before the screenshot was taken.
-- Screenshot of the running page: `docs/design/m7/dashboard-running.png` (1440 x 1600 RGB PNG,
+- Screenshot of the running page: `docs/design/dashboard/dashboard-running.png` (1440 x 1600 RGB PNG,
   SHA-256 `e2ae9795f2f32b89de3101fa1603d3e8fd690932cb063004b5aa0bbdfacc2992`), captured with
   headless Google Chrome against the live Compose dashboard:
 
@@ -734,12 +734,12 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
     --hide-scrollbars --no-first-run --no-default-browser-check \
     --user-data-dir="$HOME/.hermes/profiles/docs-devops/cache/scratch/chrome-m7" \
     --window-size=1440,1600 --virtual-time-budget=4000 \
-    --screenshot=docs/design/m7/dashboard-running.png http://localhost:4200
+    --screenshot=docs/design/dashboard/dashboard-running.png http://localhost:4200
   ```
 
   It shows stock 995, 0.1 orders/sec (1 order in the 10-second window) and four CONFIRMED rows
   with EUR amounts. The exact command, hashes and the states that were not produced live are in
-  `docs/design/m7/README.md`.
+  `docs/design/dashboard/README.md`.
 - Backend read contracts are proven by Testcontainers tests, not only by the script: the module
   run above includes `StockEndpointIT` (8 cases: seeded stock, decrease after reservations,
   unknown event 404, 256-character id 400, Redis unchanged before and after) and

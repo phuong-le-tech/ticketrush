@@ -6,8 +6,8 @@ import time
 import unittest
 from unittest.mock import Mock
 
-from m6_chaos import Failure, SERVICES, evaluate, synthetic_evidence
-from m6_live import Live
+from chaos_runner import Failure, SERVICES, evaluate, synthetic_evidence
+from chaos_live import Live
 
 
 class CleanupTest(unittest.TestCase):

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Milestone 2 acceptance: builds once, then runs OversellE2ETest and ReplayE2ETest in 10 separate
 # Maven runs (fresh JVM and fresh containers each time). Prints pass/fail and duration per run and
-# exits non-zero if any run fails. Usage: scripts/m2-acceptance.sh   (requires Docker)
+# exits non-zero if any run fails. Usage: scripts/oversell-acceptance.sh   (requires Docker)
 set -u
 cd "$(dirname "$0")/.."
 
 RUNS=10
 TESTS="OversellE2ETest,ReplayE2ETest"
-LOG_DIR="e2e-tests/target/m2-acceptance"
+LOG_DIR="e2e-tests/target/oversell-acceptance"
 
 echo "Building once (mvn install -DskipTests)..."
 if ! mvn -q install -DskipTests; then

@@ -12,7 +12,7 @@ Use Java 21: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`.
 - `mvn verify -fae -pl inventory-service,fake-payment-provider,order-service -am -Dgroups=m4-red`: expected exit 1. ReleaseIT: 2 missing-consumer assertion timeouts. Provider: 5 invocations, 1 failure, 4 pass. OutboxIT: 3 missing-migration failures. SagaReaperIT: 32 missing-migration failures.
 - `mvn -pl e2e-tests -am test -Dtest=DltE2ETest,FailureE2ETest,OutboxE2ETest -Dsurefire.failIfNoSpecifiedTests=false`: expected exit 1. DLT: 21 missing-DLT assertion timeouts. Failure: 8 RED invocations. Outbox: missing-migration failure.
 - Final OutputCapture verification: `mvn -pl e2e-tests -am test -Dtest=OutboxE2ETest -Dsurefire.failIfNoSpecifiedTests=false`: expected exit 1, AC4 missing migration, AC9 passes. This proves the actual notification log is visible to the test.
-- `scripts/m3-chart-check.sh`: expected exit 1. Helm lint passes; six DLT topics are missing from both Helm and Compose. Existing Kafka, hardening and credential checks report no failures.
+- `scripts/base-chart-check.sh`: expected exit 1. Helm lint passes; six DLT topics are missing from both Helm and Compose. Existing Kafka, hardening and credential checks report no failures.
 - `git diff --check`: exit 0.
 
 Awaitility classifies missing-behavior assertion timeouts as test errors, not JUnit assertion failures. These were real running-service observations, not import, configuration, or container-start failures. No tests are disabled or conditionally skipped.
@@ -35,7 +35,7 @@ Awaitility classifies missing-behavior assertion timeouts as test errors, not JU
 - AC5 -> DltE2ETest.AC5_eachConsumerMalformedJsonInvalidTypeAndPoisonReachSamePartitionDLTThenValidSucceeds: all seven topic/group routes x three variants lack a same-partition DLT record. Each invocation owns fresh containers so poison never leaks into another case.
 - AC6 -> FailureE2ETest.AC6_transient500AndChargedButLostReplyRetrySameKeyOneChargeOneConfirmation [HTTP500,LOST_REPLY]: expected CONFIRMED, actual PAYMENT_FAILED.
 - AC7 -> FailureE2ETest.AC7_ratePointThree1000OrdersSettleStockPlusSoldConservedUniqueOrdersCharges: actual 1,000 CONFIRMED and no FAILED at configured 0.3.
-- AC8 -> scripts/m3-chart-check.sh/check_AC8_dltTopology: source DLTs missing in both deployments. Regression evidence is the 98-test command above.
+- AC8 -> scripts/base-chart-check.sh/check_AC8_dltTopology: source DLTs missing in both deployments. Regression evidence is the 98-test command above.
 - AC9 -> OutboxE2ETest.AC9_realContainersAndNotificationOutputCapture: PASS. All failure/DLT tests also instantiate real Kafka/Postgres/Redis through E2EStack; inventory integration uses real Kafka/Redis and order integration uses real Kafka/Postgres.
 
 ## Deviations and implementation notes
@@ -51,7 +51,7 @@ Awaitility classifies missing-behavior assertion timeouts as test errors, not JU
 - DLT timing observes DefaultErrorHandler retry listeners and successful record interceptors without supplying a handler. Deserialization and poison exceptions must receive all four attempts per the approved decision. Backoff checks allow small scheduling tolerance.
 - Existing OrderSagaIT/PaymentFlowIT expect the old PAYMENT_FAILED/no-retry behavior. They are unchanged and currently pass. The code-writer must reconcile these legacy assertions with the explicitly approved FAILED/retry semantics, not silently discard coverage.
 - For manual relay/clock tests, keep scheduled production jobs from competing with test-controlled ticks. No test production wiring was added for this.
-- `scripts/m2-acceptance.sh` x10 and `scripts/m3-acceptance.sh` were not run in this RED step. M2 contention/replay passed once in the full 98-test regression. Run all ten M2 repetitions and the cluster acceptance after implementation; do not treat prior milestone evidence as current verification.
+- `scripts/oversell-acceptance.sh` x10 and `scripts/kind-acceptance.sh` were not run in this RED step. M2 contention/replay passed once in the full 98-test regression. Run all ten M2 repetitions and the cluster acceptance after implementation; do not treat prior milestone evidence as current verification.
 - Chart mutation selftests cannot reach their mutation phase until the unmutated deployment includes DLTs. That phase remains unverified.
 - Two preliminary regression attempts used incomplete Surefire/Failsafe filters and correctly ran new RED tests; a third duplicated integration tests and hit the terminal timeout. The final tag-based regression command completed successfully.
 - A delegated first draft was written in the dispatcher worktree despite the supplied feature path. Draft files were copied into the approved feature workspace and all final evidence above comes from that feature workspace. Uncommitted drafts in the dispatcher workspace are not the deliverable.

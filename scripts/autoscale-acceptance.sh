@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Test only: AC4_cleanAndRepeat, AC5_scaleAndConserve, AC5_selftestRejectsFalsePass.
-# Real mode DELETES kind cluster ticketrush, then calls m5-up twice. No production
-# bootstrap/load implementation lives here. Missing m5-up is an assertion BEFORE
+# Real mode DELETES kind cluster ticketrush, then calls observability-up twice. No production
+# bootstrap/load implementation lives here. Missing observability-up is an assertion BEFORE
 # tool discovery or cluster mutation. --evaluate FILE and --selftest are offline.
 #
 # Reversible code-writer contract (not an approved DESIGN change):
-# - scripts/m5-up.sh uses M3's kind/namespace contract, enables monitoring + KEDA.
-# - scripts/m5-load.js consumes k6 -e BASE_URL, EVENT_IDS (JSON array), RUN_ID;
+# - scripts/observability-up.sh uses M3's kind/namespace contract, enables monitoring + KEDA.
+# - scripts/autoscale-load.js consumes k6 -e BASE_URL, EVENT_IDS (JSON array), RUN_ID;
 #   uses quantity=1, unique customer/idempotency pairs, retries with the same key,
 #   and exports accepted_orders Counter ONCE per distinct acknowledged order.
 #   Its thresholds must fail on request errors. The test seeds 24 isolated events.
@@ -39,8 +39,8 @@
 # every other order zero; exact per-event stock conservation is required.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-if [ "$#" -eq 0 ] && [ ! -f scripts/m5-up.sh ]; then
-  printf '%s\n' 'FAIL AC4_cleanAndRepeat: required scripts/m5-up.sh is missing (M5 bootstrap behavior not implemented)'
+if [ "$#" -eq 0 ] && [ ! -f scripts/observability-up.sh ]; then
+  printf '%s\n' 'FAIL AC4_cleanAndRepeat: required scripts/observability-up.sh is missing (M5 bootstrap behavior not implemented)'
   exit 1
 fi
 exec python3 - "$@" <<'PY'
@@ -275,11 +275,11 @@ def selftest():
         path = Path(work) / 'evidence.json'
         for text, expected in [(json.dumps(valid), 0), ('', 1), ('{', 1), ('null', 1), ('[]', 1)]:
             path.write_text(text)
-            result = subprocess.run(['bash', 'scripts/m5-acceptance.sh', '--evaluate', str(path)],
+            result = subprocess.run(['bash', 'scripts/autoscale-acceptance.sh', '--evaluate', str(path)],
                                     capture_output=True, text=True, timeout=10)
             check(result.returncode == expected, 'public --evaluate returned unexpected status: ' + result.stdout + result.stderr)
     print('PASS public --evaluate accepts valid JSON and rejects malformed evidence')
-    print('RESULT: m5-acceptance selftest passed')
+    print('RESULT: autoscale-acceptance selftest passed')
 
 def defaults():
     return dict(cluster='ticketrush', namespace='ticketrush', prometheus_service='prometheus',
@@ -287,7 +287,7 @@ def defaults():
                 grafana_secret='ticketrush-grafana', lag_query='kafka_consumergroup_lag_sum{consumergroup="{group}",topic="{topic}"}',
                 timeout_seconds=1500, command_timeout=60, up_timeout=900,
                 poll_seconds=5, load_timeout=300, stock_per_event=500,
-                load_script='scripts/m5-load.js')
+                load_script='scripts/autoscale-load.js')
 
 class Live:
     def __init__(self, cfg, work):
@@ -426,11 +426,11 @@ class Live:
         e = dict(version=1, timed_out=False, started_at=self.started,
                  timeout_seconds=self.c['timeout_seconds'], services={}, cooldown_seconds={}, samples=[])
         self.run(['kind', 'delete', 'cluster', '--name', self.c['cluster']])
-        self.run(['bash', 'scripts/m5-up.sh'], self.c['up_timeout'])
+        self.run(['bash', 'scripts/observability-up.sh'], self.c['up_timeout'])
         e['stack_before'] = self.ready()
         e['node_before'] = self.run(['docker', 'inspect', self.c['cluster'] + '-control-plane', '--format', '{{.Id}}']).strip()
         e['credentials_before'] = self.credentials()
-        self.run(['bash', 'scripts/m5-up.sh'], self.c['up_timeout'])
+        self.run(['bash', 'scripts/observability-up.sh'], self.c['up_timeout'])
         e['stack_after'] = self.ready()
         e['node_after'] = self.run(['docker', 'inspect', self.c['cluster'] + '-control-plane', '--format', '{{.Id}}']).strip()
         e['credentials_after'] = self.credentials()
@@ -545,7 +545,7 @@ class Live:
         evaluate(e)
         print('PASS AC4_cleanAndRepeat - Ready stack, stable node/Secret, four provisioned queries return data')
         print('PASS AC5_scaleAndConserve - both services causal 1 -> >1 -> 1; stock/orders/charges conserved')
-        print('RESULT: m5-acceptance passed; evidence: ' + str(self.work / 'evidence.json'))
+        print('RESULT: autoscale-acceptance passed; evidence: ' + str(self.work / 'evidence.json'))
 
     def close(self):
         for proc in self.children:
@@ -573,14 +573,14 @@ def main():
         check(isinstance(overrides, dict) and set(overrides) <= set(cfg), 'unknown config key')
         cfg.update(overrides)
     else:
-        check(not args, 'usage: scripts/m5-acceptance.sh [--selftest | --evaluate FILE | --config FILE]')
-    check(Path('scripts/m5-up.sh').is_file(), 'AC4_cleanAndRepeat: required scripts/m5-up.sh is missing (M5 bootstrap behavior not implemented)')
+        check(not args, 'usage: scripts/autoscale-acceptance.sh [--selftest | --evaluate FILE | --config FILE]')
+    check(Path('scripts/observability-up.sh').is_file(), 'AC4_cleanAndRepeat: required scripts/observability-up.sh is missing (M5 bootstrap behavior not implemented)')
     check(Path(cfg['load_script']).is_file(), 'AC5_scaleAndConserve: required k6 load script missing: ' + cfg['load_script'])
     for key in ('timeout_seconds', 'command_timeout', 'up_timeout', 'poll_seconds', 'load_timeout', 'stock_per_event'):
         check(number(cfg[key]) and cfg[key] > 0, 'invalid bound: ' + key)
     for tool in ('docker', 'kind', 'kubectl', 'k6'):
         check(shutil.which(tool), 'missing prerequisite: ' + tool)
-    work = tempfile.mkdtemp(prefix='m5-acceptance-', dir=os.environ.get('TMPDIR', '.'))
+    work = tempfile.mkdtemp(prefix='autoscale-acceptance-', dir=os.environ.get('TMPDIR', '.'))
     print('Evidence/log directory: ' + work, flush=True)
     live = Live(cfg, work)
     try:
@@ -591,6 +591,6 @@ def main():
 try:
     main()
 except (Failure, KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError) as exc:
-    print('FAIL m5-acceptance: ' + str(exc), file=sys.stderr)
+    print('FAIL autoscale-acceptance: ' + str(exc), file=sys.stderr)
     sys.exit(1)
 PY

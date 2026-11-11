@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # TEST ONLY: M5 AC3_templatesAndMutations and AC6_hygiene. No cluster or writes to the chart.
 # Needs helm, yq (mikefarah v4), jq and Python 3 (stdlib only).
-# Usage: scripts/m5-chart-check.sh [--manifest FILE | --selftest [BASE_MANIFEST]]
+# Usage: scripts/observability-chart-check.sh [--manifest FILE | --selftest [BASE_MANIFEST]]
 # --selftest alone uses an explicitly synthetic test fixture, never acceptance evidence.
 set -u
 set -o pipefail
@@ -17,7 +17,7 @@ case "${1:-}" in
   '') [ "$#" = 0 ] || exit 2 ;;
   *) echo "usage: $0 [--manifest FILE | --selftest [BASE_MANIFEST]]"; exit 2 ;;
 esac
-SCRATCH=$(mktemp -d "${TMPDIR:-/tmp}/m5-chart-check.XXXXXX") || exit 2
+SCRATCH=$(mktemp -d "${TMPDIR:-/tmp}/observability-chart-check.XXXXXX") || exit 2
 trap 'rm -rf "$SCRATCH"' EXIT
 if [ "$MODE" = chart ]; then
   helm lint deploy/helm/ticketrush --strict || { echo 'FAIL helm_lint: chart lint failed'; exit 1; }
@@ -45,6 +45,8 @@ MODE, DOCS, BASE = sys.argv[1:]
 # Immutable last pre-M5 implementation commit. Local main can lag behind M3/M4.
 # Compare env additions against this milestone boundary, not a moving local branch.
 M5_BASELINE = '6a5a3b010fe323041705067efb9dd467c4122c33'
+# Scripts renamed after the baseline commit; look up their old paths when diffing env references.
+RENAMED_SINCE_BASELINE = {'scripts/kind-up.sh': 'scripts/m3-up.sh', 'scripts/observability-up.sh': 'scripts/m5-up.sh'}
 APPS = ('api-gateway', 'inventory-service', 'payment-service', 'fake-payment-provider',
         'order-service', 'notification-service')
 EXPECTED = {'inventory-service': 'orders.requested', 'payment-service': 'tickets.reserved'}
@@ -295,7 +297,7 @@ def hygiene(docs):
             if not path.is_file() or path.suffix not in ('.yml', '.yaml', '.java', '.properties', '.sh', '.tpl'):
                 continue
             current.update(env_refs(path.read_text(errors='replace')))
-            old = subprocess.run(['git', 'show', M5_BASELINE + ':' + name], text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            old = subprocess.run(['git', 'show', M5_BASELINE + ':' + RENAMED_SINCE_BASELINE.get(name, name)], text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             if old.returncode == 0:
                 baseline.update(env_refs(old.stdout))
         current.update(e['name'] for d in docs for c in containers(d) for e in c.get('env', []) if 'name' in e)
@@ -420,7 +422,7 @@ def selftest(docs):
         failed = True
     else:
         print('ok   selftest_undocumented_env rejected; documented env accepted')
-    print('RESULT: m5-chart-check selftest ' + ('failed' if failed else 'passed') + ' (checker evidence only)')
+    print('RESULT: observability-chart-check selftest ' + ('failed' if failed else 'passed') + ' (checker evidence only)')
     return int(failed)
 
 
@@ -436,7 +438,7 @@ try:
     errors = checks(docs) + hygiene(docs)
     if errors:
         print('\n'.join(errors))
-    print('RESULT: m5-chart-check ' + ('failed' if errors else 'passed'))
+    print('RESULT: observability-chart-check ' + ('failed' if errors else 'passed'))
     sys.exit(1 if errors else 0)
 except (ValueError, TypeError, KeyError, AttributeError) as exc:
     print('FAIL manifest: malformed resource: ' + str(exc))

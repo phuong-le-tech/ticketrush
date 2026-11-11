@@ -1,7 +1,7 @@
 # TicketRush - Project Spec
 
 The original brief from the project owner. This is the source of truth for scope.
-Approved deviations are listed at the bottom and detailed in [DESIGN.md](DESIGN.md).
+Approved deviations are listed at the bottom and detailed in [DESIGN.md](../DESIGN.md).
 
 ## Purpose
 

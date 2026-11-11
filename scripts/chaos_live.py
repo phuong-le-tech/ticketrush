@@ -11,7 +11,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from m6_chaos import CONTEXT, NAMESPACE, SERVICES, EXPERIMENTS, TERMINAL, EVIDENCE, Failure, check, evaluate
+from chaos_runner import CONTEXT, NAMESPACE, SERVICES, EXPERIMENTS, TERMINAL, EVIDENCE, Failure, check, evaluate
 
 
 class Live:
@@ -229,7 +229,7 @@ class Live:
         proc = subprocess.Popen(['k6', 'run', '--summary-export', str(self.work / 'k6-summary.json'),
             '-e', 'M6_AUDIT_ACKS=1', '-e', 'M6_EXPERIMENT=' + experiment,
             '-e', 'BASE_URL=' + self.gateway, '-e', 'EVENT_IDS=' + json.dumps(events),
-            '-e', 'RUN_ID=' + run_id, 'scripts/m6-load.js'], stdout=log, stderr=log)
+            '-e', 'RUN_ID=' + run_id, 'scripts/chaos-load.js'], stdout=log, stderr=log)
         self.children.append((proc, log))
         return proc
 
@@ -464,7 +464,7 @@ def cleanup_probe(cause):
     before = supervisor.snapshot()
     existing = set(EVIDENCE.glob('m6-consumer-ramp-*'))
     output = (supervisor.work / 'child.log').open('w')
-    args = ['bash', 'scripts/m6-chaos.sh', '--experiment', 'consumer-ramp', '--runs', '1']
+    args = ['bash', 'scripts/chaos.sh', '--experiment', 'consumer-ramp', '--runs', '1']
     if cause == 'timeout':
         args.extend(['--timeout-seconds', '18'])
     proc = subprocess.Popen(args, stdout=output, stderr=output, start_new_session=True)
@@ -523,7 +523,7 @@ def bottleneck():
 
 
 def run_live():
-    parser = argparse.ArgumentParser(description='M6 project-local chaos runner; reuse scripts/m5-up.sh stack')
+    parser = argparse.ArgumentParser(description='M6 project-local chaos runner; reuse scripts/observability-up.sh stack')
     parser.add_argument('--experiment', choices=EXPERIMENTS)
     parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--resume', action='store_true', help='re-evaluate persisted live runs and collect only missing repetitions')

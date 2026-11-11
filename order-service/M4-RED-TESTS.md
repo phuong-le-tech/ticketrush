@@ -23,4 +23,4 @@ With `JAVA_HOME=$(/usr/libexec/java_home -v 21)`:
 - `git diff --check`: exit 0.
 - A read-only source check confirmed all 8 new AC test methods contain no loops, if/switch, or ternaries. It also confirmed the old ChargeControllerIT test bodies are byte-identical to HEAD and tracked old order-service tests have no diff.
 - Earlier verification claims from a different worktree are not evidence for this workspace and have been removed.
-- These compile-only review notes are superseded by the final executed evidence and full AC mapping in `../docs/M4-TEST-HANDOFF.md`. Module RED tests were subsequently run in this workspace; all missing-migration assertions failed as expected.
+- These compile-only review notes are superseded by the final executed evidence and full AC mapping in `../docs/internal/M4-TEST-HANDOFF.md`. Module RED tests were subsequently run in this workspace; all missing-migration assertions failed as expected.

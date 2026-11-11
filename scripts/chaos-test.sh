@@ -16,8 +16,8 @@ import tempfile
 import unittest
 
 ROOT = Path.cwd()
-RUNNER = ROOT / 'scripts/m6-chaos.sh'
-RESULTS = ROOT / 'docs/evidence/m6'
+RUNNER = ROOT / 'scripts/chaos.sh'
+RESULTS = ROOT / 'docs/evidence/chaos'
 OFFLINE = '--offline' in sys.argv
 REGRESSIONS = '--regressions' in sys.argv
 if '--results' in sys.argv:
@@ -126,7 +126,7 @@ def corrupt_cases():
 class CliAssertions:
     def runner(self, *args, env=None):
         self.assertTrue(RUNNER.is_file(),
-                        'M6 chaos behavior is missing: scripts/m6-chaos.sh has not been implemented')
+                        'M6 chaos behavior is missing: scripts/chaos.sh has not been implemented')
         result = subprocess.run(['bash', str(RUNNER), *args], cwd=ROOT, env=env,
                                 capture_output=True, text=True, timeout=15)
         self.assertNotIn('Traceback (most recent call last)', result.stderr,
@@ -381,17 +381,17 @@ class RealEvidenceTests(CliAssertions, unittest.TestCase):
         self.assertIn(str(bottleneck_path.relative_to(ROOT)), readme)
 
     def test_AC9_honestReport(self):
-        progress = (ROOT / 'docs/PROGRESS.md').read_text()
+        progress = (ROOT / 'docs/internal/PROGRESS.md').read_text()
         design = (ROOT / 'docs/DESIGN.md').read_text()
         self.assertIn('### Milestone 6', progress)
-        self.assertIn('scripts/m6-chaos.sh', progress)
+        self.assertIn('scripts/chaos.sh', progress)
         self.assertIn('NOT', progress)
         self.assertIn('M6', design)
         manifest = RESULTS / 'verification.json'
         self.assertTrue(manifest.is_file(), 'M6 command/log traceability manifest missing')
         commands = json.loads(manifest.read_text())['commands']
-        for command in ('scripts/m6-chaos.sh --selftest', 'scripts/m6-chaos.sh',
-                        'mvn verify', 'scripts/m3-chart-check.sh', 'scripts/m5-chart-check.sh'):
+        for command in ('scripts/chaos.sh --selftest', 'scripts/chaos.sh',
+                        'mvn verify', 'scripts/base-chart-check.sh', 'scripts/observability-chart-check.sh'):
             with self.subTest(command=command):
                 record = commands[command]
                 self.assertEqual(0, record['exit_code'])
@@ -409,8 +409,8 @@ class RegressionTests(unittest.TestCase):
     @unittest.skipUnless(REGRESSIONS, 'Select --regressions to run the unchanged Maven/chart suite')
     def test_AC8_regressions(self):
         env = dict(os.environ, JAVA_HOME='/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home')
-        for command in (['mvn', 'verify'], ['bash', 'scripts/m3-chart-check.sh'],
-                        ['bash', 'scripts/m5-chart-check.sh']):
+        for command in (['mvn', 'verify'], ['bash', 'scripts/base-chart-check.sh'],
+                        ['bash', 'scripts/observability-chart-check.sh']):
             with self.subTest(command=command):
                 result = subprocess.run(command, cwd=ROOT, env=env, timeout=1500)
                 self.assertEqual(0, result.returncode)

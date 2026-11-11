@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # M5 bootstrap: kind, pinned operators, images, monitoring and Kafka lag autoscaling.
-# scripts/m5-up.sh
+# scripts/observability-up.sh
 # M3_CLUSTER/M3_NAMESPACE keep the M3 local cluster contract.
 # Set M5_CONSUMER_PROCESSING_DELAY_MS for a bounded k6 scaling demonstration; default off.
 set -euo pipefail
@@ -16,7 +16,7 @@ IMAGE_REPOSITORY="ticketrush"
 SERVICES=(api-gateway fake-payment-provider inventory-service notification-service order-service payment-service)
 BUILD_PARALLELISM=3
 INFRA_TIMEOUT="900s"
-SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/m3-up.XXXXXX")"
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/kind-up.XXXXXX")"
 trap 'rm -rf "$SCRATCH"' EXIT
 
 log() { echo "==> $*"; }

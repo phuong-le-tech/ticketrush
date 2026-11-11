@@ -2,7 +2,7 @@
 # Brings TicketRush up on a local kind cluster: Strimzi operator, Kafka (3 brokers), Postgres, Redis and the
 # six services. Idempotent: a second run reuses the cluster, the images (same id, same tag) and changes nothing.
 #
-#   scripts/m3-up.sh
+#   scripts/kind-up.sh
 #
 # Needs docker, kind, helm, kubectl. Overrides: M3_CLUSTER (default ticketrush), M3_NAMESPACE (default ticketrush).
 set -euo pipefail
@@ -18,7 +18,7 @@ IMAGE_REPOSITORY="ticketrush"
 SERVICES=(api-gateway fake-payment-provider inventory-service notification-service order-service payment-service)
 BUILD_PARALLELISM=3
 INFRA_TIMEOUT="900s"
-SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/m3-up.XXXXXX")"
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/kind-up.XXXXXX")"
 trap 'rm -rf "$SCRATCH"' EXIT
 
 log() { echo "==> $*"; }

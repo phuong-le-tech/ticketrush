@@ -1,6 +1,6 @@
 # Dashboard
 
-Angular 22.2.5 standalone page following the approved Open Design reference in `docs/design/m7/`.
+Angular 22.2.5 standalone page following the approved Open Design reference in `docs/design/dashboard/`.
 Live stock, orders per second and recent saga states poll independently every 2 seconds.
 The native form creates a new key per accepted Buy intent; Retry preserves the full failed purchase.
 Angular packages and CLI/build tools are pinned to 22.2.5; the lockfile resolves default Vitest to 5.1.0.
@@ -45,16 +45,16 @@ There is no configured ESLint target; strict TypeScript and Angular production c
 
 ## Status values and acceptance
 
-- The saga table renders the M4 order model as returned by `GET /orders/activity`:
+- The saga table renders the order model as returned by `GET /orders/activity`:
   `PENDING`, `RESERVED`, `CONFIRMED`, `FAILED`, `REJECTED`. `PAYMENT_FAILED` from the design
   mock is illustrative only and is never produced by the API; a failure carries its cause in
   `failureReason` (for example `TIMEOUT` or `PAYMENT_FAILED`).
 - The stock endpoint returns `eventId` and `stock` only, so the page never shows a price and
   keeps amounts as integer cents plus currency in the order table.
-- One command proves the whole dashboard end to end: `scripts/m7-acceptance.sh` runs the backend
+- One command proves the whole dashboard end to end: `scripts/dashboard-acceptance.sh` runs the backend
   module tests, the dashboard container tests and build, brings Compose up and drives
   `/healthz`, the stock read, a real `POST /api/orders`, the CONFIRMED saga row and the stock
-  decrease through http://localhost:4200. Real output is recorded in `docs/PROGRESS.md`.
+  decrease through http://localhost:4200. Real output is recorded in `docs/internal/PROGRESS.md`.
 
 ## Implementation verification
 
@@ -72,7 +72,7 @@ card's job, not proven by these tests.
 
 Fresh root `mvn verify` with Java 21.0.10 in this implementation run exited 0:
 `BUILD SUCCESS`, `Total time: 14:48 min`. All 46 Surefire/Failsafe XML reports aggregate to
-239 tests, zero failures, errors or skips. This includes contention and replay once, not the M2 ten-run command.
+239 tests, zero failures, errors or skips. This includes contention and replay once, not the oversell ten-run command.
 The final clean Node-container command (`npm ci`, Prettier check, test TypeScript check, `npm test`,
 production build) exited 0; npm audited 296 packages with zero vulnerabilities. npm warned about four
 scaffold dependency install scripts without allowScripts coverage; no script approval or package upgrade was made.
@@ -82,7 +82,7 @@ scaffold dependency install scripts without allowScripts coverage; no script app
 ### Cases and observed RED output
 
 There was no frontend test plan in this card's parent handoffs. These cases are derived directly from AC5,
-AC6, decisions 1-4, and the approved reference under `docs/design/m7/`.
+AC6, decisions 1-4, and the approved reference under `docs/design/dashboard/`.
 
 | AC | Test name | Observed failure |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 AC1-AC7: checklist order. Medium risk. Java21/JUnit/AssertJ/Awaitility; reuse ActuatorProbesIT/OrderTestInfra/E2EStack; assert behavior.
 
-Paths: S=`<service>/src/test/java/com/ticketrush/<package>` (all six services); O=order-service's S; E=`e2e-tests/src/test/java/com/ticketrush/e2e`; C=`scripts/m5-chart-check.sh`; A=`scripts/m5-acceptance.sh`.
+Paths: S=`<service>/src/test/java/com/ticketrush/<package>` (all six services); O=order-service's S; E=`e2e-tests/src/test/java/com/ticketrush/e2e`; C=`scripts/observability-chart-check.sh`; A=`scripts/autoscale-acceptance.sh`.
 
 Metrics: `ticketrush_orders_total`: gateway acknowledgments/retries; `ticketrush_saga_outcomes_total{outcome="CONFIRMED|FAILED|REJECTED"}`: committed transitions; `ticketrush_consumer_processing_seconds_count/sum{consumer,topic}`: consumer attempts. Document exporter lag name/group/topic labels in DESIGN.md before freezing tests. Exclude identifiers/payloads/exception-messages.
 
@@ -16,9 +16,9 @@ AC4 | nominal/edge | e2e | A | AC4_cleanAndRepeat | mocks:none; real kind: Ready
 AC5 | nominal | e2e | A | AC5_scaleAndConserve | mocks:none; real k6: timestamped group/topic/lag/ready-replica samples show 1 -> >1 above threshold -> 1 after drain/cooldown; sold<=stock, unique orders, <=1 charge/order.
 AC5 | error | unit | A | AC5_selftestRejectsFalsePass | mocks:none; real evaluator rejects empty/malformed samples, absent/threshold-equal lag, no-up/no-down, timeout, k6/query/invariant failure.
 AC6 | error | integration | C | AC6_hygiene | mocks:none; diff-check/dash/secret scans clean; new envs documented; Grafana uses Secret.
-AC7 | nominal | e2e | scripts/m3-acceptance.sh | AC7_regression | mocks:none; real acceptance passes or PROGRESS records not-run reason.
+AC7 | nominal | e2e | scripts/kind-acceptance.sh | AC7_regression | mocks:none; real acceptance passes or PROGRESS records not-run reason.
 
-Run: `mvn verify`; `scripts/m3-chart-check.sh` and `--selftest`; C and `--selftest`; A and `--selftest`; `scripts/m3-acceptance.sh`.
+Run: `mvn verify`; `scripts/base-chart-check.sh` and `--selftest`; C and `--selftest`; A and `--selftest`; `scripts/kind-acceptance.sh`.
 
 Rewrites: AC2: service-applicable metrics; AC5: bounded polling/timeouts, nonempty evidence.
 Not tested: chaos/auth/refunds - out-of-scope.

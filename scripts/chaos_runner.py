@@ -12,7 +12,7 @@ SERVICES = ('inventory-service', 'payment-service')
 EXPERIMENTS = ('inventory-kill', 'broker-restart', 'payment-declines',
                'postgres-latency', 'consumer-ramp')
 TERMINAL = ('CONFIRMED', 'REJECTED', 'FAILED')
-EVIDENCE = Path('docs/evidence/m6')
+EVIDENCE = Path('docs/evidence/chaos')
 
 
 class Failure(Exception):
@@ -199,8 +199,8 @@ def main():
         check(context.returncode == 0 and context.stdout.strip() == CONTEXT,
               'Refusing context: only kind-ticketrush is allowed; no context was switched')
         # Live helpers must share this Failure type when the CLI runs as __main__.
-        sys.modules['m6_chaos'] = sys.modules[__name__]
-        from m6_live import run_live
+        sys.modules['chaos_runner'] = sys.modules[__name__]
+        from chaos_live import run_live
         run_live()
 
 

@@ -1,6 +1,6 @@
 # M6 test plan
 
-Medium risk. AC1-AC9: checklist order. C=`scripts/m6-chaos.sh`; T=`scripts/m6-chaos-test.sh` (new harness). Reuse M5 fixtures/load, not destructive bootstrap.
+Medium risk. AC1-AC9: checklist order. C=`scripts/chaos.sh`; T=`scripts/chaos-test.sh` (new harness). Reuse M5 fixtures/load, not destructive bootstrap.
 
 Rewrites: AC1 selftest succeeds iff valid evidence passes and corrupt fixtures fail. AC2-AC6: acknowledged IDs equal terminal-or-correlated-DLT IDs; AC2/AC3 require terminal conservation. Recovery: fault-to-resumed-completion AND drained lag within declared timeout. Throughput: completions/second in timestamped before/during/after windows.
 
@@ -14,10 +14,10 @@ AC6 | nominal | e2e | C | AC6_rebalanceRamp | mocks:none; both consumers Ready a
 AC6 | error | integration | T | AC6_abortRestores | mocks:none; real-kind interruption/timeout restores replicas/scalers/provider/DB settings; rerun isolates data.
 AC7 | nominal | integration | T | AC7_resultsTraceable | mocks:none; README matches every raw run, >=3/experiment, dated throughput/recovery/invariants; measured single-show limit documented.
 AC8 | nominal | integration | pom.xml | AC8_regressions | mocks:none; unchanged Maven suite/M3/M5 chart checks pass; report counts.
-AC9 | nominal | integration | docs/PROGRESS.md | AC9_honestReport | mocks:none; commands/results/limitations match logs; DESIGN decisions recorded.
+AC9 | nominal | integration | docs/internal/PROGRESS.md | AC9_honestReport | mocks:none; commands/results/limitations match logs; DESIGN decisions recorded.
 AC2 | error | integration | T | AC2_contextRefusal | mocks:none; temporary kubeconfigs: absent/nonproject contexts fail before mutation; only kind-ticketrush permitted.
 
-Run: T; C --selftest; C (>=3 runs/experiment); JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home mvn verify; scripts/m3-chart-check.sh; scripts/m5-chart-check.sh.
+Run: T; C --selftest; C (>=3 runs/experiment); JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home mvn verify; scripts/base-chart-check.sh; scripts/observability-chart-check.sh.
 
 Not tested: auth/M7/M8/refunds/production-capacity - out-of-scope.
 Not tested: exact 30% observed failures - stochastic.

@@ -1,5 +1,5 @@
 {{- range .Values.topics.names }}
-{{- /* Each source topic plus its dead-letter topic <name>.DLT (M4). A Kubernetes name must be
+{{- /* Each source topic plus its dead-letter topic <name>.DLT (dead-letter). A Kubernetes name must be
        lowercase, so metadata.name lowercases ".DLT"; spec.topicName keeps the real topic name. */}}
 {{- range (list . (printf "%s.DLT" .)) }}
 ---

@@ -9,9 +9,9 @@ twice. Every design choice and every test below serves this sentence.
 
 **Status:** feature complete: ordering saga, autoscaling on Kubernetes, chaos experiments and the
 dashboard are all built and tested. Detailed
-verification and known gaps: [docs/PROGRESS.md](docs/PROGRESS.md).
+verification and known gaps: [docs/internal/PROGRESS.md](docs/internal/PROGRESS.md).
 
-![Dashboard showing live stock, orders per second and saga states](docs/design/m7/dashboard-running.png)
+![Dashboard showing live stock, orders per second and saga states](docs/design/dashboard/dashboard-running.png)
 
 ## Tech stack
 
@@ -64,11 +64,11 @@ How the invariant is enforced:
 ## Proof, not claims
 
 Every number below comes from a command that was run; the output is recorded in
-[docs/PROGRESS.md](docs/PROGRESS.md) and raw files are under [docs/evidence/](docs/evidence/).
+[docs/internal/PROGRESS.md](docs/internal/PROGRESS.md) and raw files are under [docs/evidence/](docs/evidence/).
 
 | Question | Result |
 |---|---|
-| 10,000 buyers, 1,000 concurrent duplicate requests, stock of 500 | Exactly 500 `CONFIRMED`, 9,500 `REJECTED`, 0 pending, stock 0, one charge each. Passed 10 runs out of 10 (`scripts/m2-acceptance.sh`) |
+| 10,000 buyers, 1,000 concurrent duplicate requests, stock of 500 | Exactly 500 `CONFIRMED`, 9,500 `REJECTED`, 0 pending, stock 0, one charge each. Passed 10 runs out of 10 (`scripts/oversell-acceptance.sh`) |
 | Autoscaling under load (kind, k6, 8 orders/s) | Inventory and payment scaled 1 to 2 and back to 1. 960 acknowledged orders = 960 `CONFIRMED` = 960 charges; stock 12,000 = 11,040 left + 960 sold |
 | Chaos experiments (19 completed audits) | Pod kills, a broker restart, about 30% payment declines and a database lock stall. Every audit kept the invariant: no oversell, no lost order, one charge per confirmed order. Settlement after a pod kill or broker restart took about 100 s including the remaining load |
 | Automated tests | 239 tests, 0 failures in the last fully green run (unit, Testcontainers integration, end-to-end) |
@@ -115,7 +115,7 @@ mvn verify                                          # about 15 minutes, starts r
 
 ## What I would do differently
 
-Honest list of what is not done or not good enough. Details in [docs/PROGRESS.md](docs/PROGRESS.md).
+Honest list of what is not done or not good enough. Details in [docs/internal/PROGRESS.md](docs/internal/PROGRESS.md).
 
 - **Refunds.** A payment that succeeds after the order timed out is only logged. A real system
   needs a refund flow.
@@ -151,4 +151,4 @@ clip about failure on kind: [docs/DEMO.md](docs/DEMO.md).
 | `e2e-tests` | In-process end-to-end tests: purchase flow, oversell, replay, failures, dead-letter, metrics |
 | `deploy/compose`, `deploy/helm/ticketrush` | Local stack and Kubernetes chart |
 | `scripts` | Acceptance, chart checks, load and chaos runners |
-| `docs` | [Spec](docs/SPEC.md), [design decisions](docs/DESIGN.md), [progress](docs/PROGRESS.md), [operations](docs/OPERATIONS.md), [chaos results](docs/CHAOS-RESULTS.md) |
+| `docs` | [Spec](docs/internal/SPEC.md), [design decisions](docs/DESIGN.md), [progress](docs/internal/PROGRESS.md), [operations](docs/OPERATIONS.md), [chaos results](docs/CHAOS-RESULTS.md) |

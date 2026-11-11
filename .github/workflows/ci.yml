@@ -19,7 +19,7 @@ jobs:
           java-version: "21"
           cache: maven
       # Unit tests only. The Testcontainers suites (mvn verify, about 15 min) are run locally and
-      # recorded in docs/PROGRESS.md.
+      # recorded in docs/internal/PROGRESS.md.
       - run: mvn -B test -pl '!e2e-tests'
 
   dashboard:
@@ -42,5 +42,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: scripts/m3-chart-check.sh
-      - run: scripts/m5-chart-check.sh
+      - run: scripts/base-chart-check.sh
+      - run: scripts/observability-chart-check.sh

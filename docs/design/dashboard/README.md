@@ -54,8 +54,8 @@ Open Design's renderer produced the PNG with:
 The run's local preview URLs at export time were used to download the files:
 
 ```sh
-curl --fail --silent --show-error http://127.0.0.1:58266/api/projects/ticketrush-m7-dashboard/raw/index.html -o docs/design/m7/index.html
-curl --fail --silent --show-error http://127.0.0.1:58266/api/projects/ticketrush-m7-dashboard/raw/dashboard.png -o docs/design/m7/dashboard.png
+curl --fail --silent --show-error http://127.0.0.1:58266/api/projects/ticketrush-m7-dashboard/raw/index.html -o docs/design/dashboard/index.html
+curl --fail --silent --show-error http://127.0.0.1:58266/api/projects/ticketrush-m7-dashboard/raw/dashboard.png -o docs/design/dashboard/dashboard.png
 ```
 
 Those URLs are daemon-session-specific. Refresh them through `get_run` after an Open Design restart; the project id and entry filename remain the durable identity.
@@ -65,9 +65,9 @@ Those URLs are daemon-session-specific. Refresh them through `get_run` after an 
 From the repository root:
 
 ```sh
-node docs/design/m7/verify-reference.cjs docs/design/m7/index.html
-git diff --check -- docs/design/m7
-file docs/design/m7/dashboard.png
+node docs/design/dashboard/verify-reference.cjs docs/design/dashboard/index.html
+git diff --check -- docs/design/dashboard
+file docs/design/dashboard/dashboard.png
 ```
 
 Actual isolated JavaScript-check output:
@@ -102,7 +102,7 @@ No Angular, Java, deployment, Maven, DESIGN.md or PROGRESS.md files were changed
 ## Running application capture (M7 acceptance, 2026-11-09)
 
 [dashboard-running.png](dashboard-running.png) is the real Angular page served by the Compose
-dashboard container on http://localhost:4200, captured after `scripts/m7-acceptance.sh` passed.
+dashboard container on http://localhost:4200, captured after `scripts/dashboard-acceptance.sh` passed.
 It is not the Open Design mock: every value comes from the live read APIs.
 
 Exact command, run from the repository root with the Compose stack up:
@@ -112,10 +112,10 @@ Exact command, run from the repository root with the Compose stack up:
   --hide-scrollbars --no-first-run --no-default-browser-check \
   --user-data-dir="$HOME/.hermes/profiles/docs-devops/cache/scratch/chrome-m7" \
   --window-size=1440,1600 --virtual-time-budget=4000 \
-  --screenshot=docs/design/m7/dashboard-running.png http://localhost:4200
+  --screenshot=docs/design/dashboard/dashboard-running.png http://localhost:4200
 ```
 
-Google Chrome headless wrote `160064 bytes written to file docs/design/m7/dashboard-running.png`.
+Google Chrome headless wrote `160064 bytes written to file docs/design/dashboard/dashboard-running.png`.
 The capture is a 1440 x 1600 RGB PNG, SHA-256
 `e2ae9795f2f32b89de3101fa1603d3e8fd690932cb063004b5aa0bbdfacc2992`.
 

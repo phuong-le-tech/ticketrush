@@ -9,16 +9,16 @@ order twice. Every change must keep this true.
 
 ## Read before working
 
-1. [docs/SPEC.md](docs/SPEC.md) - the full brief, milestones and acceptance criteria.
+1. [docs/internal/SPEC.md](docs/internal/SPEC.md) - the full brief, milestones and acceptance criteria.
 2. [docs/DESIGN.md](docs/DESIGN.md) - approved versions, layout, event schemas, topics, partitions.
-3. [docs/PROGRESS.md](docs/PROGRESS.md) - which milestone is current and what is left.
+3. [docs/internal/PROGRESS.md](docs/internal/PROGRESS.md) - which milestone is current and what is left.
 
 ## Milestone workflow (mandatory)
 
 - Work on exactly one milestone at a time, on branch `milestone-<n>` cut from `main`.
 - Never start the next milestone. When the current one is done:
   1. Run its acceptance command and paste the real output.
-  2. Update docs/PROGRESS.md: what exists, the verification result, what is NOT done or not verified.
+  2. Update docs/internal/PROGRESS.md: what exists, the verification result, what is NOT done or not verified.
   3. Stop and wait for the owner's go-ahead.
 - Acceptance is proven by running a command, never by reading code.
 - For M2, run the contention and replay tests 10 times and report every run.
@@ -28,7 +28,7 @@ order twice. Every change must keep this true.
 Stop and ask the owner when:
 - A requirement is ambiguous.
 - A choice is hard to reverse: topic names, partition counts, event schemas, keys, DB schema shape.
-- You want to deviate from docs/SPEC.md or docs/DESIGN.md.
+- You want to deviate from docs/internal/SPEC.md or docs/DESIGN.md.
 - You want to add a dependency (state why; record it in DESIGN.md's dependency table).
 
 Record every approved decision in the decision log in docs/DESIGN.md.
@@ -69,12 +69,12 @@ Filled in as milestones land. Keep this list accurate.
 | Build + all tests | `mvn verify` |
 | M1 acceptance | `mvn verify -pl e2e-tests -am` |
 | Local stack | `docker compose -f deploy/compose/docker-compose.yml up -d` |
-| M2 acceptance (contention + replay, 10 runs) | `scripts/m2-acceptance.sh` |
-| M3 acceptance (destructive: recreates the kind cluster) | `scripts/m3-acceptance.sh` |
-| M5 acceptance (kind, KEDA, k6) | `M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/m5-acceptance.sh` |
-| M6 chaos experiments (reuses the M5 stack) | `scripts/m6-chaos.sh` |
-| M7 acceptance (Compose + dashboard on :4200) | `scripts/m7-acceptance.sh` |
-| Chart checks | `scripts/m3-chart-check.sh`, `scripts/m5-chart-check.sh` |
+| M2 acceptance (contention + replay, 10 runs) | `scripts/oversell-acceptance.sh` |
+| M3 acceptance (destructive: recreates the kind cluster) | `scripts/kind-acceptance.sh` |
+| M5 acceptance (kind, KEDA, k6) | `M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/autoscale-acceptance.sh` |
+| M6 chaos experiments (reuses the M5 stack) | `scripts/chaos.sh` |
+| M7 acceptance (Compose + dashboard on :4200) | `scripts/dashboard-acceptance.sh` |
+| Chart checks | `scripts/base-chart-check.sh`, `scripts/observability-chart-check.sh` |
 
 ## Environment notes
 

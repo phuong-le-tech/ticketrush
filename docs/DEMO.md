@@ -32,8 +32,8 @@ requirements (16 GB Docker VM): [OPERATIONS.md](OPERATIONS.md).
 
 | Time | Command or action | What the viewer sees |
 |---|---|---|
-| 0:00 | `scripts/m5-up.sh` already done; open Grafana at `localhost:3000/d/ticketrush-m5` | Four panels: lag, processing time, orders per second, saga outcomes |
-| 0:10 | `scripts/m6-chaos.sh --experiment inventory-kill --runs 1` | k6 starts at 8 orders per second |
+| 0:00 | `scripts/observability-up.sh` already done; open Grafana at `localhost:3000/d/ticketrush-m5` | Four panels: lag, processing time, orders per second, saga outcomes |
+| 0:10 | `scripts/chaos.sh --experiment inventory-kill --runs 1` | k6 starts at 8 orders per second |
 | 0:25 | The runner deletes an inventory pod | Orders per second dips, consumer lag rises |
 | 0:45 | Pod is replaced | Lag drains, completion rate catches up |
 | 1:00 | Runner prints its audit | Every acknowledged order settled, no oversell, one charge per confirmed order |

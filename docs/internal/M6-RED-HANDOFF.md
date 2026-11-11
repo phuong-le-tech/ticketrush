@@ -2,20 +2,20 @@
 
 ## Scope and commands
 
-Only `scripts/m6-chaos-test.sh` is executable test code. No production runner,
+Only `scripts/chaos-test.sh` is executable test code. No production runner,
 application logic, skeleton, dependency, chart, Java test or protected instruction
 file was added or changed. Synthetic fixtures are embedded in the test harness and
 written only to temporary directories. They are never real chaos evidence.
 
 ```sh
-scripts/m6-chaos-test.sh
-scripts/m6-chaos-test.sh --offline
-scripts/m6-chaos-test.sh --results docs/evidence/m6
-scripts/m6-chaos-test.sh --regressions
+scripts/chaos-test.sh
+scripts/chaos-test.sh --offline
+scripts/chaos-test.sh --results docs/evidence/chaos
+scripts/chaos-test.sh --regressions
 JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home mvn verify
-scripts/m3-chart-check.sh
-scripts/m5-chart-check.sh
-bash -n scripts/m6-chaos-test.sh
+scripts/base-chart-check.sh
+scripts/observability-chart-check.sh
+bash -n scripts/chaos-test.sh
 ```
 
 Default harness mode is safe: it calls only the runner's offline evaluator,
@@ -71,10 +71,10 @@ pattern, not a public API, event, topic, key, schema or deployment-default chang
 The plan did not choose an evidence serialization. Read `fixture()`,
 `valid_cases()` and the mutation tables in the harness for exact synthetic inputs.
 
-- `scripts/m6-chaos.sh --evaluate FILE`: offline, exit 0 and a PASS diagnostic for
+- `scripts/chaos.sh --evaluate FILE`: offline, exit 0 and a PASS diagnostic for
   valid evidence; exit 1 and a FAIL diagnostic for corrupt/malformed evidence,
   without a Python traceback. It must not need kubectl, k6 or a running cluster.
-- `scripts/m6-chaos.sh --selftest`: succeeds with an empty kubeconfig, after
+- `scripts/chaos.sh --selftest`: succeeds with an empty kubeconfig, after
   accepting valid fixtures and rejecting corrupt fixtures.
 - No-argument live invocation must reject absent or nonproject contexts with exit
   1 and a diagnostic naming `kind-ticketrush`, without switching kubeconfig.
@@ -100,7 +100,7 @@ The plan did not choose an evidence serialization. Read `fixture()`,
 
 The harness audits, but does not manufacture or collect, live evidence.
 
-- `docs/evidence/m6/run-*.json`: common evaluator fields plus `source: "live"`,
+- `docs/evidence/chaos/run-*.json`: common evaluator fields plus `source: "live"`,
   `context: "kind-ticketrush"`, unique `run_id`, `date`. Experiment slugs:
   `inventory-kill`, `broker-restart`, `payment-declines`, `postgres-latency`,
   `consumer-ramp`. At least three files for each experiment; audit every file.
@@ -156,10 +156,10 @@ The harness audits, but does not manufacture or collect, live evidence.
 - Final default harness execution: 25 test methods, 69 assertion failures
   including parameterized subtests, 1 opt-in regression skip, 0 errors. Offline
   selection: 60 assertion failures, 9 skips, 0 errors. Both commands exit 1 as RED.
-- `bash -n scripts/m6-chaos-test.sh`: exit 0. Running the harness also compiles
+- `bash -n scripts/chaos-test.sh`: exit 0. Running the harness also compiles
   and executes the embedded Python, with unittest assertion failures, no errors.
 - Both M3 and M5 chart checks pass, Helm lint included. Their `--selftest` modes
-  and `scripts/m5-acceptance.sh --selftest` also pass (offline evaluator evidence).
+  and `scripts/autoscale-acceptance.sh --selftest` also pass (offline evaluator evidence).
 - First Java 21 root `mvn verify`: BUILD FAILURE in 02:44. Existing
   `OutboxIT.AC4_forcedInsertFailureRollsBackStatusAndOutboxForBothEventTypes`
   observed the scheduled relay changing only `publishedAt` from null to a

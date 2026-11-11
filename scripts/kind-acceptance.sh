@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Milestone 3 acceptance (AC4, AC5, AC6). Needs docker, kind, helm, kubectl, curl, jq. Takes several minutes.
 #
-#   scripts/m3-acceptance.sh
+#   scripts/kind-acceptance.sh
 #
 # Steps, each one fails loud (non-zero exit, message "FAIL <name>: <reason>"):
-#   AC4_clean_up              deletes the kind cluster (skip with M3_KEEP_CLUSTER=1), runs scripts/m3-up.sh: exit 0,
+#   AC4_clean_up              deletes the kind cluster (skip with M3_KEEP_CLUSTER=1), runs scripts/kind-up.sh: exit 0,
 #                             every pod Ready
-#   AC4_second_run            runs scripts/m3-up.sh again: exit 0, same kind node container, no new pod restarts
+#   AC4_second_run            runs scripts/kind-up.sh again: exit 0, same kind node container, no new pod restarts
 #   AC5_order_confirmed       POST /orders through a port-forward to the gateway: 202 and a body with orderId; within
 #                             60 s that orderId is CONFIRMED in orders.orders (Postgres) AND present on orders.confirmed
 #   AC6_graceful_restart      follows the order-service log, runs kubectl rollout restart, rollout status exit 0, and the
 #                             followed log of the old pod contains "Graceful shutdown complete" (a SIGKILLed JVM cannot
 #                             log it, so this is also the "no SIGKILL" proof)
 #
-# Contract with the chart and m3-up.sh (decided by the test plan, the code-writer implements it):
+# Contract with the chart and kind-up.sh (decided by the test plan, the code-writer implements it):
 #   kind cluster "ticketrush" (node container ticketrush-control-plane), namespace "ticketrush",
 #   Deployments and Services named after the modules (api-gateway, order-service, ...) with the Service port equal to
 #   the container port (gateway 8080), StatefulSet "postgres" (pod postgres-0, container env POSTGRES_USER, database
@@ -26,7 +26,7 @@ CLUSTER="${M3_CLUSTER:-ticketrush}"
 NS="${M3_NAMESPACE:-ticketrush}"
 LOCAL_PORT="${M3_GATEWAY_LOCAL_PORT:-18080}"
 CONFIRM_TIMEOUT_S="${M3_CONFIRM_TIMEOUT_S:-60}"
-WORK="$(mktemp -d "${TMPDIR:-/tmp}/m3-acceptance.XXXXXX")"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/kind-acceptance.XXXXXX")"
 PF_PID=""
 LOG_PID=""
 
@@ -63,9 +63,9 @@ node_container_id() {
 if [ "${M3_KEEP_CLUSTER:-0}" != "1" ]; then
   kind delete cluster --name "$CLUSTER" > /dev/null 2>&1
 fi
-scripts/m3-up.sh || die AC4_clean_up "scripts/m3-up.sh exited non-zero"
+scripts/kind-up.sh || die AC4_clean_up "scripts/kind-up.sh exited non-zero"
 pods=$(pod_count)
-[ "$pods" -gt 0 ] || die AC4_clean_up "no pods in namespace $NS after m3-up.sh"
+[ "$pods" -gt 0 ] || die AC4_clean_up "no pods in namespace $NS after kind-up.sh"
 bad=$(not_ready_pods)
 [ "$bad" = "0" ] || die AC4_clean_up "$bad pod(s) not Ready: $(kubectl -n "$NS" get pods --no-headers | grep -v ' Running ' | tr '\n' ';')"
 pass AC4_clean_up "$pods pods Ready"
@@ -74,7 +74,7 @@ pass AC4_clean_up "$pods pods Ready"
 node_before=$(node_container_id)
 restarts_before=$(total_restarts)
 [ -n "$node_before" ] || die AC4_second_run "kind node container ${CLUSTER}-control-plane not found"
-scripts/m3-up.sh || die AC4_second_run "second scripts/m3-up.sh exited non-zero"
+scripts/kind-up.sh || die AC4_second_run "second scripts/kind-up.sh exited non-zero"
 node_after=$(node_container_id)
 [ "$node_before" = "$node_after" ] || die AC4_second_run "kind node container changed: cluster was recreated"
 restarts_after=$(total_restarts)
@@ -135,4 +135,4 @@ bad=$(not_ready_pods)
 [ "$bad" = "0" ] || die AC6_graceful_restart "$bad pod(s) not Ready after the restart"
 pass AC6_graceful_restart "old pod logged 'Graceful shutdown complete', rollout completed"
 
-echo "RESULT: m3-acceptance passed"
+echo "RESULT: kind-acceptance passed"

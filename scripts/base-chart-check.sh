@@ -2,9 +2,9 @@
 # M3 static chart checks (AC1, AC2, AC3). Needs helm, yq (mikefarah v4) and jq; no cluster.
 #
 # Usage:
-#   scripts/m3-chart-check.sh                  helm lint + helm template of deploy/helm/ticketrush, then checks
-#   scripts/m3-chart-check.sh --manifest FILE  checks only, on a pre-rendered manifest (YAML or JSON)
-#   scripts/m3-chart-check.sh --selftest [BASE_MANIFEST]
+#   scripts/base-chart-check.sh                  helm lint + helm template of deploy/helm/ticketrush, then checks
+#   scripts/base-chart-check.sh --manifest FILE  checks only, on a pre-rendered manifest (YAML or JSON)
+#   scripts/base-chart-check.sh --selftest [BASE_MANIFEST]
 #                                              proves each check fails on a mutated copy of the rendered chart
 #                                              (or of BASE_MANIFEST when given)
 #
@@ -23,7 +23,7 @@ CHART="deploy/helm/ticketrush"
 RELEASE="ticketrush"
 SOURCE_TOPICS='["orders.requested","tickets.reserved","orders.rejected","payments.result","orders.confirmed","tickets.released"]'
 EXPECTED_TOPICS="" # Derived after require_tools, so a missing jq is reported cleanly.
-SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/m3-chart-check.XXXXXX")"
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/base-chart-check.XXXXXX")"
 trap 'rm -rf "$SCRATCH"' EXIT
 
 fail() { echo "FAIL $1: $2"; FAILED=1; }
@@ -260,13 +260,13 @@ fi
 if [ "$MODE" = "selftest" ]; then
   run_checks "$SCRATCH/docs.json" || { echo "FAIL selftest: the unmutated chart does not pass the checks"; exit 1; }
   selftest || exit 1
-  echo "RESULT: m3-chart-check selftest passed"
+  echo "RESULT: base-chart-check selftest passed"
   exit 0
 fi
 
 if run_checks "$SCRATCH/docs.json"; then
-  echo "RESULT: m3-chart-check passed"
+  echo "RESULT: base-chart-check passed"
 else
-  echo "RESULT: m3-chart-check failed"
+  echo "RESULT: base-chart-check failed"
   exit 1
 fi

@@ -14,13 +14,13 @@ mvn verify -pl api-gateway,inventory-service,payment-service,fake-payment-provid
 mvn verify -pl e2e-tests -am -Dtest=MetricsE2ETest -Dit.test=NoM5Integration -Dsurefire.failIfNoSpecifiedTests=false -Dfailsafe.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=true
 mvn verify -pl fake-payment-provider -am -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=PrometheusIT -Dfailsafe.failIfNoSpecifiedTests=false
 mvn verify -DexcludedGroups=m5-red
-scripts/m5-chart-check.sh
-scripts/m5-chart-check.sh --selftest
-scripts/m5-acceptance.sh
-scripts/m5-acceptance.sh --selftest
-scripts/m3-chart-check.sh
-scripts/m3-chart-check.sh --selftest
-bash -n scripts/m5-chart-check.sh scripts/m5-acceptance.sh
+scripts/observability-chart-check.sh
+scripts/observability-chart-check.sh --selftest
+scripts/autoscale-acceptance.sh
+scripts/autoscale-acceptance.sh --selftest
+scripts/base-chart-check.sh
+scripts/base-chart-check.sh --selftest
+bash -n scripts/observability-chart-check.sh scripts/autoscale-acceptance.sh
 git diff --check
 ```
 
@@ -76,7 +76,7 @@ regression was launched as a tracked background process to avoid that foreground
 | AC2 | `MetricsE2ETest.AC2_lagRisesThenDrainsAndProcessingCountsRise` | Missing inventory processing timer |
 | AC2 | `MetricsE2ETest.AC2_httpScrapesAfterTrafficWithoutSensitiveLabels` | Real purchase completes; gateway scrape expected 200, got 404 |
 | AC3 | `AC3_templatesAndMutations`: `check_AC3_scaledObjects/serviceMonitors/dashboard` | Missing two ScaledObjects, six ServiceMonitors, dashboard |
-| AC4 | `AC4_cleanAndRepeat` | Missing m5-up assertion before cluster mutation |
+| AC4 | `AC4_cleanAndRepeat` | Missing observability-up assertion before cluster mutation |
 | AC5 | `AC5_scaleAndConserve`, `AC5_selftestRejectsFalsePass` | Live gate blocked by missing bootstrap; offline evaluator/mutation tests pass |
 | AC6 | `AC6_hygiene`, `check_AC6_secrets` | Hygiene clean; Grafana workload missing |
 | AC7 | `AC7_regression`: existing M3 chart checks and cluster acceptance command | Chart checks pass; destructive kind acceptance not run, reason in PROGRESS |
@@ -105,7 +105,7 @@ prerequisites. They compile but are not claimed to have been exercised past thos
   offsets while the shell acceptance defaults to `kafka_consumergroup_lag{consumergroup,topic}`.
   Its query/service names are configurable via `--config FILE`. Implementation must document
   the actual lag exporter name/labels in DESIGN and supply data to Prometheus before acceptance.
-- Scripts implement test validators and mutation fixtures only, not m5-up or k6 production logic.
+- Scripts implement test validators and mutation fixtures only, not observability-up or k6 production logic.
   Test contracts for the downstream bootstrap/load implementation are in script headers.
   Acceptance uses 24 events to exercise existing partitions without changing topics/keys.
   Offline fixtures are explicitly labeled and cannot be reported as real scaling evidence.

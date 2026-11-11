@@ -12,9 +12,9 @@ newer default. Operator charts and container images need network access on a col
 Allow at least 8 GB Docker memory; concurrent JVM tests and image builds increase pressure.
 
 ```sh
-scripts/m5-up.sh
+scripts/observability-up.sh
 # Repeat is safe: same node, content-tagged app images and Grafana password.
-scripts/m5-up.sh
+scripts/observability-up.sh
 kubectl --context kind-ticketrush -n ticketrush get pods,scaledobjects,hpa
 ```
 
@@ -22,7 +22,7 @@ Normal consumers have no artificial delay. For the reproducible load demonstrati
 
 ```sh
 # DELETES and rebuilds the kind cluster "ticketrush", including its data.
-M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/m5-acceptance.sh
+M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/autoscale-acceptance.sh
 ```
 
 Acceptance bootstraps twice, seeds 24 unique events (500 tickets each), runs k6 at 8 acknowledged
@@ -37,8 +37,8 @@ The optional `--config FILE` accepts the documented bounds/service overrides in 
 The demonstration delay slows inventory and payment only and is off by default. It does not change
 Kafka keys or partitions. Single-show inventory is still serial; the 24 shows exercise the existing
 12 partitions. If load exceeds the saga timeout, late payments can require refunds, an existing
-M4 limitation. Do not treat this laptop demonstration as a production capacity guarantee.
-Afterward disable the artificial delay with `scripts/m5-up.sh` (without the delay variable).
+known limitation. Do not treat this laptop demonstration as a production capacity guarantee.
+Afterward disable the artificial delay with `scripts/observability-up.sh` (without the delay variable).
 
 ### Open Grafana
 
@@ -74,43 +74,43 @@ provided. Keep port-forwards bound to localhost and do not deploy these local de
 
 ## Base cluster bootstrap
 
-`scripts/m3-up.sh` explicitly disables M5 resources and still requires only Strimzi, not KEDA or
-Prometheus CRDs. `scripts/m3-acceptance.sh` is destructive and replaces the cluster; do not run it
-while watching an M5 load test. The M5 bootstrap reuses the M3 image build/load and app chart
+`scripts/kind-up.sh` explicitly disables autoscaling resources and still requires only Strimzi, not KEDA or
+Prometheus CRDs. `scripts/kind-acceptance.sh` is destructive and replaces the cluster; do not run it
+while watching an autoscaling load test. The autoscaling bootstrap reuses the base image build/load and app chart
 pattern, adding pinned observability operators before the chart install.
 
 
 ## Project-local chaos experiments
 
-Reuse the M5 stack with no artificial consumer delay. This runner never bootstraps or deletes a
+Reuse the autoscaling stack with no artificial consumer delay. This runner never bootstraps or deletes a
 cluster and never switches contexts. Select the intended context explicitly before running it:
 
 ```sh
-scripts/m5-up.sh
+scripts/observability-up.sh
 kubectl config use-context kind-ticketrush
-scripts/m6-chaos.sh --selftest             # offline; no kubectl/k6 required
-scripts/m6-chaos-test.sh --offline         # unchanged test-writer evaluator contract
-python3 scripts/m6-collector-test.py       # offline collector cleanup/freshness regressions
-scripts/m6-chaos.sh                       # 3 runs of every fault, cleanup probes, single-show comparison
-scripts/m6-chaos.sh --resume              # re-check prior live runs; collect missing repetitions only
+scripts/chaos.sh --selftest             # offline; no kubectl/k6 required
+scripts/chaos-test.sh --offline         # unchanged test-writer evaluator contract
+python3 scripts/chaos-collector-test.py       # offline collector cleanup/freshness regressions
+scripts/chaos.sh                       # 3 runs of every fault, cleanup probes, single-show comparison
+scripts/chaos.sh --resume              # re-check prior live runs; collect missing repetitions only
 # Or a bounded subset:
-scripts/m6-chaos.sh --experiment broker-restart --runs 1
-scripts/m6-chaos.sh --evaluate docs/evidence/m6/run-<run-id>.json
+scripts/chaos.sh --experiment broker-restart --runs 1
+scripts/chaos.sh --evaluate docs/evidence/chaos/run-<run-id>.json
 ```
 
 Faults target only context `kind-ticketrush`, namespace `ticketrush`. Every live kubectl call pins
 both. SIGINT, SIGTERM and the per-run deadline attempt to restore effective settings; SIGKILL or
 a host crash cannot run cleanup. A stalled runtime can also prevent reconciliation. The runner
 persists before/after settings, command output, sampled stock/lag,
-k6 response IDs and provider charge audits under `docs/evidence/m6/`. The committed verbatim
-runtime logs are in [raw-logs.zip](evidence/m6/raw-logs.zip), with a byte-count/SHA256
-[index](evidence/m6/raw-logs-index.json); JSON/JSONL measurements are also stored directly.
+k6 response IDs and provider charge audits under `docs/evidence/chaos/`. The committed verbatim
+runtime logs are in [raw-logs.zip](evidence/chaos/raw-logs.zip), with a byte-count/SHA256
+[index](evidence/chaos/raw-logs-index.json); JSON/JSONL measurements are also stored directly.
 The ZIP is a snapshot of the first partial execution, not an automatically refreshed log sink.
-The completed retry's [raw archive](evidence/m6/retry-raw-logs.zip) and
-[byte/SHA256 index](evidence/m6/retry-raw-logs-index.json) preserve its actual runtime and
+The completed retry's [raw archive](evidence/chaos/retry-raw-logs.zip) and
+[byte/SHA256 index](evidence/chaos/retry-raw-logs-index.json) preserve its actual runtime and
 Maven output; all archive members were compared byte-for-byte with the original local files.
 Never run concurrent chaos runners or bootstrap/acceptance scripts against the same cluster.
-Python uses only its standard library, and all operators/images are the existing M5 pins.
+Python uses only its standard library, and all operators/images are the existing autoscaling pins.
 
 Inventory and broker faults use normal `kubectl delete pod` (graceful termination), not a hard
 process or node power loss. Postgres latency is a four-second `ACCESS EXCLUSIVE` lock on the
@@ -123,13 +123,13 @@ The ramp attempts inventory 1 -> 8 -> 1, then payment 1 -> 8, independently, not
 It readies one new pod at a time and waits for terminating pods before starting the next phase.
 After Phuong increased the Docker VM from 8GB to 16GB on 2026-11-08, the runner stopped applying
 artificially small heaps and now retains the chart's 384Mi memory requests, 512Mi limits and
-`-XX:+UseSerialGC -XX:MaxRAMPercentage=60`. No M5 defaults are changed. The earlier 256Mi pods
+`-XX:+UseSerialGC -XX:MaxRAMPercentage=60`. No autoscaling defaults are changed. The earlier 256Mi pods
 were observed OOMKilled after Docker recovery; the 384Mi / 96Mi-heap incremental retry on the
 8GB VM still timed out at four Ready / five desired inventory replicas. Those failed measurements
 are preserved separately, not pooled with the larger-VM runs.
 
 The collector restores resources, JVM options, replicas and full ScaledObject settings on normal
-completion. The reused M5 purchase flow keeps its strict thresholds and 8/s offered rate. M6
+completion. The reused autoscaling purchase flow keeps its strict thresholds and 8/s offered rate. chaos
 preallocates 64 VUs, uses opt-in response-ID-only logs, and allows 360s for the incremental
 sequential ramp (120s otherwise). Six CPUs remain unchanged; the memory increase is not a CPU
 capacity increase or evidence of simultaneous 16-consumer performance.
