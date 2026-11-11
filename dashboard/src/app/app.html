@@ -43,9 +43,15 @@
           />
           <div figure>
             <strong class="number" id="stock-value" [class.changed]="flash('stock')">{{
-              stock() ?? (stockStale() ? 'Unavailable' : '-')
+              stock() ?? '-'
             }}</strong>
             <p class="helper">tickets available for {{ eventId().trim() || 'an event' }}</p>
+            @if (stock() === null && stockStale()) {
+              <p class="helper unavailable">Unavailable</p>
+            }
+            @if (!activity() && activityStale()) {
+              <p class="helper unavailable">Orders per second unavailable</p>
+            }
             <dl class="kv">
               <div>
                 <dt>confirmed</dt>
@@ -62,7 +68,7 @@
               <div>
                 <dt>orders/s</dt>
                 <dd id="rate-value" [class.changed]="flash('rate')">
-                  {{ activityStale() && !activity() ? 'Unavailable' : rate() }}
+                  {{ rate() }}
                 </dd>
               </div>
             </dl>
@@ -99,7 +105,7 @@
             <p class="helper">messages behind</p>
           </div>
           @if (idle()) {
-            <p note class="idle">
+            <p note class="helper idle">
               No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
             </p>
           }
@@ -123,7 +129,7 @@
             <p class="helper">per reservation</p>
           </div>
           @if (idle()) {
-            <p note class="idle">
+            <p note class="helper idle">
               No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
             </p>
           }
@@ -140,7 +146,7 @@
           <div figure>
             @for (pod of pods(); track pod.job) {
               <div class="pods">
-                <span class="square-label" [class.changed]="flash('pod:' + pod.job)"
+                <span class="pod-label" [class.changed]="flash('pod:' + pod.job)"
                   >{{ pod.job }} {{ pod.n }} of {{ maxReplicas }}</span
                 >
                 <span class="squares-row">
@@ -156,7 +162,7 @@
             }
           </div>
           @if (idle()) {
-            <p note class="idle">
+            <p note class="helper idle">
               No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
             </p>
           }

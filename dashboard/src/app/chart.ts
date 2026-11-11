@@ -64,7 +64,7 @@ const PAD_T = 8;
           <text
             class="axis threshold-label"
             [attr.x]="plotW()"
-            [attr.y]="thresholdY() - 4"
+            [attr.y]="thresholdY() < 14 ? thresholdY() + 14 : thresholdY() - 4"
             text-anchor="end"
           >
             {{ threshold() }} {{ unit() }}

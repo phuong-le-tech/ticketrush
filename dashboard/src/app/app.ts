@@ -41,11 +41,14 @@ const SERVICES = ['inventory-service', 'payment-service'];
 // Mirror autoscaling.maxReplicas and autoscaling.lagThreshold in deploy/helm/ticketrush/values.yaml.
 const MAX_REPLICAS = 2;
 const LAG_THRESHOLD = 10;
-// Lines 21-23 and 29 of inventory-service/src/main/resources/reserve.lua, unchanged.
+// Lines 23, 26, 27 and 29 of inventory-service/src/main/resources/reserve.lua, verbatim and with
+// their indentation; "..." marks omitted lines, so the rejection branch visibly ends before the decrement.
 const LUA_SNIPPET = [
-  "local stock = tonumber(redis.call('HGET', KEYS[1], 'stock'))",
-  'local quantity = tonumber(ARGV[1])',
   'if stock == nil or quantity == nil or quantity <= 0 or stock < quantity then',
+  '  ...',
+  '  return {0}',
+  'end',
+  '...',
   "redis.call('HINCRBY', KEYS[1], 'stock', -quantity)",
 ].join('\n');
 
@@ -196,7 +199,8 @@ export class App implements OnInit {
     const points = this.metrics
       .series('ordersRate')()
       .flatMap((s) => s.points);
-    return points.length > 0 && points.every((p) => !p.v);
+    const known = points.filter((p) => p.v !== null);
+    return known.length > 0 && known.every((p) => p.v === 0);
   });
 
   // A figure that changed since the previous poll is flagged for 600ms (accent colour, no counting).

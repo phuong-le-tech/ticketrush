@@ -103,6 +103,13 @@ describe('TimeSeriesChart', () => {
     expect(el.querySelector('.y-max')!.textContent).toBe('50');
   });
 
+  it('keeps the threshold label inside the plot when the threshold sits at the top', () => {
+    const el = render([{ name: 'a', emphasis: true, points: pts(1, 2, 3) }], { threshold: 50 });
+    expect(Number(el.querySelector('.threshold-label')!.getAttribute('y'))).toBeGreaterThanOrEqual(
+      12,
+    );
+  });
+
   it('marks exactly one series as emphasised with the accent stroke', () => {
     const el = render([
       { name: 'a', emphasis: true, points: pts(1, 2, 3) },

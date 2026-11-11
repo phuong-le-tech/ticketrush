@@ -406,4 +406,26 @@ describe('M7 dashboard HTTP and user interactions', () => {
       );
     }
   });
+
+  it('an unreadable order rate does not claim there was no load', () => {
+    answerBackfill({ ordersRate: [[{}, 'NaN']] });
+    expect(root.textContent).not.toContain('No orders in the last 5 minutes');
+  });
+
+  it('failed stock and activity reads keep the figures to a dash and name Unavailable beside them', () => {
+    stockRead().flush({}, { status: 503, statusText: 'Service Unavailable' });
+    activityRead().flush({}, { status: 503, statusText: 'Service Unavailable' });
+    fixture.detectChanges();
+    expect(root.querySelector('#stock-value')?.textContent?.trim()).toBe('-');
+    expect(root.querySelector('#rate-value')?.textContent?.trim()).toBe('-');
+    expect(root.querySelector('tr-chapter')?.textContent).toContain('Unavailable');
+  });
+
+  it('the Lua quote ends the rejection branch before the decrement', () => {
+    answerBackfill({});
+    const lines = root.querySelector('pre.lua')!.textContent!.split('\n');
+    expect(lines.indexOf('end')).toBeGreaterThan(-1);
+    expect(lines.indexOf('end')).toBeLessThan(lines.findIndex((l) => l.includes('HINCRBY')));
+    expect(lines).toContain('  return {0}');
+  });
 });
