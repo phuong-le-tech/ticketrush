@@ -43,6 +43,19 @@ There is no configured ESLint target; strict TypeScript and Angular production c
 - Money is displayed from integer API cents and currency, with no invented stock price. Amounts outside
   JavaScript safe-integer precision are labeled unavailable rather than displaying rounded financial data.
 
+## Status values and acceptance
+
+- The saga table renders the M4 order model as returned by `GET /orders/activity`:
+  `PENDING`, `RESERVED`, `CONFIRMED`, `FAILED`, `REJECTED`. `PAYMENT_FAILED` from the design
+  mock is illustrative only and is never produced by the API; a failure carries its cause in
+  `failureReason` (for example `TIMEOUT` or `PAYMENT_FAILED`).
+- The stock endpoint returns `eventId` and `stock` only, so the page never shows a price and
+  keeps amounts as integer cents plus currency in the order table.
+- One command proves the whole milestone end to end: `scripts/m7-acceptance.sh` runs the backend
+  module tests, the dashboard container tests and build, brings Compose up and drives
+  `/healthz`, the stock read, a real `POST /api/orders`, the CONFIRMED saga row and the stock
+  decrease through http://localhost:4200. Real output is recorded in `docs/PROGRESS.md`.
+
 ## Implementation verification
 
 25 Vitest cases pass: the original 16 plus 9 boundary/safety cases in `app.safety.spec.ts`.
