@@ -135,7 +135,10 @@ Honest list of what is not done or not good enough. Details in [docs/PROGRESS.md
 
 ## Demo
 
-A timed script for recording a short GIF: [docs/DEMO.md](docs/DEMO.md).
+![Buying tickets on the dashboard](docs/design/m8/ticketrush-demo.gif)
+
+Happy path only (four purchases, stock 1000 to 996). How it was recorded and a script for a second
+clip about failure on kind: [docs/DEMO.md](docs/DEMO.md).
 
 ## Repository map
 

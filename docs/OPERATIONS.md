@@ -133,4 +133,3 @@ completion. The reused M5 purchase flow keeps its strict thresholds and 8/s offe
 preallocates 64 VUs, uses opt-in response-ID-only logs, and allows 360s for the incremental
 sequential ramp (120s otherwise). Six CPUs remain unchanged; the memory increase is not a CPU
 capacity increase or evidence of simultaneous 16-consumer performance.
-
