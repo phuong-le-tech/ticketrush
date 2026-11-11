@@ -33,7 +33,12 @@ test('AC7 dev proxy isolates service paths and preserves query parameters', asyn
     target: 'http://localhost:9090',
     path: '/api/v1/query_range?query=up&step=5',
   });
-  for (const path of ['/api/metrics', '/api/metrics/', '/api/metrics/admin/tsdb', '/api/metrics/querymore']) {
+  for (const path of [
+    '/api/metrics',
+    '/api/metrics/',
+    '/api/metrics/admin/tsdb',
+    '/api/metrics/querymore',
+  ]) {
     assert.equal(route(path), null, path);
   }
   for (const path of [
