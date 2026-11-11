@@ -31,36 +31,55 @@ until curl -fs localhost:4200/api/events/concert-1/stock; do sleep 2; done
 
 ## Kind demo of the live dashboard (about 90 seconds)
 
-Needs Docker (16 GB VM), kind, helm and k6. Start the stack, open the dashboard, then add load.
+Needs Docker (16 GB VM), kind, helm and k6. Start the stack and open the dashboard:
 
 ```sh
-scripts/observability-up.sh        # kind cluster, Kafka, Prometheus, KEDA and the dashboard image
+scripts/observability-up.sh
 kubectl --context kind-ticketrush -n ticketrush port-forward svc/dashboard 4200:8080
 ```
 
-Open <http://localhost:4200>. In a second terminal, start the load (about 60 seconds, 8 orders per
-second against isolated events, so `concert-1` stock is untouched):
+Open <http://localhost:4200>. In a second terminal, seed a demo event and run the load against it. The
+Redis seeding is a demo convenience: it writes the stock hash directly and bypasses the service's own
+seeder. `concert-1` is not touched.
 
 ```sh
-GW=http://127.0.0.1:8080
+ID=demo-$(date +%s)
+kubectl --context kind-ticketrush -n ticketrush exec redis-0 -- \
+  redis-cli HSET inventory:event:$ID stock 500 priceCents 5000 currency EUR
 kubectl --context kind-ticketrush -n ticketrush port-forward svc/api-gateway 8080:8080 &
-RUN=demo-$(date +%s)
-for i in 0 1 2; do kubectl --context kind-ticketrush -n ticketrush exec redis-0 -- \
-  redis-cli HSET inventory:event:$RUN-$i stock 300 priceCents 100 currency EUR; done
-k6 run -e BASE_URL=$GW -e RUN_ID=$RUN -e LOAD_DURATION=60s \
-  -e EVENT_IDS="[\"$RUN-0\",\"$RUN-1\",\"$RUN-2\"]" scripts/autoscale-load.js
+PF=$!
+sleep 3
+k6 run -e BASE_URL=http://127.0.0.1:8080 -e RUN_ID=$ID -e EVENT_IDS="[\"$ID\"]" \
+  -e LOAD_RATE=20 -e LOAD_DURATION=75s scripts/autoscale-load.js
+kill $PF                                                  # cleanup of the background port-forward
+kubectl --context kind-ticketrush -n ticketrush exec redis-0 -- redis-cli DEL inventory:event:$ID
 ```
 
-| Where | What the viewer sees |
-|---|---|
-| System map | Title "One order, from click to confirmation." A Buy click sends an accent dot gateway, `orders.requested`, inventory, `tickets.reserved`, payment, order, notification. Edge rates move with the load. |
-| 01 Concurrency | Stock for `concert-1` and the saga outcomes counter. Stock only goes down and never below zero. |
-| 02 Kafka | Consumer lag per group and per partition rises under load and drains afterwards; processing rate per consumer. |
-| 03 Redis | Stock is one atomic Lua step in Redis (check, decrement, record the order). Commands per second and latency from inventory-service. Redis is the stock store here, not a cache. |
-| 04 Kubernetes | Lag against the KEDA threshold (10); ready pods per service. With `M5_CONSUMER_PROCESSING_DELAY_MS=200` at `observability-up.sh` time a second consumer pod appears (`maxReplicas` is 2); with no artificial delay it may stay at 1. |
+Type the same `$ID` into the dashboard's Event id field before starting k6, so chapter 01 follows it.
 
-Stale state: delete the Prometheus pod and the chapters mark themselves stale, then recover.
-Not recorded yet: this demo has not been filmed. The owner records it.
+Observed on 2026-11-11 in the built-in browser at 1440px, on the deployed dashboard, with k6 at 20 orders per
+second for 75 seconds on a 500-ticket event:
+
+| Where | Observed |
+|---|---|
+| System map | Node rates between 13 and 40 per second. Up to 40 dots at once (the cap), red dots for rejected orders. A manual Buy on a quiet system produced one accent dot crossing the whole map. |
+| 01 Concurrency | Stock fell from 500 to 0 in well under a minute and stayed at 0; the chart line reached the floor and stayed flat. A manual Buy afterwards was accepted, then REJECTED with reason SOLD_OUT in the table. The confirmed, rejected and failed counters are labelled "Saga outcomes, all events, since order-service start": they are not per event. |
+| 02 Kafka | Lag stayed between 0 and 5 messages. Consumers keep up at this rate with no artificial processing delay. |
+| 03 Redis | About 20 EVALSHA commands per second, 0.6 ms per reservation. Stock is one atomic Lua step in Redis (check, decrement, record the order); Redis is the stock store here, not a cache. |
+| 04 Kubernetes | Ready pods stayed 1 of 2 for both services. No second pod appeared, because lag never passed the KEDA threshold of 10. |
+| Compose (localhost:4200) | Chapters 02 to 04 show "Live metrics need the kind stack."; map rates show dashes; stock and Buy work. |
+
+Expected, not observed:
+
+- A second consumer pod appearing in chapter 04. It is expected only when the stack is brought up with
+  `M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/observability-up.sh` (as the M5 acceptance does). That was not
+  watched in the dashboard.
+- The stale state (delete the Prometheus pod after the page has been live: the chapters should mark themselves
+  stale, then recover). Not seen.
+- Reduced motion. Not seen.
+
+The acceptance script's own load (`scripts/live-dashboard-acceptance.sh`) runs on three isolated events, so
+`concert-1` stock stays flat during it.
 
 ## Optional second clip: failure on kind (about 60 seconds)
 

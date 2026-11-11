@@ -800,24 +800,40 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 scripts/live-dashboard-acceptance.sh --with-compose
 ```
 
-Real output of the final passing run, 2026-11-11 (kubectl current context `docker-desktop` before and after):
+Real output of the final passing run of LD1 to LD6, 2026-11-11, after the review fixes (run without
+`--with-compose`; `kubectl config current-context` read `docker-desktop` after the run, checked by the controller):
 
 ```text
-PASS LD1_unit - Tests  92 passed (92); production build ok
-PASS LD2_deployed - deploy/dashboard rolled out on kind-ticketrush, /healthz 200 via http://127.0.0.1:51812
+PASS LD1_unit - Tests  93 passed (93); production build ok
+PASS LD2_deployed - deploy/dashboard rolled out on kind-ticketrush, /healthz 200 via http://127.0.0.1:56001
 PASS LD3_proxy_boundaries - POST query 403; admin/tsdb, metrics/, querymore, actuator 404
-PASS LD4_live_queries - all 8 queries succeeded non-empty during 60s at 20 orders/s; ordersRate=10.399; readyPods>=1 for inventory and payment; k6 ok
+PASS LD4_live_queries - all 8 queries succeeded non-empty during 60s at 20 orders/s; ordersRate=12.4; readyPods>=1 for inventory and payment; k6 ok
 PASS LD5_reads - stock(concert-1)=999, activity 200
-PASS LD6_invariant - 1201 load orders settled; each load event remaining+sold=300, never negative; concert-1 stock=999, confirmed tickets=1 <= seed 1000
+PASS LD6_invariant - 1221 orders (k6 iterations=1201, accepted=1201) settled, none duplicated; load events: confirmed 900 of 900 tickets, remaining+sold=300 each, never negative; concert-1 stock=999 >= 0
+SKIP LD7_compose_still_passes - run with --with-compose (resets the Compose Postgres volume)
+ALL LIVE DASHBOARD CHECKS PASSED
+```
+
+LD7 from the previous run (`--with-compose`, before the review fixes, same kind cluster running), 2026-11-11:
+
+```text
 PASS LD7_compose_still_passes - ALL M7 ACCEPTANCE CHECKS PASSED
 ALL LIVE DASHBOARD CHECKS PASSED
 ```
+
+LD6 now also requires: some ticket confirmed across the load events (here 900 of 900, a sell-out, so rejections were exercised),
+no repeated Idempotency-Key and no repeated order id among the run's orders, and `concert-1` stock >= 0 (no seed comparison:
+the cluster's `concert-1` has history from before the run). The 1221 orders are 1201 k6 iterations plus 20 warm-up purchases.
+Why 1201 and not 1200: k6's constant-arrival-rate schedules 1201 arrivals in a 60 s window at 20 per second (both ends
+inclusive). One run logged `iterations 1200` with `dropped_iterations 1` (a cold first request), the next logged
+`iterations 1201` with none, so 1201 is the full schedule. The script now warms the gateway with 20 purchases before k6
+to avoid that dropped first iteration. An interrupted run (SIGTERM) now exits 1 and removes the load keys.
 
 LD7 (Compose) ran after LD1 to LD6 with the kind cluster still running; both fitted in the 16 GB Docker VM.
 Checks: LD1 dashboard unit tests and build; LD2 deployed on kind; LD3 nginx boundaries; LD4 all 8 `QUERIES`
 (parsed from `dashboard/src/app/metrics.ts`) succeed non-empty while 60 s of k6 load runs, `ordersRate` > 0,
 `readyPods` >= 1 for inventory and payment; LD5 stock and activity reads; LD6 load on 3 isolated events of 300 tickets
-(1200 orders, so sold-out contention) conserves stock per event and `concert-1` confirmed tickets stay within the 1000 seed;
+(sold-out contention) conserves stock per event, creates no duplicate order, and leaves `concert-1` stock >= 0;
 LD7 M7 still passes. The script exits 0 only if every check passes and asserts the kubectl current context is unchanged.
 
 **Proof that it can fail.** The Deployment env was changed with
@@ -842,15 +858,22 @@ Then the exact original value (`prometheus.ticketrush.svc.cluster.local:9090`, r
 (`prometheus.ticketrush.svc.cluster.local:9090` confirmed), and the script passed (output above). `helm get manifest` shows the
 same `PROMETHEUS_ADDR` value as the live Deployment, so the Deployment is as the chart renders it.
 
-Flake seen once: an earlier run at 30 orders per second failed only on the k6 `dropped_iterations` threshold
-(LD4 reported `k6 exited 99`, the dashboard queries were fine). The default rate was lowered to 20 per second and
-the final runs above pass. The failing output is not kept; the cause (the host k6 and port-forward under load) is a
-reading, not a measurement.
+Flake seen twice: runs at 30 orders per second (and once at 20, right after a fresh rollout) failed only on the k6
+`dropped_iterations` threshold (`k6 exited 99`, the dashboard queries were fine). The default rate was lowered to 20 per
+second and a 20-purchase gateway warm-up was added; the cause (slow cold first requests) is a reading, not a measurement.
 
 **Visual check by the controller** in the built-in browser at 1440px on 2026-11-11, on kind: fonts Geist and Geist Mono load
 from /fonts, no horizontal scroll, map fits its 1344px region, one Buy click produced an accent dot that crossed the map,
-stock 1000 -> 999, confirmed 1, table row CONFIRMED EUR 50.00. Not seen: behaviour under load in the browser (second pod
-appearing, lag chart moving), the stale state, reduced motion, and the Compose "needs the kind stack" state.
+stock 1000 -> 999, confirmed 1, table row CONFIRMED EUR 50.00. 
+**Observed under load** by the controller on 2026-11-11 (built-in browser, 1440px, deployed dashboard on kind, k6 at 20 orders
+per second for 75 s on a dedicated 500-ticket event typed into the Event id field): stock fell from 500 to 0 in well under a
+minute and stayed flat at 0, and a manual Buy afterwards was REJECTED with reason SOLD_OUT; map node rates 13 to 40 per second,
+up to 40 dots at once (the cap), red dots for rejected orders; Kafka lag stayed between 0 and 5 messages; EVALSHA about 20
+per second at 0.6 ms; ready pods stayed 1 of 2 for both services, no second pod appeared because lag never passed 10; on
+Compose, chapters 02 to 04 show "Live metrics need the kind stack." and map rates show dashes. This showed that the saga
+counters (confirmed 8601 beside a 500-ticket event) read as an oversell, so they are now labelled "Saga outcomes, all events,
+since order-service start". NOT seen: a second pod appearing in the dashboard (expected only with
+`M5_CONSUMER_PROCESSING_DELAY_MS=200`), the stale state, reduced motion.
 
 **NOT done / not verified:**
 
@@ -862,7 +885,7 @@ appearing, lag chart moving), the stale state, reduced motion, and the Compose "
 - The dot animation covers a whole path at once: the saga finishes faster than the 2 s activity poll, so dots show an
   order's path, not live hop-by-hop positions.
 - Scaling shows 1 to 2 pods only (KEDA `maxReplicas` 2). With no artificial consumer delay a second pod is not guaranteed,
-  so LD4 does not require one; the dashboard under load was not watched in a browser.
+  so LD4 does not require one; a second pod was not watched in the dashboard.
 - `kube-state-metrics` is disabled, so ready pods are scrape targets that are up, not scheduler state.
 - The full root `mvn verify` was not re-run for M8; the M7 note about one transient `DltE2ETest` failure still stands.
 - No mobile, light-theme, Firefox/Safari or accessibility audit.
