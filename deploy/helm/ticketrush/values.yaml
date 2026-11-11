@@ -73,6 +73,14 @@ image:
   tag: dev
   pullPolicy: IfNotPresent
 
+# The Angular dashboard (nginx). Built and loaded by scripts/observability-up.sh and scripts/kind-up.sh.
+dashboard:
+  enabled: true
+  tag: dev
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 64Mi}
+
 app:
   # Above the 30 s Spring shutdown phase (spring.lifecycle.timeout-per-shutdown-phase).
   terminationGracePeriodSeconds: 60

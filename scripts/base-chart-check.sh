@@ -14,7 +14,8 @@
 #   check_AC1_topics     exactly 12 topics: six sources and their .DLT topics, partitions 12 and RF 3
 #   check_AC8_dltTopology  Helm DLT topology plus Compose init: the same 12 topics, partitions 12 and RF 1
 #   check_AC2_hardening  every app Deployment: readiness and liveness probe paths, cpu/memory requests and
-#                        limits, runAsNonRoot, terminationGracePeriodSeconds > 30 (exactly 6 Deployments)
+#                        limits, runAsNonRoot, terminationGracePeriodSeconds > 30 (exactly 6 Java Deployments; the dashboard has its own check)
+#   check_M8_dashboard   Deployment and Service "dashboard": non-root uid 101, the three env vars the nginx template needs
 #   check_AC3_no_plaintext  credential-looking env vars come from a Secret, never a literal; the Secret exists
 set -u
 cd "$(dirname "$0")/.."
@@ -122,7 +123,7 @@ check_AC8_dltTopology() {
 check_AC2_hardening() {
   local docs="$1" out
   out=$(jq -r '
-    map(select(.kind == "Deployment")) as $dep
+    map(select(.kind == "Deployment" and .metadata.name != "dashboard")) as $dep
     | [ (if ($dep | length) != 6 then "expected 6 app Deployments, found \($dep | length)" else empty end),
         ($dep[] | .metadata.name as $n | .spec.template.spec as $p
           | ($p.terminationGracePeriodSeconds // 30) as $grace
@@ -135,6 +136,22 @@ check_AC2_hardening() {
                 (if (($p.securityContext.runAsNonRoot // false) or ($c.securityContext.runAsNonRoot // false)) != true then "\($n): runAsNonRoot must be true" else empty end)))
       ] | .[]' "$docs")
   [ -z "$out" ] || while IFS= read -r line; do fail check_AC2_hardening "$line"; done <<< "$out"
+}
+
+check_M8_dashboard() {
+  local docs="$1" out
+  out=$(jq -r '
+    (map(select(.kind == "Deployment" and .metadata.name == "dashboard"))) as $dep
+    | (map(select(.kind == "Service" and .metadata.name == "dashboard"))) as $svc
+    | [ (if ($dep | length) != 1 then "expected exactly 1 Deployment named dashboard, found \($dep | length)" else empty end),
+        (if ($svc | length) != 1 then "expected exactly 1 Service named dashboard, found \($svc | length)" else empty end),
+        ($dep[] | .spec.template.spec as $p | $p.containers[0] as $c
+          | (if ($c.securityContext.runAsUser // $p.securityContext.runAsUser) != 101 then "dashboard: must run as uid 101" else empty end),
+            (if (($p.securityContext.runAsNonRoot // false) or ($c.securityContext.runAsNonRoot // false)) != true then "dashboard: runAsNonRoot must be true" else empty end),
+            ((["NGINX_RESOLVER", "UPSTREAM_SUFFIX", "PROMETHEUS_ADDR"][]) as $e
+              | if ([$c.env[]? | select(.name == $e and (.value // "") != "")] | length) != 1 then "dashboard: env \($e) must be set" else empty end))
+      ] | .[]' "$docs")
+  [ -z "$out" ] || while IFS= read -r line; do fail check_M8_dashboard "$line"; done <<< "$out"
 }
 
 check_AC3_no_plaintext() {
@@ -163,6 +180,7 @@ run_checks() {
   check_AC1_topics "$1"
   check_AC2_hardening "$1"
   check_AC3_no_plaintext "$1"
+  check_M8_dashboard "$1"
   check_AC8_dltTopology "$1" "${2:-$SCRATCH/compose-init.sh}"
   return $FAILED
 }
@@ -222,6 +240,8 @@ selftest() {
     '(map(select(.kind == "Deployment")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then del(.spec.template.spec.containers[0].readinessProbe) else . end)'
   expect_failure selftest_AC2_mutation_fails_grace_30 check_AC2_hardening \
     '(map(select(.kind == "Deployment")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then .spec.template.spec.terminationGracePeriodSeconds = 30 else . end)'
+  expect_failure selftest_M8_dashboard_missing_env check_M8_dashboard \
+    'map(if .kind == "Deployment" and .metadata.name == "dashboard" then .spec.template.spec.containers[0].env |= map(select(.name != "UPSTREAM_SUFFIX")) else . end)'
   expect_failure selftest_AC3_mutation_fails_literal_password check_AC3_no_plaintext \
     '(map(select(.kind == "Deployment")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then .spec.template.spec.containers[0].env += [{"name": "DB_PASSWORD", "value": "hunter2-literal"}] else . end)'
   return $SELFTEST_FAILED

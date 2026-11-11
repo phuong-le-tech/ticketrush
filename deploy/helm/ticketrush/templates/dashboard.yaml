@@ -1,0 +1,70 @@
+{{- if .Values.dashboard.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  labels:
+    app.kubernetes.io/name: dashboard
+spec:
+  selector:
+    app.kubernetes.io/name: dashboard
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  labels:
+    app.kubernetes.io/name: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dashboard
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: dashboard
+          image: {{ .Values.image.repository }}/dashboard:{{ .Values.dashboard.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # nginx does not use DNS search domains, so every name is fully qualified.
+            - name: NGINX_RESOLVER
+              value: kube-dns.kube-system.svc.cluster.local
+            - name: UPSTREAM_SUFFIX
+              value: .{{ .Release.Namespace }}.svc.cluster.local
+            - name: PROMETHEUS_ADDR
+              value: prometheus.{{ .Release.Namespace }}.svc.cluster.local:9090
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.dashboard.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+{{- end }}
