@@ -432,7 +432,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   payment repetitions passed directly. The final resumed command was stopped after the ramp
   runtime failure and best-effort cleanup, not reported as exit 0.
 - Every completed run, date, exact recovery value and before/during/after completion rate is in
-  the [README table](../README.md#measured-results), linked to its raw JSON. Confirmed orders
+  the [README table](CHAOS-RESULTS.md#measured-results), linked to its raw JSON. Confirmed orders
   each have one charge; nonconfirmed orders zero, every accepted ID is conserved, stocks are
   nonnegative and conserved, and payment failures release held quantity once. These claims apply
   only to the completed audits, NOT the failed ramp or interrupted runs. k6 acknowledgments are
