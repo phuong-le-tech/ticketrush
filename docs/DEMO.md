@@ -1,8 +1,8 @@
 # TicketRush - Demo
 
-![Buying tickets on the dashboard: stock drops and each order goes to CONFIRMED](design/m8/ticketrush-demo.gif)
+![Buying tickets on the dashboard: stock drops and each order goes to CONFIRMED](design/demo/ticketrush-demo.gif)
 
-The GIF above (`docs/design/m8/ticketrush-demo.gif`, 14 s) was recorded against the Compose stack on
+The GIF above (`docs/design/demo/ticketrush-demo.gif`, 14 s) was recorded against the Compose stack on
 2026-11-11: four purchases through the dashboard, stock going 1000 to 996, each order reaching
 `CONFIRMED` in the saga table. It shows the happy path only. Failure and chaos behaviour is
 documented with measurements in [CHAOS-RESULTS.md](CHAOS-RESULTS.md), not shown in this GIF.

@@ -1,9 +1,9 @@
 # TicketRush - Operations (kind, observability, chaos runner)
 
-Moved out of the README in M8. How to bootstrap the kind cluster, open Grafana and run the chaos
+How to bootstrap the kind cluster, open Grafana and run the chaos
 experiments. Measured results are in [CHAOS-RESULTS.md](CHAOS-RESULTS.md).
 
-## M5: metrics, Grafana and autoscaling on kind
+## Metrics, Grafana and autoscaling on kind
 
 Requires running Docker, kind 0.33.0, Helm 4, kubectl, Python 3, jq, mikefarah yq v4 and k6 2.3.0.
 On macOS install the command-line tools with `brew install kind helm kubectl jq yq k6`.
@@ -72,7 +72,7 @@ Prometheus has ephemeral two-hour retention; Grafana storage is ephemeral, but p
 its Secret survive normal Helm upgrades. No public ingress or authentication for Prometheus is
 provided. Keep port-forwards bound to localhost and do not deploy these local defaults publicly.
 
-## Previous milestone bootstrap
+## Base cluster bootstrap
 
 `scripts/m3-up.sh` explicitly disables M5 resources and still requires only Strimzi, not KEDA or
 Prometheus CRDs. `scripts/m3-acceptance.sh` is destructive and replaces the cluster; do not run it
@@ -80,7 +80,7 @@ while watching an M5 load test. The M5 bootstrap reuses the M3 image build/load 
 pattern, adding pinned observability operators before the chart install.
 
 
-## M6: project-local chaos experiments
+## Project-local chaos experiments
 
 Reuse the M5 stack with no artificial consumer delay. This runner never bootstraps or deletes a
 cluster and never switches contexts. Select the intended context explicitly before running it:

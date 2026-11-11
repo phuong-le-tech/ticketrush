@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# M8 acceptance: the README "Run it" section works from a fresh clone.
+# Fresh-clone check: the README "Run it" section works from a fresh clone.
 #
-#   scripts/m8-acceptance.sh                 # clones the committed HEAD of this repo
-#   REPO_URL=https://github.com/phuong-le-tech/ticketrush.git REF=main scripts/m8-acceptance.sh
+#   scripts/fresh-clone-check.sh                 # clones the committed HEAD of this repo
+#   REPO_URL=https://github.com/phuong-le-tech/ticketrush.git REF=main scripts/fresh-clone-check.sh
 #
 # Clones into a temp dir (so uncommitted files cannot hide a missing one), starts the Compose stack
 # under its own project name, waits for the read API, buys one ticket, waits for CONFIRMED, checks
@@ -17,7 +17,7 @@ EVENT_ID="${EVENT_ID:-concert-1}"
 BASE_URL="${BASE_URL:-http://localhost:4200}"
 READY_TIMEOUT_SECONDS="${READY_TIMEOUT_SECONDS:-180}"
 CONFIRM_TIMEOUT_SECONDS="${CONFIRM_TIMEOUT_SECONDS:-60}"
-PROJECT="ticketrush-m8"
+PROJECT="ticketrush-fresh"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 stock() { curl -fs "$BASE_URL/api/events/$EVENT_ID/stock" | python3 -c 'import json,sys; print(json.load(sys.stdin)["stock"])'; }
@@ -55,7 +55,7 @@ echo "==> POST /orders"
 key="$(uuidgen)"
 body="$(curl -fs -X POST localhost:8080/orders -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $key" \
-  -d "{\"eventId\":\"$EVENT_ID\",\"customerId\":\"m8-acceptance\",\"quantity\":1}")" || fail "POST /orders did not return 2xx"
+  -d "{\"eventId\":\"$EVENT_ID\",\"customerId\":\"fresh-clone-check\",\"quantity\":1}")" || fail "POST /orders did not return 2xx"
 order_id="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["orderId"])')"
 echo "    orderId: $order_id"
 
@@ -79,4 +79,4 @@ after="$(stock)"
 echo "    stock after: $after"
 [ "$after" -eq $((before - 1)) ] || fail "stock went $before -> $after, expected a drop of exactly 1"
 
-echo "ALL M8 ACCEPTANCE CHECKS PASSED (fresh clone, order $order_id CONFIRMED, stock $before -> $after)"
+echo "ALL FRESH-CLONE CHECKS PASSED (fresh clone, order $order_id CONFIRMED, stock $before -> $after)"

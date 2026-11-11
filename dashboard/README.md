@@ -1,4 +1,4 @@
-# M7 dashboard
+# Dashboard
 
 Angular 22.2.5 standalone page following the approved Open Design reference in `docs/design/m7/`.
 Live stock, orders per second and recent saga states poll independently every 2 seconds.
@@ -28,7 +28,7 @@ There is no configured ESLint target; strict TypeScript and Angular production c
 - nginx proxies only POST `/api/orders`, GET `/api/orders/activity` and GET `/api/events/` to their
   owning services. No Actuator proxy, CORS, authentication or router. Node is absent from the final image.
 - `cd dashboard && npx ng serve --proxy-config proxy.conf.json` requires host Node >=24.15, or run
-  the same command in the approved Node container. Do not upgrade host Node as part of M7.
+  the same command in the approved Node container. Do not upgrade host Node as part of this work.
   The dev proxy expects host-running gateway/inventory/order at localhost 8080/8081/8084, or explicit
   port forwards to those services. Compose does not publish inventory/order ports. In a Node container,
   localhost means that container; a reachable backend network/forward must be arranged separately.
@@ -51,7 +51,7 @@ There is no configured ESLint target; strict TypeScript and Angular production c
   `failureReason` (for example `TIMEOUT` or `PAYMENT_FAILED`).
 - The stock endpoint returns `eventId` and `stock` only, so the page never shows a price and
   keeps amounts as integer cents plus currency in the order table.
-- One command proves the whole milestone end to end: `scripts/m7-acceptance.sh` runs the backend
+- One command proves the whole dashboard end to end: `scripts/m7-acceptance.sh` runs the backend
   module tests, the dashboard container tests and build, brings Compose up and drives
   `/healthz`, the stock read, a real `POST /api/orders`, the CONFIRMED saga row and the stock
   decrease through http://localhost:4200. Real output is recorded in `docs/PROGRESS.md`.

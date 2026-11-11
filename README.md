@@ -7,7 +7,8 @@ Kubernetes, then deliberately broken to measure what happens.
 **The invariant:** never sell more tickets than exist, and never create or charge the same order
 twice. Every design choice and every test below serves this sentence.
 
-**Status:** milestones M1 to M7 are done and merged. M8 (this polish pass) is the last one. Detailed
+**Status:** feature complete: ordering saga, autoscaling on Kubernetes, chaos experiments and the
+dashboard are all built and tested. Detailed
 verification and known gaps: [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ![Dashboard showing live stock, orders per second and saga states](docs/design/m7/dashboard-running.png)
@@ -99,7 +100,7 @@ curl -i -X POST localhost:8080/orders \
 docker compose -f deploy/compose/docker-compose.yml down -v   # stop and clean
 ```
 
-`scripts/m8-acceptance.sh` does exactly this from a fresh clone and fails if the order is not
+`scripts/fresh-clone-check.sh` does exactly this from a fresh clone and fails if the order is not
 confirmed within 60 seconds.
 
 Kubernetes, Grafana, autoscaling and chaos experiments (need kind, Helm, kubectl, k6 and a Docker
@@ -135,7 +136,7 @@ Honest list of what is not done or not good enough. Details in [docs/PROGRESS.md
 
 ## Demo
 
-![Buying tickets on the dashboard](docs/design/m8/ticketrush-demo.gif)
+![Buying tickets on the dashboard](docs/design/demo/ticketrush-demo.gif)
 
 Happy path only (four purchases, stock 1000 to 996). How it was recorded and a script for a second
 clip about failure on kind: [docs/DEMO.md](docs/DEMO.md).

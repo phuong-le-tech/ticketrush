@@ -1,6 +1,6 @@
 # TicketRush - Chaos results
 
-Moved out of the README in M8. Raw evidence (JSON, k6 IDs, provider audits) is under
+Raw evidence (JSON, k6 IDs, provider audits) is under
 [evidence/m6/](evidence/m6/). Commands to reproduce are in [OPERATIONS.md](OPERATIONS.md).
 
 ## Measurement definitions
