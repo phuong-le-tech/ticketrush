@@ -338,11 +338,47 @@ describe('M7 dashboard HTTP and user interactions', () => {
     expect(buyButton().disabled).toBe(false);
     const chapters = Array.from(root.querySelectorAll('tr-chapter'));
     expect(chapters).toHaveLength(4);
-    expect(chapters[0].textContent).not.toContain('Live metrics need the kind stack.');
+    // F3: chapter 01 now names the missing source beside its outcome counters; it still draws its chart.
+    expect(chapters[0].querySelector('tr-chart')).not.toBeNull();
     for (const chapter of chapters.slice(1)) {
       expect(chapter.textContent).toContain('Live metrics need the kind stack.');
       expect(chapter.querySelector('tr-chart')).toBeNull();
     }
+  });
+
+  describe('metrics provenance', () => {
+    const outcomesNote = () => root.querySelector('#outcomes-note')?.textContent?.trim();
+    const topBar = () => root.querySelector('#metrics-status')?.textContent?.trim();
+
+    function failMetrics() {
+      for (const req of discardMetrics()) {
+        if (!req.cancelled) req.flush('boom', { status: 503, statusText: 'Unavailable' });
+      }
+      fixture.detectChanges();
+    }
+
+    it('says "metrics loading" before the first answer and shows no outcome note', () => {
+      expect(topBar()).toBe('metrics loading');
+      expect(outcomesNote()).toBeUndefined();
+    });
+    it('says "metrics every 5s" when live and shows no outcome note', () => {
+      answerBackfill({});
+      expect(topBar()).toBe('metrics every 5s');
+      expect(outcomesNote()).toBeUndefined();
+    });
+    it('says "metrics unavailable" and explains the outcome counters without Prometheus', () => {
+      failMetrics();
+      expect(topBar()).toBe('metrics unavailable');
+      expect(outcomesNote()).toBe('Live metrics need the kind stack.');
+    });
+    it('says "metrics stale since HH:mm:ss" and marks the outcome counters stale', () => {
+      answerBackfill({});
+      vi.advanceTimersByTime(5000);
+      failMetrics();
+      const hms = new Date().toTimeString().slice(0, 8); // the date pipe formats in local time
+      expect(topBar()).toBe(`metrics stale since ${hms}`);
+      expect(outcomesNote()).toBe(`stale since ${hms}`);
+    });
   });
 
   it('NaN redis latency renders a dash, never "NaN"', () => {

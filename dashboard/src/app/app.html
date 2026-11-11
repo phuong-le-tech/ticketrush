@@ -15,7 +15,22 @@
         }}</span>
       }
       <span class="sep" aria-hidden="true">.</span>
-      <span>metrics every 5s</span>
+      @switch (metricsState()) {
+        @case ('live') {
+          <span id="metrics-status">metrics every 5s</span>
+        }
+        @case ('unavailable') {
+          <span id="metrics-status">metrics unavailable</span>
+        }
+        @case ('stale') {
+          <span id="metrics-status" class="metrics-stale"
+            >metrics stale since {{ metricsStaleSince() | date: 'HH:mm:ss' }}</span
+          >
+        }
+        @default {
+          <span id="metrics-status">metrics loading</span>
+        }
+      }
     </div>
   </header>
   <main>
@@ -63,6 +78,15 @@
             <p class="outcomes-label" id="outcomes-label">
               Saga outcomes, all events, since order-service start
             </p>
+            @if (metricsState() === 'unavailable') {
+              <p class="helper outcomes-note" id="outcomes-note">
+                Live metrics need the kind stack.
+              </p>
+            } @else if (metricsState() === 'stale') {
+              <p class="helper outcomes-note unavailable" id="outcomes-note">
+                stale since {{ metricsStaleSince() | date: 'HH:mm:ss' }}
+              </p>
+            }
             <dl class="kv kv-outcomes">
               <div>
                 <dt>confirmed</dt>
@@ -90,7 +114,11 @@
           <div chart>
             <tr-chart [series]="lagSeries()" unit="messages" />
             @for (row of partitions(); track row.topic) {
-              <div class="squares" [attr.aria-label]="row.topic + ' partitions, shaded by lag'">
+              <div
+                class="squares"
+                role="img"
+                [attr.aria-label]="row.topic + ' partitions, shaded by lag'"
+              >
                 <span class="square-label">{{ row.topic }}</span>
                 @for (sq of row.squares; track sq.partition) {
                   <span

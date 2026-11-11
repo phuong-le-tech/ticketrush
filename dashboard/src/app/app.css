@@ -31,6 +31,9 @@ footer {
 .live.warning {
   color: var(--warn);
 }
+.live .metrics-stale {
+  color: var(--warn);
+}
 .live .sep {
   color: var(--fg-2);
 }
