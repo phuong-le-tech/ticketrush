@@ -27,6 +27,8 @@ describe('App', () => {
       .flush({ windowSeconds: 10, ordersInWindow: 0, orders: [] });
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent?.trim()).toBe('Ticket operations');
+    expect(compiled.querySelector('h1')?.textContent?.trim()).toBe(
+      'One order, from click to confirmation.',
+    );
   });
 });

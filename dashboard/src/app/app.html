@@ -1,22 +1,8 @@
 <div class="shell">
   <header class="topbar">
-    <div class="brand">
-      <span class="mark" aria-hidden="true">▣</span>TicketRush <span class="version">v1</span>
-    </div>
-    <span class="helper">Local operations / Polling dashboard</span>
-  </header>
-  <main>
-    <div class="page-head">
-      <h1>Ticket operations</h1>
-      <p class="helper">Stock, throughput and the order saga in one place.</p>
-    </div>
-    <aside class="notice">
-      <p>
-        <strong>Live local stack.</strong> Buy submits a real order to the configured fake payment
-        provider. Acceptance is not a confirmed purchase.
-      </p>
-    </aside>
-    <div class="controls" role="status" [class.warning]="stale()">
+    <div class="brand">TicketRush</div>
+    &ngsp;
+    <div class="live" role="status" [class.warning]="stale()">
       <span class="dot" aria-hidden="true"></span>
       @if (stale()) {
         <span
@@ -28,94 +14,109 @@
           stock() === null || activity() === null ? 'Loading snapshot' : 'Polling every 2 seconds'
         }}</span>
       }
+      <span class="sep" aria-hidden="true">.</span>
+      <span>metrics every 5s</span>
     </div>
-    <div class="summary">
-      <section class="panel metric" aria-labelledby="stock-heading">
-        <div class="panel-head">
-          <h2 id="stock-heading">Stock</h2>
-          <span class="event">{{ eventId().trim() || 'Enter an event' }}</span>
-        </div>
-        <div class="metric-value">
-          <strong class="number" id="stock-value">{{
-            stock() ?? (stockStale() ? 'Unavailable' : 'Loading')
-          }}</strong
-          ><span class="helper">tickets available</span>
-        </div>
-        <p class="helper">Latest available stock for the selected event.</p>
-        <div class="metric-foot helper">Price is not returned by the stock API.</div>
-      </section>
-      <section class="panel metric" aria-labelledby="throughput-heading">
-        <div class="panel-head">
-          <h2 id="throughput-heading">Orders per second</h2>
-          <span class="eyebrow">All events</span>
-        </div>
-        <div class="metric-value">
-          <strong class="number" id="rate-value">{{
-            activity() ? rate() : activityStale() ? 'Unavailable' : 'Loading'
-          }}</strong
-          ><span class="helper">orders / sec</span>
-        </div>
-        <p class="helper">
-          {{ activity()?.ordersInWindow ?? '?' }} orders in window /
-          {{ activity()?.windowSeconds ?? '?' }} seconds
-        </p>
-        <div class="metric-foot helper">Polling cadence <strong>Every 2 seconds</strong></div>
-      </section>
-    </div>
-    <section class="panel buy-panel" aria-labelledby="buy-heading">
-      <div>
-        <h2 id="buy-heading">Buy tickets</h2>
-        <p class="helper">
-          One purchase at a time. Follow accepted orders in the saga table below.
-        </p>
-      </div>
-      <form (submit)="buy($event)" [attr.aria-busy]="pending()">
-        <div>
-          <label for="event-id">Event id</label
-          ><input
-            id="event-id"
-            name="eventId"
-            [value]="eventId()"
-            (input)="changeEvent($any($event.target).value)"
-            [disabled]="pending() || !!attempt()"
-            maxlength="255"
-            required
-            autocomplete="off"
-          />
-        </div>
-        <div>
-          <label for="quantity">Quantity</label
-          ><input
-            id="quantity"
-            name="quantity"
-            type="number"
-            [value]="quantity()"
-            (input)="changeQuantity($any($event.target).value)"
-            [disabled]="pending() || !!attempt()"
-            min="1"
-            max="4"
-            step="1"
-            required
-          />
-        </div>
-        <button
-          class="primary"
-          id="buy-button"
-          type="submit"
-          [disabled]="pending() || (!attempt() && !validInput())"
-        >
-          {{ pending() ? 'Pending...' : attempt() ? 'Retry' : 'Buy' }}
-        </button>
-        <p class="form-note" [class.error]="buyError()" id="buy-message" role="status">
-          {{ buyMessage() }}
-        </p>
-        <p class="form-note helper">
-          Network, 5xx or 429 failure: Retry keeps the same key, event and quantity. Inputs stay
-          locked until acknowledged. The key is never displayed.
-        </p>
-      </form>
+  </header>
+  <main>
+    <section class="map-region">
+      <h1>One order, from click to confirmation.</h1>
+      <p class="sub">Every figure on this page is read from the running system.</p>
+      <div class="map-placeholder"></div>
     </section>
-    <section class="panel saga" aria-labelledby="orders-heading">
+    <div class="layout">
+      <div class="chapters">
+        <div class="figures">
+          <section class="figure" aria-labelledby="stock-heading">
+            <h2 id="stock-heading">Stock</h2>
+            <div class="metric-value">
+              <strong class="number" id="stock-value">{{
+                stock() ?? (stockStale() ? 'Unavailable' : 'Loading')
+              }}</strong
+              ><span class="helper"
+                >tickets available for {{ eventId().trim() || 'an event' }}</span
+              >
+            </div>
+            <p class="helper">Latest available stock for the selected event.</p>
+            <p class="helper">Price is not returned by the stock API.</p>
+          </section>
+          <section class="figure" aria-labelledby="throughput-heading">
+            <h2 id="throughput-heading">Orders per second</h2>
+            <div class="metric-value">
+              <strong class="number" id="rate-value">{{
+                activity() ? rate() : activityStale() ? 'Unavailable' : 'Loading'
+              }}</strong
+              ><span class="helper">orders / sec</span>
+            </div>
+            <p class="helper">
+              {{ activity()?.ordersInWindow ?? '?' }} orders in window /
+              {{ activity()?.windowSeconds ?? '?' }} seconds
+            </p>
+            <p class="helper">Polling cadence every 2 seconds.</p>
+          </section>
+        </div>
+      </div>
+      <aside class="rail">
+        <p class="notice">
+          <strong>Live local stack.</strong> Buy submits a real order to the configured fake payment
+          provider. Acceptance is not a confirmed purchase.
+        </p>
+        <section aria-labelledby="buy-heading">
+          <div>
+            <h2 id="buy-heading">Buy tickets</h2>
+            <p class="helper">
+              One purchase at a time. Follow accepted orders in the saga table below.
+            </p>
+          </div>
+          <form (submit)="buy($event)" [attr.aria-busy]="pending()">
+            <div>
+              <label for="event-id">Event id</label
+              ><input
+                id="event-id"
+                name="eventId"
+                [value]="eventId()"
+                (input)="changeEvent($any($event.target).value)"
+                [disabled]="pending() || !!attempt()"
+                maxlength="255"
+                required
+                autocomplete="off"
+              />
+            </div>
+            <div>
+              <label for="quantity">Quantity</label
+              ><input
+                id="quantity"
+                name="quantity"
+                type="number"
+                [value]="quantity()"
+                (input)="changeQuantity($any($event.target).value)"
+                [disabled]="pending() || !!attempt()"
+                min="1"
+                max="4"
+                step="1"
+                required
+              />
+            </div>
+            <button
+              class="primary"
+              id="buy-button"
+              type="submit"
+              [disabled]="pending() || (!attempt() && !validInput())"
+            >
+              {{ pending() ? 'Pending...' : attempt() ? 'Retry' : 'Buy' }}
+            </button>
+            <p class="form-note" [class.error]="buyError()" id="buy-message" role="status">
+              {{ buyMessage() }}
+            </p>
+            <p class="form-note helper">
+              Network, 5xx or 429 failure: Retry keeps the same key, event and quantity. Inputs stay
+              locked until acknowledged. The key is never displayed.
+            </p>
+          </form>
+        </section>
+      </aside>
+    </div>
+    <section class="orders" aria-labelledby="orders-heading">
       <div class="table-head">
         <div>
           <h2 id="orders-heading">Recent orders</h2>

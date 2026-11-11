@@ -1,14 +1,41 @@
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 :root {
   color-scheme: dark;
-  --bg: #0c111c;
-  --surface: #101722;
-  --raised: #202936;
-  --fg: #eef6ff;
-  --muted: #b1bfce;
-  --border: #303b49;
-  --accent: #0ea5e9;
-  --warning: #f5bf63;
-  --danger: #ff9a94;
+  --bg: #0a0a0b;
+  --surface: #111113;
+  --raised: #1a1a1e;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --fg: #f4f4f5;
+  --fg-2: #a1a1aa;
+  --fg-3: #71717a;
+  --accent: #f5a524;
+  --ok: #4ade80;
+  --warn: #f5a524;
+  --bad: #f87171;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --t-fast: 150ms;
+  --t-move: 600ms;
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0ms;
+    --t-move: 0ms;
+  }
 }
 * {
   box-sizing: border-box;
@@ -17,11 +44,11 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font:
-    15px/1.5 'IBM Plex Sans',
-    'Segoe UI',
-    Helvetica,
-    sans-serif;
+  font: 400 15px/24px var(--font-sans);
+}
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 button,
 input {
@@ -29,11 +56,11 @@ input {
 }
 button,
 input {
-  min-height: 44px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  min-height: 40px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
   color: var(--fg);
-  background: var(--surface);
+  background: var(--raised);
 }
 input {
   padding: 8px 12px;
@@ -43,7 +70,8 @@ button {
   padding: 0 16px;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
+  transition: opacity var(--t-fast) var(--ease-out);
 }
 button:disabled {
   opacity: 0.55;
@@ -54,7 +82,7 @@ input:disabled {
 }
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 4px;
+  outline-offset: 2px;
 }
 h1,
 h2,
@@ -62,10 +90,14 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 30px;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 48px;
+  letter-spacing: -1.6px;
 }
 h2 {
-  font-size: 17px;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 32px;
+  letter-spacing: -0.5px;
 }
