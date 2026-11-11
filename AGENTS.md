@@ -69,8 +69,15 @@ Filled in as milestones land. Keep this list accurate.
 | Build + all tests | `mvn verify` |
 | M1 acceptance | `mvn verify -pl e2e-tests -am` |
 | Local stack | `docker compose -f deploy/compose/docker-compose.yml up -d` |
+| M2 acceptance (contention + replay, 10 runs) | `scripts/m2-acceptance.sh` |
+| M3 acceptance (destructive: recreates the kind cluster) | `scripts/m3-acceptance.sh` |
+| M5 acceptance (kind, KEDA, k6) | `M5_CONSUMER_PROCESSING_DELAY_MS=200 scripts/m5-acceptance.sh` |
+| M6 chaos experiments (reuses the M5 stack) | `scripts/m6-chaos.sh` |
+| M7 acceptance (Compose + dashboard on :4200) | `scripts/m7-acceptance.sh` |
+| Chart checks | `scripts/m3-chart-check.sh`, `scripts/m5-chart-check.sh` |
 
 ## Environment notes
 
 - Docker is required (Testcontainers and Compose).
-- `kind` and `helm` are not installed yet; they are needed from Milestone 3.
+- `kind`, `helm` and `k6` are needed from Milestone 3 and are installed on the owner's machine.
+- The 16 GB Docker VM is required for the M6 consumer ramp (the 8 GB VM failed, see PROGRESS.md).

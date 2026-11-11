@@ -11,7 +11,7 @@ result, and what is NOT done or not verified.
 | 4 | Failure handling | PR #18 (`6a5a3b0`) | Done |
 | 5 | Observability and autoscaling | PR #19 (`aa465d5`) | Done |
 | 6 | Chaos experiments and results | PR #20 (`f409c88`) | Done |
-| 7 | Minimal Angular dashboard | - | In progress: implemented and accepted end to end 2026-11-09 on `docs/m7-acceptance`; PR pending. Owner merged the implementation without same-card review (defect) |
+| 7 | Minimal Angular dashboard | PRs #22, #23, #24 (`6335f62`) | Done. Accepted end to end 2026-11-09 with `scripts/m7-acceptance.sh`. #22 was merged without same-card review (process defect, see M7 report); #24 changes no file. Owed: one fully green root `mvn verify` (a transient `DltE2ETest` duplicate-delivery failure was seen once, the class passed on rerun) |
 | 8 | Portfolio polish | - | Not started |
 
 ## Milestone 1 checklist (done)
