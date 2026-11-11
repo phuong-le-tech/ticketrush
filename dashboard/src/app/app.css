@@ -32,7 +32,7 @@ footer {
   color: var(--warn);
 }
 .live .sep {
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 .dot {
   display: inline-block;
@@ -116,7 +116,7 @@ label {
   display: block;
   font: 400 12px/16px var(--font-mono);
   letter-spacing: 0.2px;
-  color: var(--fg-3);
+  color: var(--fg-2);
   margin-bottom: 8px;
 }
 .primary {
@@ -160,7 +160,7 @@ table {
 th {
   font: 400 12px/16px var(--font-mono);
   letter-spacing: 0.2px;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 th,
 td {
@@ -208,7 +208,7 @@ time {
 footer {
   margin-top: 48px;
   font-size: 12px;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 .sr-only {
   position: absolute;

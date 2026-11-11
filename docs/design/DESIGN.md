@@ -73,7 +73,7 @@ Dark only (owner decision).
 | `--hairline` | `rgba(255,255,255,0.08)` | the only border |
 | `--fg` | `#f4f4f5` | primary text |
 | `--fg-2` | `#a1a1aa` | secondary text (7.6:1 on bg) |
-| `--fg-3` | `#71717a` | labels, axes (4.1:1: large or non-text only) |
+| `--fg-3` | `#71717a` | non-text only (lines, swatches) and text of 24px or more |
 | `--accent` | `#f5a524` | "moving right now": my order's dot, live chart head, Buy button (9.7:1 on bg; text on accent is `#0a0a0b`) |
 | `--ok` | `#4ade80` | confirmed |
 | `--warn` | `#f5a524` | pending retry, stale (same hue as accent, always paired with a label) |
@@ -93,7 +93,7 @@ woff2 in `dashboard/public/fonts` so the demo works offline (see spec, dependenc
 | Chapter claim | 24px / 500 / -0.5px |
 | Key figure | 56px mono / 500 / -1px, tabular numbers |
 | Body | 15px / 400 / 0, line-height 24px |
-| Label, axis | 12px mono / 400 / +0.2px, uppercase for chapter numbers only |
+| Label, axis | 12px mono / 400 / +0.2px, `--fg-2`, uppercase for chapter numbers only |
 | Table | 13px |
 
 No other sizes.
