@@ -1,6 +1,15 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   BehaviorSubject,
@@ -12,6 +21,9 @@ import {
   switchMap,
   timeout,
 } from 'rxjs';
+import { Chapter, current } from './chapter';
+import { TimeSeriesChart } from './chart';
+import { MetricsStore, Sample } from './metrics';
 
 const POLL_INTERVAL_MS = 2000;
 const READ_TIMEOUT_MS = 8000;
@@ -20,6 +32,22 @@ const CUSTOMER_STORAGE_KEY = 'ticketrush.customerId';
 const MAX_EVENT_ID_LENGTH = 255;
 const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 4;
+const DASH = '-';
+const STOCK_HISTORY_MAX = 150; // 5 minutes of 2s polls
+const FLASH_MS = 600;
+const PARTITIONS = 12;
+const TOPICS = ['orders.requested', 'tickets.reserved'];
+const SERVICES = ['inventory-service', 'payment-service'];
+// Mirror autoscaling.maxReplicas and autoscaling.lagThreshold in deploy/helm/ticketrush/values.yaml.
+const MAX_REPLICAS = 2;
+const LAG_THRESHOLD = 10;
+// Lines 21-23 and 29 of inventory-service/src/main/resources/reserve.lua, unchanged.
+const LUA_SNIPPET = [
+  "local stock = tonumber(redis.call('HGET', KEYS[1], 'stock'))",
+  'local quantity = tonumber(ARGV[1])',
+  'if stock == nil or quantity == nil or quantity <= 0 or stock < quantity then',
+  "redis.call('HINCRBY', KEYS[1], 'stock', -quantity)",
+].join('\n');
 
 interface RecentOrder {
   orderId: string;
@@ -67,7 +95,7 @@ function customerIdentity(): string {
 }
 
 @Component({
-  imports: [DatePipe],
+  imports: [DatePipe, Chapter, TimeSeriesChart],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
@@ -75,6 +103,7 @@ function customerIdentity(): string {
 export class App implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly metrics = inject(MetricsStore);
   private readonly stockEvents = new BehaviorSubject('concert-1');
   protected readonly eventId = signal('concert-1');
   protected readonly quantity = signal(1);
@@ -83,10 +112,107 @@ export class App implements OnInit {
   protected readonly stockStale = signal(false);
   protected readonly activityStale = signal(false);
   protected readonly stale = computed(() => this.stockStale() || this.activityStale());
+  protected readonly staleSince = signal<Date | null>(null);
+  protected readonly stockHistory = signal<Sample[]>([]);
+  protected readonly metricsState = this.metrics.state;
+  protected readonly metricsStaleSince = this.metrics.staleSince;
   protected readonly rate = computed(() => {
     const activity = this.activity();
-    return activity ? (activity.ordersInWindow / activity.windowSeconds).toFixed(1) : 'Loading';
+    return activity ? (activity.ordersInWindow / activity.windowSeconds).toFixed(1) : DASH;
   });
+  protected readonly stockSeries = computed(() => [
+    { name: 'stock', emphasis: true, points: this.stockHistory() },
+  ]);
+  protected readonly stockFloor = computed(() => this.stockHistory()[0]?.v ?? 1);
+
+  private outcomeCount(name: string): string {
+    const v = current(this.metrics.series('sagaOutcomes')()).find(
+      (c) => c.labels['outcome']?.toUpperCase() === name,
+    )?.v;
+    return v == null ? DASH : String(Math.round(v));
+  }
+  protected readonly outcomes = computed(() => ({
+    confirmed: this.outcomeCount('CONFIRMED'),
+    rejected: this.outcomeCount('REJECTED'),
+    failed: this.outcomeCount('FAILED'),
+  }));
+
+  private readonly lagAll = computed(() =>
+    this.metrics
+      .series('lagByGroup')()
+      .map((s) => ({
+        name: `${s.labels['consumergroup']} / ${s.labels['topic']}`,
+        emphasis: s.labels['consumergroup'] === 'inventory-service',
+        points: s.points,
+      })),
+  );
+  protected readonly lagSeries = this.lagAll;
+  protected readonly inventoryLag = computed(() => this.lagAll().filter((s) => s.emphasis));
+  protected readonly totalLag = computed(() => {
+    const values = current(this.metrics.series('lagByGroup')())
+      .map((c) => c.v)
+      .filter((v): v is number => v !== null);
+    return values.length ? String(Math.round(values.reduce((a, b) => a + b, 0))) : DASH;
+  });
+  protected readonly partitions = computed(() => {
+    const fresh = current(this.metrics.series('partitionLag')());
+    return TOPICS.map((topic) => ({
+      topic,
+      squares: Array.from({ length: PARTITIONS }, (_, partition) => {
+        const lags = fresh
+          .filter((c) => c.labels['topic'] === topic && Number(c.labels['partition']) === partition)
+          .map((c) => c.v ?? 0);
+        const lag = lags.length ? Math.max(...lags) : 0;
+        return { partition, lag, opacity: 0.3 + 0.7 * Math.min(lag / LAG_THRESHOLD, 1) };
+      }),
+    }));
+  });
+
+  protected readonly redisSeries = computed(() =>
+    this.metrics
+      .series('redisOps')()
+      .map((s) => ({
+        name: s.labels['db_operation'],
+        emphasis: s.labels['db_operation'] === 'EVALSHA',
+        points: s.points,
+      })),
+  );
+  protected readonly latency = computed(() => {
+    const v = current(this.metrics.series('redisLatency')())[0]?.v ?? null;
+    return v === null ? DASH : `${(v * 1000).toFixed(1)} ms`;
+  });
+
+  protected readonly pods = computed(() => {
+    const fresh = current(this.metrics.series('readyPods')());
+    return SERVICES.map((job) => {
+      const n = Math.round(fresh.find((c) => c.labels['job'] === job)?.v ?? 0);
+      return { job, n, squares: Array.from({ length: MAX_REPLICAS }, (_, i) => i < n) };
+    });
+  });
+  protected readonly luaSnippet = LUA_SNIPPET;
+  protected readonly maxReplicas = MAX_REPLICAS;
+  protected readonly lagThreshold = LAG_THRESHOLD;
+  protected readonly idle = computed(() => {
+    const points = this.metrics
+      .series('ordersRate')()
+      .flatMap((s) => s.points);
+    return points.length > 0 && points.every((p) => !p.v);
+  });
+
+  // A figure that changed since the previous poll is flagged for 600ms (accent colour, no counting).
+  private readonly flashing = signal<ReadonlySet<string>>(new Set());
+  private shown: Record<string, string> = {};
+  protected flash(key: string): boolean {
+    return this.flashing().has(key);
+  }
+  private readonly watched = computed<Record<string, string>>(() => ({
+    stock: this.stock()?.toString() ?? DASH,
+    rate: this.rate(),
+    ...this.outcomes(),
+    lag: this.totalLag(),
+    latency: this.latency(),
+    ...Object.fromEntries(this.pods().map((p) => [`pod:${p.job}`, String(p.n)])),
+  }));
   protected readonly pending = signal(false);
   protected readonly attempt = signal<PurchaseAttempt | null>(null);
   protected readonly buyMessage = signal(
@@ -104,7 +230,36 @@ export class App implements OnInit {
     );
   });
 
+  constructor() {
+    effect(() => {
+      const now = this.watched();
+      untracked(() => {
+        const keys = Object.keys(now).filter(
+          (k) =>
+            this.shown[k] !== undefined &&
+            this.shown[k] !== DASH &&
+            now[k] !== DASH &&
+            this.shown[k] !== now[k],
+        );
+        // A pod square that appeared gets the outline, a pod that left does not.
+        const grown = keys.filter(
+          (k) => k.startsWith('pod:') && Number(now[k]) > Number(this.shown[k]),
+        );
+        this.shown = now;
+        if (!keys.length) return;
+        const marks = [...keys, ...grown.map((k) => `new:${k}`)];
+        this.flashing.update((set) => new Set([...set, ...marks]));
+        const timer = setTimeout(
+          () => this.flashing.update((set) => new Set([...set].filter((k) => !marks.includes(k)))),
+          FLASH_MS,
+        );
+        this.destroyRef.onDestroy(() => clearTimeout(timer));
+      });
+    });
+  }
+
   ngOnInit(): void {
+    this.metrics.start(this.destroyRef);
     this.stockEvents
       .pipe(
         switchMap((eventId) =>
@@ -120,6 +275,7 @@ export class App implements OnInit {
                       timeout(READ_TIMEOUT_MS),
                       catchError(() => {
                         this.stockStale.set(true);
+                        this.staleSince.update((since) => since ?? new Date());
                         return EMPTY;
                       }),
                     ),
@@ -132,6 +288,10 @@ export class App implements OnInit {
       .subscribe((response) => {
         this.stock.set(response.stock);
         this.stockStale.set(false);
+        if (!this.stale()) this.staleSince.set(null);
+        this.stockHistory.update((h) =>
+          [...h, { t: Date.now(), v: response.stock }].slice(-STOCK_HISTORY_MAX),
+        );
       });
 
     interval(POLL_INTERVAL_MS)
@@ -142,6 +302,7 @@ export class App implements OnInit {
             timeout(READ_TIMEOUT_MS),
             catchError(() => {
               this.activityStale.set(true);
+              this.staleSince.update((since) => since ?? new Date());
               return EMPTY;
             }),
           ),
@@ -151,6 +312,7 @@ export class App implements OnInit {
       .subscribe((activity) => {
         this.activity.set(activity);
         this.activityStale.set(false);
+        if (!this.stale()) this.staleSince.set(null);
       });
   }
 
@@ -158,6 +320,8 @@ export class App implements OnInit {
     this.eventId.set(value);
     this.stock.set(null);
     this.stockStale.set(false);
+    if (!this.stale()) this.staleSince.set(null);
+    this.stockHistory.set([]);
     const id = value.trim();
     this.stockEvents.next(id && id.length <= MAX_EVENT_ID_LENGTH ? id : '');
   }

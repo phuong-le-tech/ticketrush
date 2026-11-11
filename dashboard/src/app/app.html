@@ -26,35 +26,141 @@
     </section>
     <div class="layout">
       <div class="chapters">
-        <div class="figures">
-          <section class="figure" aria-labelledby="stock-heading">
-            <h2 id="stock-heading">Stock</h2>
-            <div class="metric-value">
-              <strong class="number" id="stock-value">{{
-                stock() ?? (stockStale() ? 'Unavailable' : 'Loading')
-              }}</strong
-              ><span class="helper"
-                >tickets available for {{ eventId().trim() || 'an event' }}</span
-              >
-            </div>
-            <p class="helper">Latest available stock for the selected event.</p>
-            <p class="helper">Price is not returned by the stock API.</p>
-          </section>
-          <section class="figure" aria-labelledby="throughput-heading">
-            <h2 id="throughput-heading">Orders per second</h2>
-            <div class="metric-value">
-              <strong class="number" id="rate-value">{{
-                activity() ? rate() : activityStale() ? 'Unavailable' : 'Loading'
-              }}</strong
-              ><span class="helper">orders / sec</span>
-            </div>
-            <p class="helper">
-              {{ activity()?.ordersInWindow ?? '?' }} orders in window /
-              {{ activity()?.windowSeconds ?? '?' }} seconds
+        <tr-chapter
+          number="01"
+          [title]="'CONCURRENCY'"
+          claim="Many buyers, few tickets. Stock never goes below zero."
+          mechanism="Atomic reservation in Redis; duplicate orders return their stored outcome."
+          [state]="stale() ? 'stale' : 'live'"
+          [staleSince]="staleSince()"
+        >
+          <tr-chart
+            chart
+            [series]="stockSeries()"
+            [yFloor]="stockFloor()"
+            [area]="true"
+            unit="tickets"
+          />
+          <div figure>
+            <strong class="number" id="stock-value" [class.changed]="flash('stock')">{{
+              stock() ?? (stockStale() ? 'Unavailable' : '-')
+            }}</strong>
+            <p class="helper">tickets available for {{ eventId().trim() || 'an event' }}</p>
+            <dl class="kv">
+              <div>
+                <dt>confirmed</dt>
+                <dd [class.changed]="flash('confirmed')">{{ outcomes().confirmed }}</dd>
+              </div>
+              <div>
+                <dt>rejected</dt>
+                <dd [class.changed]="flash('rejected')">{{ outcomes().rejected }}</dd>
+              </div>
+              <div>
+                <dt>failed</dt>
+                <dd [class.changed]="flash('failed')">{{ outcomes().failed }}</dd>
+              </div>
+              <div>
+                <dt>orders/s</dt>
+                <dd id="rate-value" [class.changed]="flash('rate')">
+                  {{ activityStale() && !activity() ? 'Unavailable' : rate() }}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </tr-chapter>
+        <tr-chapter
+          number="02"
+          [title]="'KAFKA'"
+          claim="Work waits in topics. Consumers drain it, in order per order."
+          mechanism="key = orderId; offsets committed after processing."
+          [state]="metricsState()"
+          [staleSince]="metricsStaleSince()"
+        >
+          <div chart>
+            <tr-chart [series]="lagSeries()" unit="messages" />
+            @for (row of partitions(); track row.topic) {
+              <div class="squares" [attr.aria-label]="row.topic + ' partitions, shaded by lag'">
+                <span class="square-label">{{ row.topic }}</span>
+                @for (sq of row.squares; track sq.partition) {
+                  <span
+                    class="sq"
+                    [class.on]="sq.lag > 0"
+                    [style.opacity]="sq.lag > 0 ? sq.opacity : null"
+                    [title]="'partition ' + sq.partition + ': ' + sq.lag"
+                  ></span>
+                }
+              </div>
+            }
+          </div>
+          <div figure>
+            <strong class="number" id="lag-value" [class.changed]="flash('lag')">{{
+              totalLag()
+            }}</strong>
+            <p class="helper">messages behind</p>
+          </div>
+          @if (idle()) {
+            <p note class="idle">
+              No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
             </p>
-            <p class="helper">Polling cadence every 2 seconds.</p>
-          </section>
-        </div>
+          }
+        </tr-chapter>
+        <tr-chapter
+          number="03"
+          [title]="'REDIS'"
+          claim="One atomic step: check stock, decrement, remember the order."
+          mechanism="Lua script in inventory-service; Redis is the stock counter and the idempotency record."
+          [state]="metricsState()"
+          [staleSince]="metricsStaleSince()"
+        >
+          <div chart>
+            <tr-chart [series]="redisSeries()" unit="cmd/s" />
+            <pre class="lua">{{ luaSnippet }}</pre>
+          </div>
+          <div figure>
+            <strong class="number" id="latency-value" [class.changed]="flash('latency')">{{
+              latency()
+            }}</strong>
+            <p class="helper">per reservation</p>
+          </div>
+          @if (idle()) {
+            <p note class="idle">
+              No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
+            </p>
+          }
+        </tr-chapter>
+        <tr-chapter
+          number="04"
+          [title]="'KUBERNETES'"
+          claim="Lag passes 10. A second consumer appears."
+          mechanism="KEDA, Kafka lag trigger, 1 to 2 replicas."
+          [state]="metricsState()"
+          [staleSince]="metricsStaleSince()"
+        >
+          <tr-chart chart [series]="inventoryLag()" [threshold]="lagThreshold" unit="messages" />
+          <div figure>
+            @for (pod of pods(); track pod.job) {
+              <div class="pods">
+                <span class="square-label" [class.changed]="flash('pod:' + pod.job)"
+                  >{{ pod.job }} {{ pod.n }} of {{ maxReplicas }}</span
+                >
+                <span class="squares-row">
+                  @for (on of pod.squares; track $index) {
+                    <span
+                      class="sq pod"
+                      [class.on]="on"
+                      [class.appeared]="on && $index === pod.n - 1 && flash('new:pod:' + pod.job)"
+                    ></span>
+                  }
+                </span>
+              </div>
+            }
+          </div>
+          @if (idle()) {
+            <p note class="idle">
+              No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
+            </p>
+          }
+        </tr-chapter>
       </div>
       <aside class="rail">
         <p class="notice">
