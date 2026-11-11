@@ -7,6 +7,14 @@
     "target": "http://localhost:8084",
     "pathRewrite": { "^/api/orders/activity": "/orders/activity" }
   },
+  "^/api/metrics/query(?:\\?.*)?$": {
+    "target": "http://localhost:9090",
+    "pathRewrite": { "^/api/metrics/": "/api/v1/" }
+  },
+  "^/api/metrics/query_range(?:\\?.*)?$": {
+    "target": "http://localhost:9090",
+    "pathRewrite": { "^/api/metrics/": "/api/v1/" }
+  },
   "/api/events/**": {
     "target": "http://localhost:8081",
     "pathRewrite": { "^/api/events/": "/events/" }

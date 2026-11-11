@@ -1,16 +1,16 @@
 # Docker's embedded DNS follows service recreation without baking container IPs into nginx.
-resolver 127.0.0.11 valid=10s ipv6=off;
+resolver ${NGINX_RESOLVER} valid=10s ipv6=off;
 upstream gateway {
     zone gateway 64k;
-    server api-gateway:8080 resolve;
+    server api-gateway${UPSTREAM_SUFFIX}:8080 resolve;
 }
 upstream orders {
     zone orders 64k;
-    server order-service:8084 resolve;
+    server order-service${UPSTREAM_SUFFIX}:8084 resolve;
 }
 upstream inventory {
     zone inventory 64k;
-    server inventory-service:8081 resolve;
+    server inventory-service${UPSTREAM_SUFFIX}:8081 resolve;
 }
 server {
     listen 8080;
@@ -43,6 +43,8 @@ server {
         limit_except GET { deny all; }
         proxy_pass http://inventory/events/;
     }
+    location = /api/metrics/query       { limit_except GET { deny all; } set $prom ${PROMETHEUS_ADDR}; proxy_pass http://$prom/api/v1/query$is_args$args; }
+    location = /api/metrics/query_range { limit_except GET { deny all; } set $prom ${PROMETHEUS_ADDR}; proxy_pass http://$prom/api/v1/query_range$is_args$args; }
     location /api/ { return 404; }
     location /actuator { return 404; }
     location / {

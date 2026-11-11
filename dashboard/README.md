@@ -26,7 +26,7 @@ There is no configured ESLint target; strict TypeScript and Angular production c
 - `docker compose -f deploy/compose/docker-compose.yml up -d --build` from the repo root serves the
   production dashboard at http://localhost:4200. The healthcheck covers nginx, not backend readiness.
 - nginx proxies only POST `/api/orders`, GET `/api/orders/activity` and GET `/api/events/` to their
-  owning services. No Actuator proxy, CORS, authentication or router. Node is absent from the final image.
+  owning services, plus GET `/api/metrics/query` and `/api/metrics/query_range` to Prometheus. No Actuator proxy, CORS, authentication or router. Node is absent from the final image.
 - `cd dashboard && npx ng serve --proxy-config proxy.conf.json` requires host Node >=24.15, or run
   the same command in the approved Node container. Do not upgrade host Node as part of this work.
   The dev proxy expects host-running gateway/inventory/order at localhost 8080/8081/8084, or explicit
