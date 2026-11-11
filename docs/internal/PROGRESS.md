@@ -770,7 +770,7 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
   The M7 backend card had recorded a green root run (239 tests, 46 reports) on the same
   application code before this branch was cut.
 - NOT done / unverified: the dashboard has no Helm chart and is not deployed to kind (explicit
-  out of scope); there is no SSE, auth or router; `FAILED`, `RESERVED` and `REJECTED` rows were
+  out of scope; superseded in M8, see below); there is no SSE, auth or router; `FAILED`, `RESERVED` and `REJECTED` rows were
   only exercised against mocked responses, never produced by a live failure during the capture;
   no mobile, Firefox/Safari or accessibility audit; no performance, throughput or capacity claim,
   and no new database index, so the activity query can scan and sort the order table; the
@@ -879,7 +879,9 @@ since order-service start". NOT seen: a second pod appearing in the dashboard (e
 
 - Owner review, PR and merge of `milestone-8`; nothing pushed.
 - `scripts/kind-up.sh` change (dashboard build and load) was only syntax-checked (`bash -n`); it was not run end to end.
-  The renamed lowercase `dashboard_tag` variable was not re-run in a bring-up.
+  The renamed lowercase `dashboard_tag` variable was not re-run in a bring-up. `scripts/kind-up.sh` is used by the
+  destructive M3 acceptance `scripts/kind-acceptance.sh`, which has not been executed since that change; the owner must
+  decide whether to run that acceptance.
 - The demo GIF (`docs/design/demo/ticketrush-demo.gif`) and the README screenshot show the previous dashboard; the owner
   must re-record them from the new page.
 - The dot animation covers a whole path at once: the saga finishes faster than the 2 s activity poll, so dots show an
