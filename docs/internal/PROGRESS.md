@@ -800,23 +800,20 @@ Also: `docker compose -f deploy/compose/docker-compose.yml up` + one `curl` reac
 scripts/live-dashboard-acceptance.sh --with-compose
 ```
 
-Real output of the final passing run of LD1 to LD6, 2026-11-11, after the review fixes (run without
-`--with-compose`; `kubectl config current-context` read `docker-desktop` after the run, checked by the controller):
+Real output of the final run of LD1 to LD7, 2026-11-11, after the whole-branch review fixes (run with `--with-compose`;
+`kubectl config current-context` read `docker-desktop` after the run). Docker was restarted between the fix commits and this run
+and the kind node was started again with `docker start`; `scripts/observability-up.sh` was then re-run so the deployed dashboard
+matches the code. Two earlier attempts on the restarted cluster are not the record: one failed LD4 on the known k6
+`dropped_iterations` flake (1179 to 1199 iterations; its LD7 was cut off by my own shell timeout in the second attempt), the
+passing run below is the next run.
 
 ```text
-PASS LD1_unit - Tests  93 passed (93); production build ok
-PASS LD2_deployed - deploy/dashboard rolled out on kind-ticketrush, /healthz 200 via http://127.0.0.1:56001
+PASS LD1_unit - Tests  102 passed (102); production build ok
+PASS LD2_deployed - deploy/dashboard rolled out on kind-ticketrush, /healthz 200 via http://127.0.0.1:57513
 PASS LD3_proxy_boundaries - POST query 403; admin/tsdb, metrics/, querymore, actuator 404
-PASS LD4_live_queries - all 8 queries succeeded non-empty during 60s at 20 orders/s; ordersRate=12.4; readyPods>=1 for inventory and payment; k6 ok
+PASS LD4_live_queries - all 8 queries succeeded non-empty during 60s at 20 orders/s; ordersRate=10.08; readyPods>=1 for inventory and payment; k6 ok
 PASS LD5_reads - stock(concert-1)=999, activity 200
-PASS LD6_invariant - 1221 orders (k6 iterations=1201, accepted=1201) settled, none duplicated; load events: confirmed 900 of 900 tickets, remaining+sold=300 each, never negative; concert-1 stock=999 >= 0
-SKIP LD7_compose_still_passes - run with --with-compose (resets the Compose Postgres volume)
-ALL LIVE DASHBOARD CHECKS PASSED
-```
-
-LD7 from the previous run (`--with-compose`, before the review fixes, same kind cluster running), 2026-11-11:
-
-```text
+PASS LD6_invariant - 1220 orders (k6 iterations=1200, accepted=1200) settled, none duplicated; load events: confirmed 900 of 900 tickets, remaining+sold=300 each, never negative; concert-1 stock=999 >= 0
 PASS LD7_compose_still_passes - ALL M7 ACCEPTANCE CHECKS PASSED
 ALL LIVE DASHBOARD CHECKS PASSED
 ```
