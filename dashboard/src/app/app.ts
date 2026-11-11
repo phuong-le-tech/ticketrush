@@ -21,11 +21,11 @@ import {
   switchMap,
   timeout,
 } from 'rxjs';
-import { Chapter, current } from './chapter';
+import { Chapter } from './chapter';
 import { TimeSeriesChart } from './chart';
 import { RecentOrder } from './flow';
 import { SystemMap } from './system-map';
-import { MetricsStore, Sample } from './metrics';
+import { FLASH_MS, MetricsStore, Sample, current } from './metrics';
 
 const POLL_INTERVAL_MS = 2000;
 const READ_TIMEOUT_MS = 8000;
@@ -36,9 +36,8 @@ const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 4;
 const DASH = '-';
 const STOCK_HISTORY_MAX = 150; // 5 minutes of 2s polls
-const FLASH_MS = 600;
 const PARTITIONS = 12;
-const TOPICS = ['orders.requested', 'tickets.reserved'];
+const LAG_TOPICS = ['orders.requested', 'tickets.reserved'];
 const SERVICES = ['inventory-service', 'payment-service'];
 // Mirror autoscaling.maxReplicas and autoscaling.lagThreshold in deploy/helm/ticketrush/values.yaml.
 const MAX_REPLICAS = 2;
@@ -131,7 +130,7 @@ export class App implements OnInit {
     failed: this.outcomeCount('FAILED'),
   }));
 
-  private readonly lagAll = computed(() =>
+  protected readonly lagAll = computed(() =>
     this.metrics
       .series('lagByGroup')()
       .map((s) => ({
@@ -140,7 +139,6 @@ export class App implements OnInit {
         points: s.points,
       })),
   );
-  protected readonly lagSeries = this.lagAll;
   protected readonly inventoryLag = computed(() => this.lagAll().filter((s) => s.emphasis));
   protected readonly totalLag = computed(() => {
     const values = current(this.metrics.series('lagByGroup')())
@@ -150,7 +148,7 @@ export class App implements OnInit {
   });
   protected readonly partitions = computed(() => {
     const fresh = current(this.metrics.series('partitionLag')());
-    return TOPICS.map((topic) => ({
+    return LAG_TOPICS.map((topic) => ({
       topic,
       squares: Array.from({ length: PARTITIONS }, (_, partition) => {
         const lags = fresh

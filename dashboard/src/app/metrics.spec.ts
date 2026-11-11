@@ -7,7 +7,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MetricsStore, QUERIES, QueryId, parseMatrix, parseVector } from './metrics';
+import { MetricsStore, QUERIES, QueryId, current, parseMatrix, parseVector } from './metrics';
 
 const IDS = Object.keys(QUERIES) as QueryId[];
 const T0 = 1794400000;
@@ -245,5 +245,28 @@ describe('MetricsStore', () => {
       expect(r.request.params.get('step')).toBe('5');
     }
     reqs.forEach((r) => r.flush(matrix([])));
+  });
+});
+
+describe('current', () => {
+  const T = 1_000_000;
+  it('a pod series whose newest point is older than 15s renders as absent, not as its old count', () => {
+    const pods = [
+      { labels: { job: 'inventory-service' }, points: [{ t: T, v: 2 }] },
+      { labels: { job: 'payment-service' }, points: [{ t: T - 15001, v: 1 }] },
+    ];
+    expect(current(pods)).toEqual([{ labels: { job: 'inventory-service' }, v: 2 }]);
+  });
+
+  it('keeps a series exactly 15s behind the newest and passes null through', () => {
+    const all = [
+      { labels: { a: '1' }, points: [{ t: T, v: null }] },
+      { labels: { a: '2' }, points: [{ t: T - 15000, v: 3 }] },
+    ];
+    expect(current(all).map((c) => c.v)).toEqual([null, 3]);
+  });
+
+  it('is empty for no data', () => {
+    expect(current([])).toEqual([]);
   });
 });

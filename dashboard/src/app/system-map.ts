@@ -11,9 +11,8 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { current } from './chapter';
 import { Dot, RecentOrder, Stage, capDots, transitions } from './flow';
-import { MetricsStore } from './metrics';
+import { FLASH_MS, MetricsStore, current } from './metrics';
 
 const H = 420;
 const NODE_W = 152;
@@ -24,7 +23,6 @@ const PILL_BOTTOM = 44; // above the edge line; node tops are 32px above it
 const MARGIN = 16;
 const MAX_DOTS = 40;
 const EDGE_MS = 600;
-const FLASH_MS = 600;
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
 const LINE_Y = Math.round(H * 0.45);
 const SAT_Y = LINE_Y + 130;
@@ -50,7 +48,7 @@ const SPECS: Spec[] = [
   { stage: 'order', label: 'order-service', consumer: 'order-service' },
   { stage: 'notification', label: 'notification-service', consumer: 'notification-service' },
 ];
-const TOPICS = ['orders.requested', 'tickets.reserved', 'payments.result', 'orders.confirmed'];
+const MAP_TOPICS = ['orders.requested', 'tickets.reserved', 'payments.result', 'orders.confirmed'];
 // Redis, the fake provider and Postgres hang under inventory, payment and order.
 const SATELLITES = [
   { label: 'Redis', at: 2 },
@@ -138,6 +136,7 @@ function rate(v: number | null | undefined): string {
     <p class="legend">
       <span class="key"><i class="swatch"></i>Background orders</span>
       <span class="key"><i class="swatch mine"></i>Your order</span>
+      <span class="key note">One dot = one order whose status changed, polled every 2 s</span>
     </p>
   `,
 })
@@ -229,7 +228,7 @@ export class SystemMap {
       y2: SAT_Y - SAT_H / 2,
       dashed: true,
     }));
-    const ticks = TOPICS.map((_, i) => ({
+    const ticks = MAP_TOPICS.map((_, i) => ({
       x1: (xs[i + 1] + xs[i + 2]) / 2,
       y1: LINE_Y - PILL_BOTTOM,
       x2: (xs[i + 1] + xs[i + 2]) / 2,
@@ -241,7 +240,7 @@ export class SystemMap {
 
   protected readonly pills = computed(() => {
     const xs = this.xs();
-    const on = TOPICS.map((text, i) => ({
+    const on = MAP_TOPICS.map((text, i) => ({
       text,
       x: (xs[i + 1] + xs[i + 2]) / 2,
       y: LINE_Y - PILL_BOTTOM - 10,

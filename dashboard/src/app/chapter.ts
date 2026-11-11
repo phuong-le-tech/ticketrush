@@ -1,23 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { Series, SourceState } from './metrics';
-
-const FRESH_MS = 15000;
-
-export interface Current {
-  labels: Record<string, string>;
-  v: number | null;
-}
-
-// The store keeps the old points of a series that vanished from a poll. A figure may only use a
-// series whose newest point is within 15s of the newest point of the query; the rest is absent.
-export function current(all: Series[]): Current[] {
-  const newest = Math.max(0, ...all.flatMap((s) => s.points.map((p) => p.t)));
-  return all.flatMap((s) => {
-    const last = s.points.at(-1);
-    return last && last.t >= newest - FRESH_MS ? [{ labels: s.labels, v: last.v }] : [];
-  });
-}
+import { SourceState } from './metrics';
 
 @Component({
   selector: 'tr-chapter',

@@ -346,6 +346,13 @@ describe('M7 dashboard HTTP and user interactions', () => {
     }
   });
 
+  it('partition squares are announced as images', () => {
+    answerBackfill({});
+    const rows = root.querySelectorAll('.squares[aria-label]');
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((r) => expect(r.getAttribute('role')).toBe('img'));
+  });
+
   describe('metrics provenance', () => {
     const outcomesNote = () => root.querySelector('#outcomes-note')?.textContent?.trim();
     const topBar = () => root.querySelector('#metrics-status')?.textContent?.trim();

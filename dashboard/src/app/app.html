@@ -112,7 +112,7 @@
           [staleSince]="metricsStaleSince()"
         >
           <div chart>
-            <tr-chart [series]="lagSeries()" unit="messages" />
+            <tr-chart [series]="lagAll()" unit="messages" />
             @for (row of partitions(); track row.topic) {
               <div
                 class="squares"

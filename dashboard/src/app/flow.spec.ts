@@ -52,7 +52,7 @@ describe('transitions', () => {
     ]);
   });
   it('a failed payment stops at the order node', () =>
-    expect(transitions(seen('a', 'RESERVED'), seen('a', 'PAYMENT_FAILED'), null)[0].path).toEqual([
+    expect(transitions(seen('a', 'RESERVED'), seen('a', 'FAILED'), null)[0].path).toEqual([
       'payment',
       'order',
     ]));

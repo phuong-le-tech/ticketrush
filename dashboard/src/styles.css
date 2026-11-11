@@ -46,10 +46,6 @@ body {
   color: var(--fg);
   font: 400 15px/24px var(--font-sans);
 }
-.mono {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
 button,
 input {
   font: inherit;

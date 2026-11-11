@@ -33,6 +33,11 @@ describe('SystemMap', () => {
     expect(rates.every((r) => r === '-')).toBe(true);
   });
 
+  it('discloses that dots are inferred from polled status changes', () => {
+    const text = (render(null).nativeElement as HTMLElement).querySelector('.legend')?.textContent;
+    expect(text).toContain('One dot = one order whose status changed, polled every 2 s');
+  });
+
   it('renders the five real topic names', () => {
     const text = (render(null).nativeElement as HTMLElement).textContent ?? '';
     for (const t of [

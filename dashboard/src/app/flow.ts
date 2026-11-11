@@ -24,9 +24,7 @@ export const PATH_FOR_STATUS: Record<string, Stage[]> = {
   RESERVED: ['payment'],
   CONFIRMED: ['notification'],
   REJECTED: ['rejected'],
-  PAYMENT_FAILED: ['order'],
   FAILED: ['order'],
-  TIMEOUT: ['order'],
 };
 
 const MAIN: Stage[] = ['gateway', 'inventory', 'payment', 'order', 'notification'];

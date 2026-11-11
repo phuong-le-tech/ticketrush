@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { Chapter, current } from './chapter';
+import { Chapter } from './chapter';
 import { SourceState } from './metrics';
 
 @Component({
@@ -60,28 +60,5 @@ describe('Chapter', () => {
     const root = render('loading');
     expect(root.querySelector('#projected-figure')).toBeNull();
     expect(root.querySelector('.dash')?.textContent?.trim()).toBe('-');
-  });
-});
-
-describe('current', () => {
-  const T = 1_000_000;
-  it('a pod series whose newest point is older than 15s renders as absent, not as its old count', () => {
-    const pods = [
-      { labels: { job: 'inventory-service' }, points: [{ t: T, v: 2 }] },
-      { labels: { job: 'payment-service' }, points: [{ t: T - 15001, v: 1 }] },
-    ];
-    expect(current(pods)).toEqual([{ labels: { job: 'inventory-service' }, v: 2 }]);
-  });
-
-  it('keeps a series exactly 15s behind the newest and passes null through', () => {
-    const all = [
-      { labels: { a: '1' }, points: [{ t: T, v: null }] },
-      { labels: { a: '2' }, points: [{ t: T - 15000, v: 3 }] },
-    ];
-    expect(current(all).map((c) => c.v)).toEqual([null, 3]);
-  });
-
-  it('is empty for no data', () => {
-    expect(current([])).toEqual([]);
   });
 });
