@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  overflow-x: auto;
+}
+svg {
+  display: block;
+}
+.ground {
+  fill: var(--surface);
+}
+.edge {
+  stroke: var(--hairline);
+}
+.edge.dashed {
+  stroke-dasharray: 4 4;
+}
+.node rect {
+  fill: var(--raised);
+  stroke: var(--hairline);
+}
+.node.flash rect {
+  stroke: var(--accent);
+  animation: flash var(--t-move) var(--ease-out);
+}
+.node.flash.bad rect {
+  stroke: var(--bad);
+}
+@keyframes flash {
+  from {
+    opacity: 0.4;
+  }
+}
+text {
+  font: 400 12px var(--font-mono);
+  letter-spacing: 0.2px;
+}
+.name,
+.topic {
+  fill: var(--fg);
+}
+.rate {
+  fill: var(--fg-2);
+}
+.topic {
+  fill: var(--fg-2);
+}
+.pill {
+  fill: var(--surface);
+  stroke: var(--hairline);
+}
+.legend {
+  display: flex;
+  gap: 24px;
+  margin: 12px 0 0;
+  color: var(--fg-2);
+  font-size: 13px;
+}
+.key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.swatch {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--fg-3);
+}
+.swatch.mine {
+  background: var(--accent);
+}

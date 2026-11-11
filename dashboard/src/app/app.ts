@@ -23,6 +23,8 @@ import {
 } from 'rxjs';
 import { Chapter, current } from './chapter';
 import { TimeSeriesChart } from './chart';
+import { RecentOrder } from './flow';
+import { SystemMap } from './system-map';
 import { MetricsStore, Sample } from './metrics';
 
 const POLL_INTERVAL_MS = 2000;
@@ -51,18 +53,6 @@ const LUA_SNIPPET = [
   '...',
   "redis.call('HINCRBY', KEYS[1], 'stock', -quantity)",
 ].join('\n');
-
-interface RecentOrder {
-  orderId: string;
-  eventId: string;
-  quantity: number;
-  status: string;
-  failureReason: string | null;
-  amountCents: number | null;
-  currency: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface Activity {
   windowSeconds: number;
@@ -98,7 +88,7 @@ function customerIdentity(): string {
 }
 
 @Component({
-  imports: [DatePipe, Chapter, TimeSeriesChart],
+  imports: [DatePipe, Chapter, SystemMap, TimeSeriesChart],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
@@ -112,6 +102,7 @@ export class App implements OnInit {
   protected readonly quantity = signal(1);
   protected readonly stock = signal<number | null>(null);
   protected readonly activity = signal<Activity | null>(null);
+  protected readonly lastOrderId = signal<string | null>(null);
   protected readonly stockStale = signal(false);
   protected readonly activityStale = signal(false);
   protected readonly stale = computed(() => this.stockStale() || this.activityStale());
@@ -371,6 +362,7 @@ export class App implements OnInit {
           this.pending.set(false);
           if (response.status === 202) {
             this.attempt.set(null);
+            this.lastOrderId.set(response.body?.orderId ?? null);
             this.buyMessage.set(
               `Order ${response.body?.orderId ?? ''} accepted. Follow its saga state below; it is not yet confirmed.`,
             );

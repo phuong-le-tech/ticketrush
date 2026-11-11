@@ -56,11 +56,8 @@ footer {
   margin-top: 8px;
   color: var(--fg-2);
 }
-.map-placeholder {
-  min-height: 420px;
+tr-system-map {
   margin-top: 32px;
-  background: var(--surface);
-  border-radius: 6px;
 }
 .layout {
   display: grid;
