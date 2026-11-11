@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>TicketRush | Ticket operations</title>
+<style>
+:root {
+ color-scheme:dark;
+ --bg:#0c111c; --surface:#101722; --raised:#202936; --fg:#eef6ff;
+ --muted:#b1bfce; --border:#303b49; --accent:#0ea5e9; --warning:#f5bf63; --danger:#ff9a94;
+ --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px;
+}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 'IBM Plex Sans','Segoe UI',Helvetica,sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,p{margin:0}h1{font-size:32px;line-height:1.2;font-weight:600;letter-spacing:-.02em}h2{font-size:16px;font-weight:600;letter-spacing:0}
+button,input,select{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-height:44px}input,select{width:100%;padding:8px 12px}button{padding:8px 20px;font-weight:600;letter-spacing:.02em;cursor:pointer}button:hover,select:hover{background:var(--raised)}input:hover{border-color:var(--muted)}button:disabled,input:disabled{opacity:.6;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}.primary:hover{background:oklch(from var(--accent) calc(l + .08) c h);color:var(--bg)}.primary:active{background:oklch(from var(--accent) calc(l + .04) c h);color:var(--bg)}
+.shell{width:100%;max-width:1680px;margin:auto;padding:0 40px 24px}.topbar{height:72px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:16px}.brand{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:600;letter-spacing:-.02em}.mark{display:grid;place-items:center;width:32px;height:32px;background:var(--fg);color:var(--bg);border-radius:6px}.mark svg{width:22px;height:22px}.version,.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase}.version{border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--muted)}.muted,.helper,.top-note{color:var(--muted)}.helper,.top-note{font-size:13px;letter-spacing:.01em}.top-note{display:flex;gap:24px}.page-head{padding:24px 0 20px;display:flex;justify-content:space-between;align-items:center;gap:24px}.subtitle{margin-top:8px;color:var(--muted)}.page-label{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}.notice{border-radius:6px;background:var(--raised);padding:12px 16px;font-size:13px;letter-spacing:.01em}.notice strong{font-weight:600}
+.controls{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0}.freshness{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;letter-spacing:.01em}.dot{width:6px;height:6px;display:inline-block;flex:none;border-radius:50%;background:currentColor}.fresh .dot{animation:poll-pulse 2s cubic-bezier(.2,0,0,1) infinite}.stale{color:var(--warning)}.state-control{display:flex;align-items:center;gap:12px;font-size:13px}.state-control label{margin:0;white-space:nowrap;color:var(--muted)}.state-control select{width:160px}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:0}.metric{padding:20px 24px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px}.event{font:12px ui-monospace,monospace;color:var(--muted);max-width:65%;overflow-wrap:anywhere}.eyebrow{color:var(--muted)}.metric-main{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:16px}.metric-value{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.number{font:500 42px/1.1 ui-monospace,monospace;letter-spacing:-.03em;display:inline-block}.unit{color:var(--muted);font-size:13px}.metric-detail{margin-top:8px;color:var(--muted);font-size:13px}.trend{width:220px;flex-shrink:0;color:var(--muted)}.trend svg{width:100%;height:48px;display:block;overflow:visible}.trend-label{display:flex;justify-content:space-between;gap:8px;font-size:12px;letter-spacing:.01em;margin-top:8px}.metric-foot{margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:16px;color:var(--muted);font-size:12px;letter-spacing:.01em}
+.buy-panel{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(480px,1.7fr);gap:32px;padding:20px 24px;margin-top:16px}.buy-copy p{margin-top:8px;max-width:38ch}form{display:grid;grid-template-columns:minmax(160px,1fr) 96px 112px;align-items:end;gap:8px 12px}label{display:block;font-size:13px;font-weight:500;letter-spacing:.02em;margin-bottom:8px}.form-note,.retry-note{grid-column:1/-1;font-size:12px;letter-spacing:.01em;color:var(--muted)}.retry-note{max-width:85ch}.error{color:var(--danger)}
+.saga{margin-top:24px;overflow:hidden}.table-head{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}.table-head p{margin-top:4px}.count{font:12px ui-monospace,monospace;color:var(--muted);white-space:nowrap}.table-scroll{overflow-x:auto;max-width:100%;scrollbar-color:var(--border) var(--surface)}table{width:100%;min-width:1080px;border-collapse:collapse;text-align:left;font-size:13px;letter-spacing:.01em}th{background:var(--raised);color:var(--muted);font-size:12px;font-weight:500;letter-spacing:.02em;padding:12px 16px;white-space:nowrap}td{padding:16px;border-bottom:1px solid var(--border);white-space:nowrap}th:first-child,td:first-child{padding-left:24px}th:last-child,td:last-child{padding-right:24px}td:first-child,td.numeric,time,.reason{font-family:ui-monospace,monospace}time,.reason{font-size:12px}.numeric{text-align:right}.status{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-weight:500;letter-spacing:.06em;color:var(--muted);transition:color 160ms cubic-bezier(.2,0,0,1),background-color 160ms cubic-bezier(.2,0,0,1),border-color 160ms cubic-bezier(.2,0,0,1)}.status.pending,.status.reserved{color:var(--warning);background:oklch(from var(--warning) l c h / .06);border-color:oklch(from var(--warning) l c h / .24)}.status.confirmed{color:var(--fg);background:var(--raised)}.status.failed,.status.rejected{color:var(--danger);background:oklch(from var(--danger) l c h / .06);border-color:oklch(from var(--danger) l c h / .24)}.table-footer{display:flex;justify-content:space-between;gap:16px;padding:12px 24px;color:var(--muted);font-size:12px;letter-spacing:.01em}.state-message{padding:32px 24px;border-top:1px solid var(--border)}.state-message p{margin:8px 0 16px}.state-message h2{font-size:16px}footer{display:flex;justify-content:space-between;gap:16px;padding-top:20px;font-size:12px;color:var(--muted);letter-spacing:.01em}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
+.value-change{animation:value-update 180ms cubic-bezier(.2,0,0,1)}.new-row{background:oklch(from var(--warning) l c h / .08)}
+@keyframes value-update{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}@keyframes poll-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+@media(max-width:1100px){.shell{padding:0 24px 24px}.trend{width:150px}.metric-main{gap:12px}.metric-value{gap:8px}.buy-panel{grid-template-columns:1fr;gap:16px}.buy-copy p{max-width:100%}}
+@media(max-width:700px){.shell{padding:0 16px 24px}.topbar{height:64px}.top-note,.page-label{display:none}.page-head{padding:24px 0 16px}h1{font-size:30px}.controls{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.metric{padding:20px}.metric-main{gap:16px;align-items:stretch;flex-direction:column}.trend{width:100%;max-width:none}.metric-foot{flex-wrap:wrap}.buy-panel{padding:20px}form{grid-template-columns:minmax(0,1fr) 80px}form button{grid-column:1/-1}.table-head{padding:20px;align-items:flex-start}.table-head p{max-width:27ch}.table-footer,footer{flex-direction:column;gap:8px}.notice{line-height:1.6}}
+@media(prefers-reduced-motion:reduce){.value-change,.fresh .dot{animation:none!important}.status{transition:none!important}.new-row{background:transparent!important}}
+</style>
+</head>
+<body>
+<div class="shell" data-od-id="dashboard">
+<header class="topbar" data-od-id="header"><div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v5a2 2 0 0 0 0 4v5H4v-5a2 2 0 0 0 0-4V5Z"/><path d="M15 5v3m0 3v2m0 3v3"/></svg></span>TicketRush <span class="version">M7</span></div><div class="top-note"><span>Distributed systems portfolio</span><span>Local operations / Demo</span></div></header>
+<main>
+<div class="page-head" data-od-id="page-heading"><div><h1 data-od-id="title">Ticket operations</h1><p class="subtitle">Stock, throughput and the order saga in one place.</p></div><span class="page-label">Flash-sale operations</span></div>
+<aside class="notice" data-od-id="demo-notice"><strong>Illustrative data and interactions.</strong> No reservations or payments are made; accepted is not confirmed.</aside>
+<div class="controls" data-od-id="demo-controls"><p class="freshness fresh" id="freshness" role="status"><span class="dot" aria-hidden="true"></span><span id="freshness-text">Fresh sample / Polling every 2 seconds</span></p><div class="state-control"><label for="demo-state">Demo state</label><select id="demo-state" data-od-id="demo-state"><option value="ready">Ready</option><option value="stale">Stale</option><option value="loading">Loading</option><option value="empty">Empty orders</option><option value="error">Read error</option></select></div></div>
+<div class="summary">
+<section class="panel metric" data-od-id="stock-zone" aria-labelledby="stock-heading"><div class="panel-head"><h2 id="stock-heading" data-od-id="stock-heading">Stock</h2><span id="event-label" class="event">concert-1</span></div><div class="metric-main"><div><div class="metric-value"><strong class="number" id="stock-value">248</strong><span class="unit">tickets available</span></div><p class="metric-detail">Latest illustrative stock</p></div><div class="trend"><svg id="stock-trend" viewBox="0 0 220 48" role="img" aria-label="Stock history from successful page polls"></svg><div class="trend-label"><span>sampled by this page</span><span id="stock-trend-count">0 / 30 polls</span></div></div></div><div class="metric-foot"><span>Selected event</span><span>History resets on event change or reload</span></div></section>
+<section class="panel metric" data-od-id="throughput-zone" aria-labelledby="throughput-heading"><div class="panel-head"><h2 id="throughput-heading" data-od-id="throughput-heading">Orders per second</h2><span class="eyebrow">All events</span></div><div class="metric-main"><div><div class="metric-value"><strong class="number" id="rate-value">3.2</strong><span class="unit">orders / sec</span></div><p class="metric-detail" id="rate-formula">32 orders / 10 seconds</p></div><div class="trend"><svg id="rate-trend" viewBox="0 0 220 48" role="img" aria-label="Order rate history from successful page polls"></svg><div class="trend-label"><span>sampled by this page</span><span id="rate-trend-count">0 / 30 polls</span></div></div></div><div class="metric-foot"><span>10-second activity window</span><span>Illustrative polls / Every 2 seconds</span></div></section>
+</div>
+<section class="panel buy-panel" data-od-id="buy-zone" aria-labelledby="buy-heading"><div class="buy-copy"><h2 id="buy-heading" data-od-id="buy-heading">Buy tickets</h2><p class="helper">One purchase at a time. Try a failed request, then retry with the original details.</p></div><form id="buy-form" data-od-id="buy-form"><div><label for="event-id">Event id</label><input id="event-id" value="concert-1" maxlength="80" required autocomplete="off" data-od-id="event-input"></div><div><label for="quantity">Quantity</label><input id="quantity" type="number" min="1" max="4" step="1" required value="1" data-od-id="quantity-input"></div><button id="buy-button" class="primary" type="submit" data-od-id="buy-button">Buy</button><p id="buy-message" class="form-note" role="status">1 to 4 tickets per order. No charge will be made.</p><p class="retry-note">Retry preserves the request, event and quantity. Fields stay locked until acknowledged.</p></form></section>
+<section class="panel saga" data-od-id="orders-zone" aria-labelledby="orders-heading"><div class="table-head"><div><h2 id="orders-heading" data-od-id="orders-heading">Recent orders</h2><p class="helper">All events, newest first. Illustrative saga records.</p></div><span class="count" id="order-count">5 orders</span></div><div id="table-container" class="table-scroll" tabindex="0" role="region" aria-label="Recent orders, scroll horizontally on narrow screens" data-od-id="orders-scroll"><table data-od-id="orders-table"><caption class="sr-only">Illustrative orders. All dates are 09 November 2026 and all times are UTC.</caption><thead><tr><th scope="col">Order id</th><th scope="col">Event id</th><th class="numeric" scope="col">Qty</th><th scope="col">Status</th><th class="numeric" scope="col">Amount</th><th scope="col">Failure reason</th><th scope="col">Created</th><th scope="col">Updated</th></tr></thead><tbody id="tbody"></tbody></table></div><div id="state-message" class="state-message" role="status" hidden data-od-id="orders-state"><h2 id="state-title" data-od-id="state-title"></h2><p id="state-description" class="helper"></p><button id="reload-button" type="button" hidden data-od-id="reload-button">Retry demo read</button></div><div class="table-footer"><span>09 Nov 2026 / All timestamps UTC</span><span>Pending and reserved orders are still in progress</span></div></section>
+</main><footer data-od-id="footer"><span>TicketRush / Distributed order saga</span><span>Standalone design reference / No backend connection</span></footer>
+</div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let sample = {ordersInWindow:32,windowSeconds:10,stock:248};
+const ordersPerSecond = data => (data.ordersInWindow / data.windowSeconds).toFixed(1);
+let demoState = 'ready';
+let attempt = null;
+let pending = false;
+let attemptSequence = 0;
+const stateCopy = {
+ loading:['Loading sample orders','Demonstration of a read in progress. No API request is made.'],
+ empty:['No sample orders yet','Orders will appear here after submission in the real application.'],
+ error:['Sample read failed','Simulated read error. Previous sample values are unavailable; retry the demo read.']
+};
+const reducedMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : {matches:false};
+let stockHistory = [], rateHistory = [], previousIds = null, poll = 0;
+let previousStock = null, previousRate = null, rowSequence = 0;
+const baselineOrders = [
+ {orderId:'a17c9f02-418c-4f8e-8e44-000000001042',eventId:'concert-1',quantity:2,status:'PENDING',amount:'EUR 100.00',failureReason:null,created:'14:32:06',updated:'14:32:07'},
+ {orderId:'b28d0a13-418c-4f8e-8e44-000000001041',eventId:'concert-1',quantity:1,status:'RESERVED',amount:'EUR 50.00',failureReason:null,created:'14:32:03',updated:'14:32:05'},
+ {orderId:'c39e1b24-418c-4f8e-8e44-000000001040',eventId:'concert-1',quantity:1,status:'CONFIRMED',amount:'EUR 50.00',failureReason:null,created:'14:31:58',updated:'14:32:00'},
+ {orderId:'d40f2c35-418c-4f8e-8e44-000000001039',eventId:'concert-1',quantity:3,status:'FAILED',amount:'EUR 150.00',failureReason:'PAYMENT_FAILED',created:'14:31:50',updated:'14:31:53'},
+ {orderId:'e51a3d46-418c-4f8e-8e44-000000001038',eventId:'concert-1',quantity:4,status:'REJECTED',amount:'EUR 200.00',failureReason:'INSUFFICIENT_STOCK',created:'14:31:42',updated:'14:31:42'}
+];
+let orders = baselineOrders.slice();
+const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function metric(id, value, previous) {
+ const el = $(id);
+ el.textContent = value;
+ el.classList.remove('value-change');
+ if (!reducedMotion.matches && previous !== null && previous !== value) {
+  if (typeof el.offsetWidth === 'number') void el.offsetWidth;
+  el.classList.add('value-change');
+ }
+}
+function sparkline(id, values) {
+ const label = values.length + ' / 30 polls';
+ $(id+'-count').textContent = label;
+ if (!values.length) {$(id).innerHTML = '<text x="0" y="32" fill="currentColor" font-size="12">Awaiting successful polls</text>'; return;}
+ const min = Math.min(...values), max = Math.max(...values), range = max-min || 1;
+ const points = values.map((value,i) => [values.length === 1 ? 4 : 4+i*212/(values.length-1), 42-(value-min)*30/range]);
+ const line = points.map(point => point.join(',')).join(' ');
+ $(id).innerHTML = values.length === 1 ? '<circle cx="4" cy="27" r="3" fill="currentColor"/>' : '<polygon points="4,48 '+line+' 216,48" fill="currentColor" opacity=".08"/><polyline points="'+line+'" fill="none" stroke="currentColor" stroke-width="1.6"/>';
+}
+function renderOrders(success) {
+ const ids = orders.map(order => order.orderId);
+ const markup = orders.map(order => {
+  const fresh = success && previousIds !== null && previousIds.indexOf(order.orderId) < 0 && !reducedMotion.matches;
+  const state = order.status.toLowerCase();
+  return '<tr id="row-'+escapeHtml(order.orderId)+'" data-od-id="order-'+escapeHtml(order.orderId)+'"'+(fresh?' class="new-row"':'')+'><td><span role="group" title="'+escapeHtml(order.orderId)+'" aria-label="'+escapeHtml(order.orderId)+'">'+escapeHtml(order.orderId.slice(0,8))+'</span></td><td>'+escapeHtml(order.eventId)+'</td><td class="numeric">'+order.quantity+'</td><td><span id="badge-'+escapeHtml(order.orderId)+'" class="status '+state+'"><span class="dot" aria-hidden="true"></span><span id="status-'+escapeHtml(order.orderId)+'">'+order.status+'</span></span></td><td class="numeric">'+order.amount+'</td><td>'+ (order.failureReason ? '<span class="reason">'+order.failureReason+'</span>' : '<span class="muted" aria-hidden="true">-</span><span class="sr-only">None</span>')+'</td><td><time datetime="2026-11-09T'+order.created+'Z">'+order.created+' UTC</time></td><td><time datetime="2026-11-09T'+order.updated+'Z">'+order.updated+' UTC</time></td></tr>';
+ });
+ const body = $('tbody');
+ if (typeof body.insertAdjacentHTML === 'function' && body.children && body.children.length) {
+  Array.from(body.children).forEach(row => {
+   if (ids.indexOf(row.id.slice(4)) < 0) row.remove();
+  });
+  orders.slice().reverse().forEach((order,reverseIndex) => {
+   let row = $('row-'+order.orderId);
+   if (!row) {
+    body.insertAdjacentHTML('afterbegin',markup[orders.length-1-reverseIndex]);
+    row = $('row-'+order.orderId);
+   }
+   row.classList.remove('new-row');
+   if (success && previousIds !== null && previousIds.indexOf(order.orderId) < 0 && !reducedMotion.matches) row.classList.add('new-row');
+   $('badge-'+order.orderId).setAttribute('class','status '+order.status.toLowerCase());
+   $('status-'+order.orderId).textContent = order.status;
+  });
+ } else body.innerHTML = markup.join('');
+ if (success) previousIds = ids;
+ $('order-count').textContent = orders.length+' '+(orders.length === 1 ? 'order' : 'orders');
+}
+function renderState() {
+ const unavailable = demoState === 'loading' || demoState === 'error';
+ const stock = unavailable ? 'Unavailable' : sample.stock;
+ const rate = unavailable ? 'Unavailable' : ordersPerSecond(sample);
+ metric('stock-value',stock,previousStock); metric('rate-value',rate,previousRate);
+ previousStock = stock; previousRate = rate;
+ $('stock-value').style.fontSize = unavailable ? '24px' : '';
+ $('rate-value').style.fontSize = unavailable ? '24px' : '';
+ $('rate-formula').textContent = unavailable ? 'Waiting for an illustrative window' : sample.ordersInWindow+' '+(sample.ordersInWindow === 1 ? 'order' : 'orders')+' / '+sample.windowSeconds+' seconds';
+ $('table-container').hidden = !!stateCopy[demoState];
+ $('state-message').hidden = !stateCopy[demoState];
+ $('reload-button').hidden = demoState !== 'error';
+ if (stateCopy[demoState]) {
+  $('state-title').textContent = stateCopy[demoState][0];
+  $('state-description').textContent = stateCopy[demoState][1];
+ }
+ $('freshness-text').textContent = demoState === 'stale' ? 'STALE / Last successful sample retained' : demoState === 'error' ? 'STALE / Illustrative read failed' : demoState === 'loading' ? 'Loading illustrative snapshot' : 'Fresh sample / Polling every 2 seconds';
+ $('freshness').classList.remove('fresh','stale');
+ $('freshness').classList.add(demoState === 'ready' || demoState === 'empty' ? 'fresh' : 'stale');
+ $('event-label').textContent = $('event-id').value.trim() || 'Enter an event';
+ $('order-count').textContent = demoState === 'empty' ? '0 orders' : unavailable ? 'Unavailable' : orders.length+' '+(orders.length === 1 ? 'order' : 'orders');
+}
+function resetHistory() {
+ stockHistory = []; rateHistory = []; previousIds = null; poll = 0;
+ $('stock-value').classList.remove('value-change'); $('rate-value').classList.remove('value-change');
+ sparkline('stock-trend',stockHistory); sparkline('rate-trend',rateHistory);
+}
+$('event-id').addEventListener('input', () => {
+ if (pending || attempt) return;
+ resetHistory(); renderState(); renderOrders(false);
+});
+function setPending(value) {
+ pending = value;
+ $('buy-button').disabled = value;
+ $('event-id').disabled = value || !!attempt;
+ $('quantity').disabled = value || !!attempt;
+ $('buy-form').setAttribute('aria-busy', String(value));
+ $('buy-button').textContent = value ? 'Pending...' : attempt ? 'Retry' : 'Buy';
+}
+$('demo-state').addEventListener('change', event => {demoState = event.target.value; if (demoState === 'ready') {sample = {ordersInWindow:32,windowSeconds:10,stock:248}; resetHistory();} renderState();});
+$('reload-button').addEventListener('click', () => {demoState = 'ready'; $('demo-state').value = 'ready'; renderState();});
+$('buy-form').addEventListener('submit', event => {
+ event.preventDefault();
+ if (pending) return;
+ if (!attempt) {
+  if (!$('buy-form').reportValidity()) return;
+  const eventId = $('event-id').value.trim();
+  const quantity = Number($('quantity').value);
+  if (!eventId || !Number.isInteger(quantity) || quantity < 1 || quantity > 4) {
+   $('buy-message').textContent = 'Enter an event id and a whole quantity from 1 to 4.';
+   $('buy-message').classList.add('error');
+   return;
+  }
+  attempt = {eventId,quantity,key:++attemptSequence,failed:false};
+ }
+ const retry = attempt.failed;
+ setPending(true);
+ $('buy-message').classList.remove('error');
+ $('buy-message').textContent = retry ? 'Retry pending (demo). Original event and quantity retained.' : 'Pending (demo). Simulating a network failure; no request is sent.';
+ setTimeout(() => {
+  if (!retry) {
+   attempt.failed = true;
+   setPending(false);
+   $('buy-message').classList.add('error');
+   $('buy-message').textContent = 'Simulated network failure. Retry with the same request. Fields are retained and locked.';
+  } else {
+   const completed = attempt;
+   attempt = null;
+   setPending(false);
+   $('buy-message').textContent = `Demo confirmed: ${completed.quantity} ticket${completed.quantity === 1 ? '' : 's'} for ${completed.eventId}. No tickets reserved or payment made. Sample table unchanged.`;
+  }
+ }, 1100);
+});
+// One illustrative poll owns sampling, row discovery, and value updates.
+setInterval(() => {
+ if (demoState !== 'ready') return;
+ poll++;
+ sample = {stock:248-(poll%9),ordersInWindow:32+(poll%5),windowSeconds:10};
+ if (poll%4 === 0) {
+  const seconds = 14*3600+32*60+8+(++rowSequence)*8;
+  const time = String(Math.floor(seconds/3600)%24).padStart(2,'0')+':'+String(Math.floor(seconds/60)%60).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+  const next = Object.assign({},baselineOrders[0],{orderId:'f'+String(rowSequence).padStart(7,'0')+'-418c-4f8e-8e44-000000001043',created:time,updated:time});
+  orders = [next].concat(orders).slice(0,8);
+ }
+ orders = orders.map((order,index) => index === 0 && poll%4 === 2 ? Object.assign({},order,{status:order.status === 'PENDING' ? 'RESERVED' : 'CONFIRMED'}) : order);
+ stockHistory.push(sample.stock); rateHistory.push(Number(ordersPerSecond(sample)));
+ stockHistory = stockHistory.slice(-30); rateHistory = rateHistory.slice(-30);
+ renderState(); renderOrders(true);
+ sparkline('stock-trend',stockHistory); sparkline('rate-trend',rateHistory);
+}, 2000);
+renderState(); renderOrders(true); resetHistory();
+// Initial rows establish the baseline without a highlight.
+previousIds = orders.map(order => order.orderId);
+</script>
+</body>
+</html>
