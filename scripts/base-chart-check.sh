@@ -148,6 +148,12 @@ check_M8_dashboard() {
         ($dep[] | .spec.template.spec as $p | $p.containers[0] as $c
           | (if ($c.securityContext.runAsUser // $p.securityContext.runAsUser) != 101 then "dashboard: must run as uid 101" else empty end),
             (if (($p.securityContext.runAsNonRoot // false) or ($c.securityContext.runAsNonRoot // false)) != true then "dashboard: runAsNonRoot must be true" else empty end),
+            (if $p.securityContext.seccompProfile.type != "RuntimeDefault" then "dashboard: seccompProfile must be RuntimeDefault" else empty end),
+            (if $p.automountServiceAccountToken != false then "dashboard: automountServiceAccountToken must be false" else empty end),
+            (if $c.readinessProbe.httpGet.path != "/healthz" then "dashboard: readiness probe path must be /healthz" else empty end),
+            (if $c.livenessProbe.httpGet.path != "/healthz" then "dashboard: liveness probe path must be /healthz" else empty end),
+            (if ($c.resources.requests.cpu // "") == "" or ($c.resources.requests.memory // "") == "" then "dashboard: cpu and memory requests are required" else empty end),
+            (if ($c.resources.limits.cpu // "") == "" or ($c.resources.limits.memory // "") == "" then "dashboard: cpu and memory limits are required" else empty end),
             ((["NGINX_RESOLVER", "UPSTREAM_SUFFIX", "PROMETHEUS_ADDR"][]) as $e
               | if ([$c.env[]? | select(.name == $e and (.value // "") != "")] | length) != 1 then "dashboard: env \($e) must be set" else empty end))
       ] | .[]' "$docs")
@@ -237,13 +243,15 @@ selftest() {
   expect_failure selftest_AC1_mutation_fails_topic_6_partitions check_AC1_topics \
     '(map(select(.kind == "KafkaTopic")) | .[0].metadata.name) as $n | map(if .kind == "KafkaTopic" and .metadata.name == $n then .spec.partitions = 6 else . end)'
   expect_failure selftest_AC2_mutation_fails_no_readiness_probe check_AC2_hardening \
-    '(map(select(.kind == "Deployment")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then del(.spec.template.spec.containers[0].readinessProbe) else . end)'
+    '(map(select(.kind == "Deployment" and .metadata.name != "dashboard")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then del(.spec.template.spec.containers[0].readinessProbe) else . end)'
   expect_failure selftest_AC2_mutation_fails_grace_30 check_AC2_hardening \
-    '(map(select(.kind == "Deployment")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then .spec.template.spec.terminationGracePeriodSeconds = 30 else . end)'
+    '(map(select(.kind == "Deployment" and .metadata.name != "dashboard")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then .spec.template.spec.terminationGracePeriodSeconds = 30 else . end)'
   expect_failure selftest_M8_dashboard_missing_env check_M8_dashboard \
     'map(if .kind == "Deployment" and .metadata.name == "dashboard" then .spec.template.spec.containers[0].env |= map(select(.name != "UPSTREAM_SUFFIX")) else . end)'
+  expect_failure selftest_M8_dashboard_no_readiness_probe check_M8_dashboard \
+    'map(if .kind == "Deployment" and .metadata.name == "dashboard" then del(.spec.template.spec.containers[0].readinessProbe) else . end)'
   expect_failure selftest_AC3_mutation_fails_literal_password check_AC3_no_plaintext \
-    '(map(select(.kind == "Deployment")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then .spec.template.spec.containers[0].env += [{"name": "DB_PASSWORD", "value": "hunter2-literal"}] else . end)'
+    '(map(select(.kind == "Deployment" and .metadata.name != "dashboard")) | .[0].metadata.name) as $n | map(if .kind == "Deployment" and .metadata.name == $n then .spec.template.spec.containers[0].env += [{"name": "DB_PASSWORD", "value": "hunter2-literal"}] else . end)'
   return $SELFTEST_FAILED
 }
 
