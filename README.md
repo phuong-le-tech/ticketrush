@@ -3,9 +3,10 @@
 A flash-sale ticketing platform built with Java 21, Spring Boot, Kafka (KRaft, Strimzi),
 PostgreSQL, Redis and Kubernetes. The invariant is no oversell, duplicate order or duplicate charge.
 
-**Status:** M6 is partially implemented and blocked on local kind/Docker runtime recovery. It is
-not accepted. See [verification and limitations](docs/PROGRESS.md),
-[spec](docs/SPEC.md) and [design decisions](docs/DESIGN.md). M7-M8 are not started.
+**Status:** M1-M7 are done and merged (M7 is the minimal Angular dashboard, see
+[dashboard/README.md](dashboard/README.md); run it with `scripts/m7-acceptance.sh`). M8 (portfolio
+polish) is not started. See [verification and limitations](docs/PROGRESS.md),
+[spec](docs/SPEC.md) and [design decisions](docs/DESIGN.md).
 
 ## Build and test
 
@@ -98,7 +99,7 @@ Prometheus CRDs. `scripts/m3-acceptance.sh` is destructive and replaces the clus
 while watching an M5 load test. The M5 bootstrap reuses the M3 image build/load and app chart
 pattern, adding pinned observability operators before the chart install.
 
-Full portfolio polish and the Angular UI remain future milestones.
+Full portfolio polish (M8) remains a future milestone.
 
 ## M6: project-local chaos experiments
 
