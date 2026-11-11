@@ -55,11 +55,56 @@ describe('SystemMap', () => {
     expect(el.querySelector('[data-stage="inventory"]')?.classList.contains('flash')).toBe(true);
   });
 
-  it('draws and removes a dot where the Web Animations API is missing', () => {
+  it('draws no dot where the Web Animations API is missing', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: false }));
     const fixture = render([]);
     fixture.componentRef.setInput('orders', [order('PENDING')]);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('.dot').length).toBe(0);
+  });
+
+  it('adds a dot, accent for mine, and removes it when the animation finishes', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    const animations: { onfinish?: () => void }[] = [];
+    Element.prototype.animate = (() => {
+      const a = {};
+      animations.push(a);
+      return a;
+    }) as unknown as typeof Element.prototype.animate;
+    try {
+      const fixture = render([]);
+      fixture.componentRef.setInput('mine', 'a');
+      fixture.componentRef.setInput('orders', [order('PENDING')]);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const dots = el.querySelectorAll('.dot.mine');
+      expect(dots.length).toBeGreaterThan(0);
+      expect((dots[0] as SVGElement).style.fill).toBe('var(--accent)');
+      animations.forEach((a) => a.onfinish?.());
+      expect(el.querySelectorAll('.dot').length).toBe(0);
+    } finally {
+      delete (Element.prototype as { animate?: unknown }).animate;
+    }
+  });
+
+  it('fits a 1344px host: svg as wide as the host, every node inside the margins', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private cb: (e: unknown[]) => void) {}
+        observe() {
+          this.cb([{ contentRect: { width: 1344 } }]);
+        }
+        disconnect() {}
+      },
+    );
+    const el: HTMLElement = render(null).nativeElement;
+    expect(el.querySelector('svg')?.getAttribute('width')).toBe('1344');
+    const rects = Array.from(el.querySelectorAll('[data-stage] rect'));
+    expect(rects.length).toBeGreaterThan(6);
+    for (const r of rects) {
+      expect(+r.getAttribute('x')! + +r.getAttribute('width')!).toBeLessThanOrEqual(1344 - 16);
+      expect(+r.getAttribute('x')!).toBeGreaterThanOrEqual(16);
+    }
   });
 });

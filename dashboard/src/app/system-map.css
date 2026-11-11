@@ -1,6 +1,5 @@
 :host {
   display: block;
-  overflow-x: auto;
 }
 svg {
   display: block;
@@ -34,9 +33,9 @@ text {
   font: 400 12px var(--font-mono);
   letter-spacing: 0.2px;
 }
-.name,
-.topic {
+.name {
   fill: var(--fg);
+  font-size: 13px;
 }
 .rate {
   fill: var(--fg-2);

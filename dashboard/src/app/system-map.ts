@@ -16,18 +16,20 @@ import { Dot, RecentOrder, Stage, capDots, transitions } from './flow';
 import { MetricsStore } from './metrics';
 
 const H = 420;
-const NODE_W = 120;
-const NODE_H = 56;
+const NODE_W = 152;
+const NODE_H = 64;
+const SAT_W = 120;
+const SAT_H = 44;
+const PILL_BOTTOM = 44; // above the edge line; node tops are 32px above it
 const MARGIN = 16;
 const MAX_DOTS = 40;
 const EDGE_MS = 600;
 const FLASH_MS = 600;
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
 const LINE_Y = Math.round(H * 0.45);
-const SAT_Y = LINE_Y + 140;
-const REJECTED_Y = LINE_Y - 120;
-// Room for the widest topic pill between two nodes; below this the map scrolls instead of overlapping.
-const MIN_W = 2 * MARGIN + 6 * NODE_W + 5 * 128;
+const SAT_Y = LINE_Y + 130;
+const REJECTED_Y = 40;
+const REJECTED_PILL_Y = 90; // clear of the pills above the main edges
 const TRAIL = [
   { delay: 0, opacity: 1 },
   { delay: 70, opacity: 0.5 },
@@ -77,7 +79,7 @@ function rate(v: number | null | undefined): string {
       [attr.aria-label]="aria"
     >
       <rect class="ground" x="0" y="0" [attr.width]="w()" [attr.height]="H" />
-      @for (e of edges(); track e.x1) {
+      @for (e of edges(); track $index) {
         <line
           class="edge"
           [attr.x1]="e.x1"
@@ -108,22 +110,24 @@ function rate(v: number | null | undefined): string {
           [attr.data-stage]="n.stage"
         >
           <rect
-            [attr.x]="n.x - 60"
+            [attr.x]="n.x - n.w / 2"
             [attr.y]="n.y - n.h / 2"
-            width="120"
+            [attr.width]="n.w"
             [attr.height]="n.h"
             rx="6"
           />
           <text
             class="name"
             [attr.x]="n.x"
-            [attr.y]="n.rate === null ? n.y + 4 : n.y - 5"
+            [attr.y]="n.rate === null ? n.y + 4 : n.y - 4"
+            [attr.textLength]="n.label.length > 17 ? 136 : null"
+            lengthAdjust="spacingAndGlyphs"
             text-anchor="middle"
           >
             {{ n.label }}
           </text>
           @if (n.rate !== null) {
-            <text class="rate" [attr.x]="n.x" [attr.y]="n.y + 14" text-anchor="middle">
+            <text class="rate" [attr.x]="n.x" [attr.y]="n.y + 16" text-anchor="middle">
               {{ n.rate }}
             </text>
           }
@@ -150,7 +154,7 @@ export class SystemMap {
   protected readonly flashes = signal<Record<string, boolean>>({});
   protected readonly H = H;
   protected readonly aria = ARIA;
-  protected readonly w = computed(() => Math.max(this.width(), MIN_W));
+  protected readonly w = computed(() => this.width());
 
   private readonly xs = computed(() => {
     const step = (this.w() - 2 * MARGIN - NODE_W) / 5;
@@ -177,16 +181,26 @@ export class SystemMap {
         label: s.label,
         x: xs[i],
         y: LINE_Y,
+        w: NODE_W,
         h: NODE_H,
         rate: s.stage === 'buyer' ? null : rateOf(s),
       })),
-      { stage: 'rejected' as const, label: 'rejected', x: xs[2], y: REJECTED_Y, h: 32, rate: null },
+      {
+        stage: 'rejected' as const,
+        label: 'rejected',
+        x: xs[2],
+        y: REJECTED_Y,
+        w: SAT_W,
+        h: 32,
+        rate: null,
+      },
       ...SATELLITES.map((s) => ({
         stage: s.label,
         label: s.label,
         x: xs[s.at],
         y: SAT_Y,
-        h: NODE_H,
+        w: SAT_W,
+        h: SAT_H,
         rate: null,
       })),
     ];
@@ -212,19 +226,30 @@ export class SystemMap {
       x1: xs[s.at],
       y1: LINE_Y + NODE_H / 2,
       x2: xs[s.at],
-      y2: SAT_Y - NODE_H / 2,
+      y2: SAT_Y - SAT_H / 2,
       dashed: true,
     }));
-    return [...main, up, ...sats];
+    const ticks = TOPICS.map((_, i) => ({
+      x1: (xs[i + 1] + xs[i + 2]) / 2,
+      y1: LINE_Y - PILL_BOTTOM,
+      x2: (xs[i + 1] + xs[i + 2]) / 2,
+      y2: LINE_Y,
+      dashed: false,
+    }));
+    return [...main, up, ...ticks, ...sats];
   });
 
   protected readonly pills = computed(() => {
     const xs = this.xs();
-    const on = TOPICS.map((text, i) => ({ text, x: (xs[i + 1] + xs[i + 2]) / 2, y: LINE_Y }));
-    return [
-      ...on,
-      { text: 'orders.rejected', x: xs[2], y: (LINE_Y - NODE_H / 2 + REJECTED_Y + 16) / 2 },
-    ].map((p) => ({ ...p, w: p.text.length * 7.2 + 8 }));
+    const on = TOPICS.map((text, i) => ({
+      text,
+      x: (xs[i + 1] + xs[i + 2]) / 2,
+      y: LINE_Y - PILL_BOTTOM - 10,
+    }));
+    return [...on, { text: 'orders.rejected', x: xs[2], y: REJECTED_PILL_Y }].map((p) => ({
+      ...p,
+      w: p.text.length * 7.2 + 8,
+    }));
   });
 
   constructor() {
@@ -232,7 +257,10 @@ export class SystemMap {
     const destroyRef = inject(DestroyRef);
     destroyRef.onDestroy(() => this.timers.forEach(clearTimeout));
     if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(([e]) => this.width.set(Math.round(e.contentRect.width)));
+      const ro = new ResizeObserver(([e]) => {
+        const w = Math.round(e.contentRect.width);
+        if (w > 0) this.width.set(w);
+      });
       ro.observe(host);
       destroyRef.onDestroy(() => ro.disconnect());
     }
@@ -287,6 +315,7 @@ export class SystemMap {
     const els = (dot.mine ? TRAIL : TRAIL.slice(0, 1)).map((t) => {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       el.classList.add('dot');
+      if (dot.mine) el.classList.add('mine');
       el.setAttribute('r', '3');
       el.style.fill = fill;
       el.style.opacity = String(dot.mine ? t.opacity : 1);
