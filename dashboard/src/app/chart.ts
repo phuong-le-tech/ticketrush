@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Sample } from './metrics';
 
 type XY = [number, number];
@@ -27,7 +36,7 @@ export function niceMax(values: (number | null)[], floor: number): number {
   return [1, 2, 5, 10].find((c) => m / base <= c + 1e-9)! * base;
 }
 
-const W = 556; // plot box inside the 600x200 viewBox
+const PAD_R = 8;
 const H = 172;
 const PAD_L = 40;
 const PAD_T = 8;
@@ -36,25 +45,25 @@ const PAD_T = 8;
   selector: 'tr-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <svg viewBox="0 0 600 200" role="img" [attr.aria-label]="label()">
-      <rect class="ground" x="0" y="0" width="600" height="200" />
+    <svg [attr.viewBox]="'0 0 ' + width() + ' 200'" role="img" [attr.aria-label]="label()">
+      <rect class="ground" x="0" y="0" [attr.width]="width()" height="200" />
       <text class="axis y-max" x="36" [attr.y]="PAD_T + 10" text-anchor="end">{{ yMax() }}</text>
       <text class="axis" x="36" [attr.y]="PAD_T + H" text-anchor="end">0</text>
       <text class="axis" [attr.x]="PAD_L" y="198">-5m</text>
-      <text class="axis" [attr.x]="PAD_L + W" y="198" text-anchor="end">now</text>
+      <text class="axis" [attr.x]="PAD_L + plotW()" y="198" text-anchor="end">now</text>
       <g [attr.transform]="'translate(' + PAD_L + ' ' + PAD_T + ')'">
-        <line class="base" x1="0" [attr.y1]="H" [attr.x2]="W" [attr.y2]="H" />
+        <line class="base" x1="0" [attr.y1]="H" [attr.x2]="plotW()" [attr.y2]="H" />
         @if (threshold() !== null) {
           <line
             class="threshold"
             x1="0"
             [attr.y1]="thresholdY()"
-            [attr.x2]="W"
+            [attr.x2]="plotW()"
             [attr.y2]="thresholdY()"
           />
           <text
             class="axis threshold-label"
-            [attr.x]="W"
+            [attr.x]="plotW()"
             [attr.y]="thresholdY() - 4"
             text-anchor="end"
           >
@@ -62,7 +71,7 @@ const PAD_T = 8;
           </text>
         }
         @if (!hasData()) {
-          <text class="axis" [attr.x]="W / 2" [attr.y]="H / 2" text-anchor="middle">
+          <text class="axis" [attr.x]="plotW() / 2" [attr.y]="H / 2" text-anchor="middle">
             No data yet
           </text>
         } @else {
@@ -74,10 +83,10 @@ const PAD_T = 8;
                 }
                 <path class="line" [class.emphasis]="s.emphasis" [attr.d]="s.d" />
               }
+              @if (head(); as h) {
+                <circle class="head" [attr.cx]="h[0]" [attr.cy]="h[1]" r="4" />
+              }
             </g>
-          }
-          @if (head(); as h) {
-            <circle class="head" [attr.cx]="h[0]" [attr.cy]="h[1]" r="4" />
           }
         }
       </g>
@@ -145,10 +154,23 @@ export class TimeSeriesChart {
   readonly area = input(false);
   readonly unit = input('');
 
-  protected readonly W = W;
+  // One viewBox unit is one CSS pixel: the width follows the host (600 without ResizeObserver).
+  protected readonly width = signal(600);
+  protected readonly plotW = computed(() => this.width() - PAD_L - PAD_R);
   protected readonly H = H;
   protected readonly PAD_L = PAD_L;
   protected readonly PAD_T = PAD_T;
+
+  constructor() {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => {
+      const w = Math.round(e.contentRect.width);
+      if (w > PAD_L + PAD_R + 1) this.width.set(w);
+    });
+    ro.observe(host);
+    inject(DestroyRef).onDestroy(() => ro.disconnect());
+  }
 
   protected readonly yMax = computed(() => {
     const values = this.series().flatMap((s) => s.points.map((p) => p.v));
@@ -160,7 +182,7 @@ export class TimeSeriesChart {
   protected readonly drawn = computed(() =>
     this.series().map((s) => {
       // Split at nulls so a gap breaks the line instead of bridging it.
-      const xy = scalePoints(s.points, W, H, this.yMax());
+      const xy = scalePoints(s.points, this.plotW(), H, this.yMax());
       const segs: XY[][] = [[]];
       let j = 0;
       for (const p of s.points) {
@@ -193,7 +215,7 @@ export class TimeSeriesChart {
   );
   protected readonly step = computed(() => {
     const n = Math.max(2, ...this.series().map((s) => s.points.length));
-    return W / (n - 1);
+    return this.plotW() / (n - 1);
   });
 
   protected readonly label = computed(() => {

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TimeSeriesChart, linePath, niceMax, scalePoints } from './chart';
 import { Sample } from './metrics';
 
@@ -125,5 +125,39 @@ describe('TimeSeriesChart', () => {
     const s = [{ name: 'a', emphasis: true, points: pts(1, 2, 3) }];
     expect(render(s).querySelector('path.area')).toBeNull();
     expect(render(s, { area: true }).querySelector('path.area')).not.toBeNull();
+  });
+
+  it('keeps the head circle inside the sliding group so it moves with the line', () => {
+    const el = render([{ name: 'a', emphasis: true, points: pts(1, 2, 3) }]);
+    expect(el.querySelector('g.slide circle.head')).not.toBeNull();
+  });
+
+  describe('width', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('uses the measured host width for the viewBox and plot geometry', () => {
+      let cb: (e: { contentRect: { width: number } }[]) => void = () => undefined;
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          constructor(c: typeof cb) {
+            cb = c;
+          }
+          observe() {}
+          disconnect() {}
+        },
+      );
+      const fixture = TestBed.createComponent(TimeSeriesChart);
+      fixture.componentRef.setInput('series', [
+        { name: 'a', emphasis: true, points: pts(1, 2, 3) },
+      ]);
+      fixture.detectChanges();
+      cb([{ contentRect: { width: 1000 } }]);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 1000 200');
+      // plot width = 1000 - 40 left pad - 8 right pad
+      expect(el.querySelector('circle.head')!.getAttribute('cx')).toBe('952');
+    });
   });
 });
