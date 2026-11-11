@@ -36,6 +36,14 @@ build_image() {
   echo "$tag" > "${SCRATCH}/${service}.tag"
 }
 
+# The dashboard builds from its own context (dashboard/), not the repo root like the Java services.
+build_dashboard() {
+  local id
+  id="$(docker build -q --provenance=false --sbom=false -t "${IMAGE_REPOSITORY}/dashboard:build" dashboard)"
+  DASHBOARD_TAG="$(echo "${id#sha256:}" | cut -c1-12)"
+  docker tag "${IMAGE_REPOSITORY}/dashboard:build" "${IMAGE_REPOSITORY}/dashboard:${DASHBOARD_TAG}"
+}
+
 # Batches of BUILD_PARALLELISM (portable to the bash 3.2 that macOS ships, which has no `wait -n`).
 build_images() {
   local failed=0 service pid pids=()
@@ -64,6 +72,8 @@ load_images() {
     docker exec "${CLUSTER}-control-plane" crictl inspecti "docker.io/${image}" > /dev/null 2>&1 \
       || kind load docker-image --name "$CLUSTER" "$image"
   done
+  docker exec "${CLUSTER}-control-plane" crictl inspecti "docker.io/${IMAGE_REPOSITORY}/dashboard:${DASHBOARD_TAG}" > /dev/null 2>&1 \
+    || kind load docker-image --name "$CLUSTER" "${IMAGE_REPOSITORY}/dashboard:${DASHBOARD_TAG}"
 }
 
 log "kind cluster ${CLUSTER}"
@@ -94,6 +104,7 @@ helm --kube-context "$CONTEXT" upgrade --install strimzi "$STRIMZI_CHART" --vers
 
 log "building service images"
 build_images
+build_dashboard
 load_images
 
 log "installing the ticketrush chart"
@@ -101,6 +112,7 @@ tag_args=()
 for service in "${SERVICES[@]}"; do
   tag_args+=(--set-string "services.${service}.tag=$(cat "${SCRATCH}/${service}.tag")")
 done
+tag_args+=(--set-string "dashboard.tag=${DASHBOARD_TAG}")
 DELAY="${M5_CONSUMER_PROCESSING_DELAY_MS:-0}"
 case "$DELAY" in ''|*[!0-9]*) echo 'M5_CONSUMER_PROCESSING_DELAY_MS must be a nonnegative integer'; exit 2 ;; esac
 helm --kube-context "$CONTEXT" upgrade --install ticketrush "$CHART" --namespace "$NS" "${tag_args[@]}" \
