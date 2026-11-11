@@ -25,6 +25,7 @@ Checked against Maven Central and Docker Hub on 2026-10-16. Re-check tools for l
 | Angular / test runner (M7) | 22.2.5 / Vitest 5.1.0 | Angular and CLI/build/compiler packages pinned to 22.2.5; default Vitest runner, jsdom 30.1.3, TypeScript 6.0.3. Exact resolutions in dashboard/package-lock.json, verified by container npm ci and npm ls. |
 | Node build/test image (M7) | `node:24.22.2` | Verified with `docker run --rm node:24.22.2 node --version` -> `v24.22.2`, satisfying Angular 22's Node ^24.15 requirement. Every npm command runs in this container; do not upgrade host Node. |
 | nginx runtime image (M7) | `nginxinc/nginx-unprivileged:stable-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03` (nginx 1.30.6) | Stable Alpine image fetched on 2026-11-09; digest pins the multi-platform manifest. Official [unprivileged image](https://github.com/nginx/docker-nginx-unprivileged); verified nginx -v, nginx -t and runtime uid/gid 101. |
+| GitHub Actions (M8) | `actions/checkout@v4`, `actions/setup-java@v4` (Temurin 21), `actions/setup-node@v4` (Node 24.22.2) | CI workflow `.github/workflows/ci.yml`. Official actions pinned to major tags; runners are `ubuntu-latest`. No third-party actions. |
 
 ### M5 version and compatibility check (2026-10-31)
 
@@ -273,6 +274,8 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-11-09 | M7 purchase timeout is 15 seconds and retains the retry intent; failed persistent identity/cryptography setup blocks the purchase with a visible error | Avoid a permanently disabled button or silently switching customer identity. Retry state is in memory only and does not survive reload. |
 | 2026-11-09 | M7 serving uses the pinned stable nginx 1.30.6 unprivileged Alpine digest, explicit uid/gid 101, narrow proxy routes and Docker DNS resolution | Reproducible non-root runtime; no Node in the final image, CORS, Actuator proxy, new environment variable or Helm change. |
 | 2026-11-09 | M7 scaffold verification resolves Angular 22.2.5, default Vitest 5.1.0 and TypeScript 6.0.3 using node:24.22.2 | All npm/test/build/format commands stay containerized; host Node unchanged and no extra implementation dependency. |
+| 2026-11-11 | M8 adds a short CI workflow: backend unit tests (`mvn test -pl '!e2e-tests'`), dashboard `npm ci`/test/build, and the two chart checks. The 15 minute Testcontainers suite (`mvn verify`) stays a local gate recorded in PROGRESS.md | Owner approved the short CI. A full Testcontainers run on every pull request would be slow and was not requested. SonarCloud keeps running separately. |
+| 2026-11-11 | README split: setup and results detail moved to `docs/OPERATIONS.md` and `docs/CHAOS-RESULTS.md`; README now carries the stack table, a Mermaid architecture diagram, proof summary, run instructions and an honest limits list | Owner approved the M8 plan and asked for the tech stack to be visible to recruiters. No code, topic, schema or key change. |
 
 ### M6 tool observation (2026-11-04)
 
