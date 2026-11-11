@@ -44,6 +44,70 @@ describe('scalePoints', () => {
   });
 });
 
+describe('scalePoints on a fixed window', () => {
+  it('a 20s series occupies the right 20/300 of the plot width', () => {
+    const xy = scalePoints(
+      [
+        { t: 1000, v: 1 },
+        { t: 21000, v: 1 },
+      ],
+      300,
+      100,
+      1,
+      21000,
+      300000,
+    );
+    expect(xy.map(([x]) => x)).toEqual([280, 300]);
+  });
+  it('two series with different first timestamps share x for equal t', () => {
+    const a = scalePoints(
+      [
+        { t: 10000, v: 1 },
+        { t: 30000, v: 1 },
+      ],
+      300,
+      100,
+      1,
+      30000,
+      300000,
+    );
+    const b = scalePoints(
+      [
+        { t: 20000, v: 1 },
+        { t: 30000, v: 1 },
+      ],
+      300,
+      100,
+      1,
+      30000,
+      300000,
+    );
+    expect(a[1][0]).toBe(b[1][0]);
+    expect(a[0][0]).toBeLessThan(b[0][0]);
+  });
+});
+
+describe('TimeSeriesChart window', () => {
+  it('labels the axis from windowMs and does not draw points older than it', () => {
+    const el = render(
+      [
+        {
+          name: 'x',
+          emphasis: true,
+          points: [
+            { t: 0, v: 1 },
+            { t: 590000, v: 1 },
+            { t: 600000, v: 1 },
+          ],
+        },
+      ],
+      { windowMs: 60000 },
+    );
+    expect(el.textContent).toContain('-1m');
+    expect(el.querySelector('path.line')?.getAttribute('d')?.match(/M|L/g)).toHaveLength(2);
+  });
+});
+
 describe('niceMax', () => {
   it('never returns 0: all-zero and empty input give the floor', () => {
     expect(niceMax([0, 0, 0], 1)).toBe(1);

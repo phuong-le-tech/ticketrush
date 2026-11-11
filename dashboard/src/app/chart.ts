@@ -12,10 +12,24 @@ import { Sample } from './metrics';
 
 type XY = [number, number];
 
-// x is linear in time between the first and last non-null point; a single point sits at x 0.
-export function scalePoints(points: Sample[], width: number, height: number, yMax: number): XY[] {
+// With tNewest and windowMs, x is a fixed window ending at tNewest, shared by every series of a chart.
+// Without them, x is linear between the first and last non-null point; a single point sits at x 0.
+export function scalePoints(
+  points: Sample[],
+  width: number,
+  height: number,
+  yMax: number,
+  tNewest?: number,
+  windowMs?: number,
+): XY[] {
   const live = points.filter((p): p is { t: number; v: number } => p.v !== null);
   if (!live.length) return [];
+  if (tNewest !== undefined && windowMs !== undefined) {
+    return live.map((p) => [
+      width - ((tNewest - p.t) / windowMs) * width,
+      height - (p.v / yMax) * height,
+    ]);
+  }
   const t0 = live[0].t;
   const span = live[live.length - 1].t - t0;
   return live.map((p) => [
@@ -49,7 +63,7 @@ const PAD_T = 8;
       <rect class="ground" x="0" y="0" [attr.width]="width()" height="200" />
       <text class="axis y-max" x="36" [attr.y]="PAD_T + 10" text-anchor="end">{{ yMax() }}</text>
       <text class="axis" x="36" [attr.y]="PAD_T + H" text-anchor="end">0</text>
-      <text class="axis" [attr.x]="PAD_L" y="198">-5m</text>
+      <text class="axis" [attr.x]="PAD_L" y="198">{{ windowLabel() }}</text>
       <text class="axis" [attr.x]="PAD_L + plotW()" y="198" text-anchor="end">now</text>
       <g [attr.transform]="'translate(' + PAD_L + ' ' + PAD_T + ')'">
         <line class="base" x1="0" [attr.y1]="H" [attr.x2]="plotW()" [attr.y2]="H" />
@@ -112,7 +126,7 @@ const PAD_T = 8;
       stroke-dasharray: 4 4;
     }
     .axis {
-      fill: var(--fg-3);
+      fill: var(--fg-2);
       font: 400 12px var(--font-mono, monospace);
       letter-spacing: 0.2px;
     }
@@ -153,6 +167,7 @@ export class TimeSeriesChart {
   readonly yFloor = input(1);
   readonly area = input(false);
   readonly unit = input('');
+  readonly windowMs = input(300000);
 
   // One viewBox unit is one CSS pixel: the width follows the host (600 without ResizeObserver).
   protected readonly width = signal(600);
@@ -179,10 +194,30 @@ export class TimeSeriesChart {
   });
   protected readonly thresholdY = computed(() => H - ((this.threshold() ?? 0) / this.yMax()) * H);
 
+  protected readonly windowLabel = computed(() => {
+    const ms = this.windowMs();
+    return ms % 60000 === 0 ? `-${ms / 60000}m` : `-${Math.round(ms / 1000)}s`;
+  });
+  private readonly tNewest = computed(() =>
+    Math.max(0, ...this.series().flatMap((s) => s.points.map((p) => p.t))),
+  );
+
   protected readonly drawn = computed(() =>
-    this.series().map((s) => {
+    this.series().map((full) => {
+      // Points older than the window are not drawn.
+      const s = {
+        ...full,
+        points: full.points.filter((p) => p.t >= this.tNewest() - this.windowMs()),
+      };
       // Split at nulls so a gap breaks the line instead of bridging it.
-      const xy = scalePoints(s.points, this.plotW(), H, this.yMax());
+      const xy = scalePoints(
+        s.points,
+        this.plotW(),
+        H,
+        this.yMax(),
+        this.tNewest(),
+        this.windowMs(),
+      );
       const segs: XY[][] = [[]];
       let j = 0;
       for (const p of s.points) {
@@ -210,12 +245,16 @@ export class TimeSeriesChart {
   );
 
   // A new newest timestamp re-creates the group, which restarts the slide animation.
-  protected readonly slideKey = computed(() =>
-    Math.max(0, ...this.series().flatMap((s) => s.points.map((p) => p.t))),
-  );
+  protected readonly slideKey = this.tNewest;
+  // One sample interval (last two timestamps of the longest series) in window scale.
   protected readonly step = computed(() => {
-    const n = Math.max(2, ...this.series().map((s) => s.points.length));
-    return this.plotW() / (n - 1);
+    const longest = this.series().reduce<Sample[]>(
+      (a, s) => (s.points.length > a.length ? s.points : a),
+      [],
+    );
+    const interval =
+      longest.length > 1 ? longest[longest.length - 1].t - longest[longest.length - 2].t : 0;
+    return (interval / this.windowMs()) * this.plotW();
   });
 
   protected readonly label = computed(() => {
