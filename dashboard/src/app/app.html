@@ -1,22 +1,8 @@
 <div class="shell">
   <header class="topbar">
-    <div class="brand">
-      <span class="mark" aria-hidden="true">▣</span>TicketRush <span class="version">M7</span>
-    </div>
-    <span class="helper">Local operations / Polling dashboard</span>
-  </header>
-  <main>
-    <div class="page-head">
-      <h1>Ticket operations</h1>
-      <p class="helper">Stock, throughput and the order saga in one place.</p>
-    </div>
-    <aside class="notice">
-      <p>
-        <strong>Live local stack.</strong> Buy submits a real order to the configured fake payment
-        provider. Acceptance is not a confirmed purchase.
-      </p>
-    </aside>
-    <div class="controls" role="status" [class.warning]="stale()">
+    <div class="brand">TicketRush</div>
+    &ngsp;
+    <div class="live" role="status" [class.warning]="stale()">
       <span class="dot" aria-hidden="true"></span>
       @if (stale()) {
         <span
@@ -28,94 +14,254 @@
           stock() === null || activity() === null ? 'Loading snapshot' : 'Polling every 2 seconds'
         }}</span>
       }
+      <span class="sep" aria-hidden="true">.</span>
+      @switch (metricsState()) {
+        @case ('live') {
+          <span id="metrics-status">metrics every 5s</span>
+        }
+        @case ('unavailable') {
+          <span id="metrics-status">metrics unavailable</span>
+        }
+        @case ('stale') {
+          <span id="metrics-status" class="metrics-stale"
+            >metrics stale since {{ metricsStaleSince() | date: 'HH:mm:ss' }}</span
+          >
+        }
+        @default {
+          <span id="metrics-status">metrics loading</span>
+        }
+      }
     </div>
-    <div class="summary">
-      <section class="panel metric" aria-labelledby="stock-heading">
-        <div class="panel-head">
-          <h2 id="stock-heading">Stock</h2>
-          <span class="event">{{ eventId().trim() || 'Enter an event' }}</span>
-        </div>
-        <div class="metric-value">
-          <strong class="number" id="stock-value">{{
-            stock() ?? (stockStale() ? 'Unavailable' : 'Loading')
-          }}</strong
-          ><span class="helper">tickets available</span>
-        </div>
-        <p class="helper">Latest available stock for the selected event.</p>
-        <div class="metric-foot helper">Price is not returned by the stock API.</div>
-      </section>
-      <section class="panel metric" aria-labelledby="throughput-heading">
-        <div class="panel-head">
-          <h2 id="throughput-heading">Orders per second</h2>
-          <span class="eyebrow">All events</span>
-        </div>
-        <div class="metric-value">
-          <strong class="number" id="rate-value">{{
-            activity() ? rate() : activityStale() ? 'Unavailable' : 'Loading'
-          }}</strong
-          ><span class="helper">orders / sec</span>
-        </div>
-        <p class="helper">
-          {{ activity()?.ordersInWindow ?? '?' }} orders in window /
-          {{ activity()?.windowSeconds ?? '?' }} seconds
-        </p>
-        <div class="metric-foot helper">Polling cadence <strong>Every 2 seconds</strong></div>
-      </section>
-    </div>
-    <section class="panel buy-panel" aria-labelledby="buy-heading">
-      <div>
-        <h2 id="buy-heading">Buy tickets</h2>
-        <p class="helper">
-          One purchase at a time. Follow accepted orders in the saga table below.
-        </p>
-      </div>
-      <form (submit)="buy($event)" [attr.aria-busy]="pending()">
-        <div>
-          <label for="event-id">Event id</label
-          ><input
-            id="event-id"
-            name="eventId"
-            [value]="eventId()"
-            (input)="changeEvent($any($event.target).value)"
-            [disabled]="pending() || !!attempt()"
-            maxlength="255"
-            required
-            autocomplete="off"
-          />
-        </div>
-        <div>
-          <label for="quantity">Quantity</label
-          ><input
-            id="quantity"
-            name="quantity"
-            type="number"
-            [value]="quantity()"
-            (input)="changeQuantity($any($event.target).value)"
-            [disabled]="pending() || !!attempt()"
-            min="1"
-            max="4"
-            step="1"
-            required
-          />
-        </div>
-        <button
-          class="primary"
-          id="buy-button"
-          type="submit"
-          [disabled]="pending() || (!attempt() && !validInput())"
-        >
-          {{ pending() ? 'Pending...' : attempt() ? 'Retry' : 'Buy' }}
-        </button>
-        <p class="form-note" [class.error]="buyError()" id="buy-message" role="status">
-          {{ buyMessage() }}
-        </p>
-        <p class="form-note helper">
-          Network, 5xx or 429 failure: Retry keeps the same key, event and quantity. Inputs stay
-          locked until acknowledged. The key is never displayed.
-        </p>
-      </form>
+  </header>
+  <main>
+    <section class="map-region">
+      <h1>One order, from click to confirmation.</h1>
+      <p class="sub">Every measured figure on this page is read from the running system.</p>
+      <tr-system-map [orders]="activity()?.orders ?? null" [mine]="lastOrderId()" />
     </section>
-    <section class="panel saga" aria-labelledby="orders-heading">
+    <div class="layout">
+      <div class="chapters">
+        <tr-chapter
+          number="01"
+          [title]="'CONCURRENCY'"
+          claim="Many buyers, few tickets. Stock never goes below zero."
+          mechanism="Atomic reservation in Redis; duplicate orders return their stored outcome."
+          [state]="stale() ? 'stale' : 'live'"
+          [staleSince]="staleSince()"
+        >
+          <tr-chart
+            chart
+            [series]="stockSeries()"
+            [yFloor]="stockFloor()"
+            [area]="true"
+            unit="tickets"
+          />
+          <div figure>
+            <strong class="number" id="stock-value" [class.changed]="flash('stock')">{{
+              stock() ?? '-'
+            }}</strong>
+            <p class="helper">tickets available for {{ eventId().trim() || 'an event' }}</p>
+            @if (stock() === null && stockStale()) {
+              <p class="helper unavailable">Unavailable</p>
+            }
+            @if (!activity() && activityStale()) {
+              <p class="helper unavailable">Orders per second unavailable</p>
+            }
+            <dl class="kv">
+              <div>
+                <dt>orders/s</dt>
+                <dd id="rate-value" [class.changed]="flash('rate')">
+                  {{ rate() }}
+                </dd>
+              </div>
+            </dl>
+            <p class="outcomes-label" id="outcomes-label">
+              Saga outcomes, all events, since order-service start
+            </p>
+            @if (metricsState() === 'unavailable') {
+              <p class="helper outcomes-note" id="outcomes-note">
+                Live metrics need the kind stack.
+              </p>
+            } @else if (metricsState() === 'stale') {
+              <p class="helper outcomes-note unavailable" id="outcomes-note">
+                stale since {{ metricsStaleSince() | date: 'HH:mm:ss' }}
+              </p>
+            }
+            <dl class="kv kv-outcomes">
+              <div>
+                <dt>confirmed</dt>
+                <dd [class.changed]="flash('confirmed')">{{ outcomes().confirmed }}</dd>
+              </div>
+              <div>
+                <dt>rejected</dt>
+                <dd [class.changed]="flash('rejected')">{{ outcomes().rejected }}</dd>
+              </div>
+              <div>
+                <dt>failed</dt>
+                <dd [class.changed]="flash('failed')">{{ outcomes().failed }}</dd>
+              </div>
+            </dl>
+          </div>
+        </tr-chapter>
+        <tr-chapter
+          number="02"
+          [title]="'KAFKA'"
+          claim="Work waits in topics. Consumers drain it, in order per order."
+          mechanism="key = orderId; offsets committed after processing."
+          [state]="metricsState()"
+          [staleSince]="metricsStaleSince()"
+        >
+          <div chart>
+            <tr-chart [series]="lagAll()" unit="messages" />
+            @for (row of partitions(); track row.topic) {
+              <div
+                class="squares"
+                role="img"
+                [attr.aria-label]="row.topic + ' partitions, shaded by lag'"
+              >
+                <span class="square-label">{{ row.topic }}</span>
+                @for (sq of row.squares; track sq.partition) {
+                  <span
+                    class="sq"
+                    [class.on]="sq.lag > 0"
+                    [style.opacity]="sq.lag > 0 ? sq.opacity : null"
+                    [title]="'partition ' + sq.partition + ': ' + sq.lag"
+                  ></span>
+                }
+              </div>
+            }
+          </div>
+          <div figure>
+            <strong class="number" id="lag-value" [class.changed]="flash('lag')">{{
+              totalLag()
+            }}</strong>
+            <p class="helper">messages behind</p>
+          </div>
+          @if (idle()) {
+            <p note class="helper idle">
+              No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
+            </p>
+          }
+        </tr-chapter>
+        <tr-chapter
+          number="03"
+          [title]="'REDIS'"
+          claim="One atomic step: check stock, decrement, remember the order."
+          mechanism="Lua script in inventory-service; Redis is the stock counter and the idempotency record."
+          [state]="metricsState()"
+          [staleSince]="metricsStaleSince()"
+        >
+          <div chart>
+            <tr-chart [series]="redisSeries()" unit="cmd/s" />
+            <pre class="lua">{{ luaSnippet }}</pre>
+          </div>
+          <div figure>
+            <strong class="number" id="latency-value" [class.changed]="flash('latency')">{{
+              latency()
+            }}</strong>
+            <p class="helper">per reservation</p>
+          </div>
+          @if (idle()) {
+            <p note class="helper idle">
+              No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
+            </p>
+          }
+        </tr-chapter>
+        <tr-chapter
+          number="04"
+          [title]="'KUBERNETES'"
+          claim="Lag passes 10. A second consumer appears."
+          mechanism="KEDA, Kafka lag trigger, 1 to 2 replicas."
+          [state]="metricsState()"
+          [staleSince]="metricsStaleSince()"
+        >
+          <tr-chart chart [series]="inventoryLag()" [threshold]="lagThreshold" unit="messages" />
+          <div figure>
+            @for (pod of pods(); track pod.job) {
+              <div class="pods">
+                <span class="pod-label" [class.changed]="flash('pod:' + pod.job)"
+                  >{{ pod.job }} {{ pod.n }} of {{ maxReplicas }}</span
+                >
+                <span class="squares-row">
+                  @for (on of pod.squares; track $index) {
+                    <span
+                      class="sq pod"
+                      [class.on]="on"
+                      [class.appeared]="on && $index === pod.n - 1 && flash('new:pod:' + pod.job)"
+                    ></span>
+                  }
+                </span>
+              </div>
+            }
+          </div>
+          @if (idle()) {
+            <p note class="helper idle">
+              No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh
+            </p>
+          }
+        </tr-chapter>
+      </div>
+      <aside class="rail">
+        <p class="notice">
+          <strong>Live local stack.</strong> Buy submits a real order to the configured fake payment
+          provider. Acceptance is not a confirmed purchase.
+        </p>
+        <section aria-labelledby="buy-heading">
+          <div>
+            <h2 id="buy-heading">Buy tickets</h2>
+            <p class="helper">
+              One purchase at a time. Follow accepted orders in the saga table below.
+            </p>
+          </div>
+          <form (submit)="buy($event)" [attr.aria-busy]="pending()">
+            <div>
+              <label for="event-id">Event id</label
+              ><input
+                id="event-id"
+                name="eventId"
+                [value]="eventId()"
+                (input)="changeEvent($any($event.target).value)"
+                [disabled]="pending() || !!attempt()"
+                maxlength="255"
+                required
+                autocomplete="off"
+              />
+            </div>
+            <div>
+              <label for="quantity">Quantity</label
+              ><input
+                id="quantity"
+                name="quantity"
+                type="number"
+                [value]="quantity()"
+                (input)="changeQuantity($any($event.target).value)"
+                [disabled]="pending() || !!attempt()"
+                min="1"
+                max="4"
+                step="1"
+                required
+              />
+            </div>
+            <button
+              class="primary"
+              id="buy-button"
+              type="submit"
+              [disabled]="pending() || (!attempt() && !validInput())"
+            >
+              {{ pending() ? 'Pending...' : attempt() ? 'Retry' : 'Buy' }}
+            </button>
+            <p class="form-note" [class.error]="buyError()" id="buy-message" role="status">
+              {{ buyMessage() }}
+            </p>
+            <p class="form-note helper">
+              Network, 5xx or 429 failure: Retry keeps the same key, event and quantity. Inputs stay
+              locked until acknowledged. The key is never displayed.
+            </p>
+          </form>
+        </section>
+      </aside>
+    </div>
+    <section class="orders" aria-labelledby="orders-heading">
       <div class="table-head">
         <div>
           <h2 id="orders-heading">Recent orders</h2>
@@ -194,6 +340,6 @@
     </section>
   </main>
   <footer class="helper">
-    <span>TicketRush M7 / Local operations</span><span>Service-owned reads / No auth</span>
+    <span>TicketRush / Local operations</span><span>Service-owned reads / No auth</span>
   </footer>
 </div>

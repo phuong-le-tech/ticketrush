@@ -1,7 +1,7 @@
 # Local kind defaults. The credentials below are dummy values for a throwaway cluster; override them
 # (for example with --set-string credentials.postgresPassword=...) for anything else. They only
 # ever reach the pods through the chart-generated Secret.
-# M5 bootstrap installs operator CRDs before installing this dependency-free chart.
+# autoscaling bootstrap installs operator CRDs before installing this dependency-free chart.
 monitoring:
   enabled: true
   prometheusImage: quay.io/prometheus/prometheus:v3.15.1
@@ -67,11 +67,19 @@ redis:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {cpu: 250m, memory: 256Mi}
 
-# Images are built and loaded into kind by scripts/m3-up.sh, which overrides each tag with the image id.
+# Images are built and loaded into kind by scripts/kind-up.sh, which overrides each tag with the image id.
 image:
   repository: ticketrush
   tag: dev
   pullPolicy: IfNotPresent
+
+# The Angular dashboard (nginx). Built and loaded by scripts/observability-up.sh and scripts/kind-up.sh.
+dashboard:
+  enabled: true
+  tag: dev
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 64Mi}
 
 app:
   # Above the 30 s Spring shutdown phase (spring.lifecycle.timeout-per-shutdown-phase).

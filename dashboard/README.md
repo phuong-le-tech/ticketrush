@@ -1,6 +1,7 @@
-# M7 dashboard
+# Dashboard
 
-Angular 22.2.5 standalone page following the approved Open Design reference in `docs/design/m7/`.
+Angular 22.2.5 standalone page. The purchase and saga-table parts follow the M7 Open Design reference in
+`docs/design/dashboard/`; the live system map and chapters follow `docs/design/DESIGN.md`.
 Live stock, orders per second and recent saga states poll independently every 2 seconds.
 The native form creates a new key per accepted Buy intent; Retry preserves the full failed purchase.
 Angular packages and CLI/build tools are pinned to 22.2.5; the lockfile resolves default Vitest to 5.1.0.
@@ -26,9 +27,9 @@ There is no configured ESLint target; strict TypeScript and Angular production c
 - `docker compose -f deploy/compose/docker-compose.yml up -d --build` from the repo root serves the
   production dashboard at http://localhost:4200. The healthcheck covers nginx, not backend readiness.
 - nginx proxies only POST `/api/orders`, GET `/api/orders/activity` and GET `/api/events/` to their
-  owning services. No Actuator proxy, CORS, authentication or router. Node is absent from the final image.
+  owning services, plus GET `/api/metrics/query` and `/api/metrics/query_range` to Prometheus. No Actuator proxy, CORS, authentication or router. Node is absent from the final image.
 - `cd dashboard && npx ng serve --proxy-config proxy.conf.json` requires host Node >=24.15, or run
-  the same command in the approved Node container. Do not upgrade host Node as part of M7.
+  the same command in the approved Node container. Do not upgrade host Node as part of this work.
   The dev proxy expects host-running gateway/inventory/order at localhost 8080/8081/8084, or explicit
   port forwards to those services. Compose does not publish inventory/order ports. In a Node container,
   localhost means that container; a reachable backend network/forward must be arranged separately.
@@ -43,18 +44,34 @@ There is no configured ESLint target; strict TypeScript and Angular production c
 - Money is displayed from integer API cents and currency, with no invented stock price. Amounts outside
   JavaScript safe-integer precision are labeled unavailable rather than displaying rounded financial data.
 
+## Against kind (live metrics) and what Compose shows
+
+The page has a system map and four chapters (Concurrency, Kafka, Redis, Kubernetes). The chapters read
+Prometheus through two GET-only same-origin routes, `/api/metrics/query` and `/api/metrics/query_range`
+(address in `PROMETHEUS_ADDR`; POST is 403, other `/api/metrics/...` paths are 404). The eight query
+strings live in `src/app/metrics.ts`; each source shows loading, live, stale or unavailable, never a
+sample number.
+
+- kind: the dashboard is in the Helm chart. After `scripts/observability-up.sh` (or `kind-up.sh`):
+  `kubectl --context kind-ticketrush -n ticketrush port-forward svc/dashboard 4200:8080`, open
+  http://localhost:4200. Pod counts come from `up`, since kube-state-metrics is disabled.
+- Compose: there is no Prometheus, so the chapters show a named "needs the kind stack" state. Buying,
+  stock, orders per second and the saga table still work.
+- Fonts: Geist and Geist Mono 1.9.2 (SIL OFL) are self-hosted in `public/fonts`, not an npm dependency.
+- Acceptance: `scripts/live-dashboard-acceptance.sh [--with-compose]`.
+
 ## Status values and acceptance
 
-- The saga table renders the M4 order model as returned by `GET /orders/activity`:
+- The saga table renders the order model as returned by `GET /orders/activity`:
   `PENDING`, `RESERVED`, `CONFIRMED`, `FAILED`, `REJECTED`. `PAYMENT_FAILED` from the design
   mock is illustrative only and is never produced by the API; a failure carries its cause in
   `failureReason` (for example `TIMEOUT` or `PAYMENT_FAILED`).
 - The stock endpoint returns `eventId` and `stock` only, so the page never shows a price and
   keeps amounts as integer cents plus currency in the order table.
-- One command proves the whole milestone end to end: `scripts/m7-acceptance.sh` runs the backend
+- One command proves the whole dashboard end to end: `scripts/dashboard-acceptance.sh` runs the backend
   module tests, the dashboard container tests and build, brings Compose up and drives
   `/healthz`, the stock read, a real `POST /api/orders`, the CONFIRMED saga row and the stock
-  decrease through http://localhost:4200. Real output is recorded in `docs/PROGRESS.md`.
+  decrease through http://localhost:4200. Real output is recorded in `docs/internal/PROGRESS.md`.
 
 ## Implementation verification
 
@@ -72,7 +89,7 @@ card's job, not proven by these tests.
 
 Fresh root `mvn verify` with Java 21.0.10 in this implementation run exited 0:
 `BUILD SUCCESS`, `Total time: 14:48 min`. All 46 Surefire/Failsafe XML reports aggregate to
-239 tests, zero failures, errors or skips. This includes contention and replay once, not the M2 ten-run command.
+239 tests, zero failures, errors or skips. This includes contention and replay once, not the oversell ten-run command.
 The final clean Node-container command (`npm ci`, Prettier check, test TypeScript check, `npm test`,
 production build) exited 0; npm audited 296 packages with zero vulnerabilities. npm warned about four
 scaffold dependency install scripts without allowScripts coverage; no script approval or package upgrade was made.
@@ -82,7 +99,7 @@ scaffold dependency install scripts without allowScripts coverage; no script app
 ### Cases and observed RED output
 
 There was no frontend test plan in this card's parent handoffs. These cases are derived directly from AC5,
-AC6, decisions 1-4, and the approved reference under `docs/design/m7/`.
+AC6, decisions 1-4, and the approved reference under `docs/design/dashboard/`.
 
 | AC | Test name | Observed failure |
 |---|---|---|

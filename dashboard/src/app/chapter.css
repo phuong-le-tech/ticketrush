@@ -1,0 +1,48 @@
+:host {
+  display: block;
+  padding-top: 96px;
+  border-top: 1px solid var(--hairline);
+}
+:host(:first-of-type) {
+  padding-top: 0;
+  border-top: 0;
+}
+.label {
+  font: 400 12px/16px var(--font-mono);
+  letter-spacing: 0.2px;
+  color: var(--fg-2);
+}
+.claim {
+  margin-top: 8px;
+  max-width: 40ch;
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 32px;
+  margin-top: 24px;
+  align-items: start;
+}
+.chart {
+  min-width: 0;
+}
+.dash {
+  font: 500 56px/64px var(--font-mono);
+  color: var(--fg-3);
+}
+.unavailable {
+  margin-top: 24px;
+  color: var(--fg-2);
+}
+.mechanism {
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--fg-2);
+}
+.stale {
+  margin-top: 8px;
+  font: 400 12px/16px var(--font-mono);
+  letter-spacing: 0.2px;
+  color: var(--warn);
+}

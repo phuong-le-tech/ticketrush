@@ -25,6 +25,22 @@ test('AC7 dev proxy isolates service paths and preserves query parameters', asyn
     target: 'http://localhost:8081',
     path: '/events/concert-1/stock',
   });
+  assert.deepEqual(route('/api/metrics/query?query=up'), {
+    target: 'http://localhost:9090',
+    path: '/api/v1/query?query=up',
+  });
+  assert.deepEqual(route('/api/metrics/query_range?query=up&step=5'), {
+    target: 'http://localhost:9090',
+    path: '/api/v1/query_range?query=up&step=5',
+  });
+  for (const path of [
+    '/api/metrics',
+    '/api/metrics/',
+    '/api/metrics/admin/tsdb',
+    '/api/metrics/querymore',
+  ]) {
+    assert.equal(route(path), null, path);
+  }
   for (const path of [
     '/actuator/prometheus',
     '/api/actuator',

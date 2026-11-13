@@ -7,6 +7,7 @@ import {
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './app';
+import { QUERIES, QueryId } from './metrics';
 
 const STOCK_URL = '/api/events/concert-1/stock';
 const ACTIVITY_URL = '/api/orders/activity';
@@ -45,11 +46,34 @@ describe('M7 dashboard HTTP and user interactions', () => {
 
   afterEach(() => {
     fixture.destroy();
+    discardMetrics();
     http.verify({ ignoreCancelled: true });
     vi.useRealTimers();
     vi.restoreAllMocks();
     localStorage.clear();
   });
+
+  // The metrics store polls Prometheus from the start; these tests do not care unless they answer it.
+  function discardMetrics(): TestRequest[] {
+    return http.match((req) => req.url.startsWith('/api/metrics'));
+  }
+
+  function answerBackfill(
+    data: Partial<Record<QueryId, [Record<string, string>, string, number?][]>>,
+  ) {
+    const nowS = Math.floor(Date.now() / 1000);
+    for (const req of http.match((r) => r.url === '/api/metrics/query_range')) {
+      const id = (Object.keys(QUERIES) as QueryId[]).find(
+        (k) => QUERIES[k] === req.request.params.get('query'),
+      )!;
+      const result = (data[id] ?? []).map(([metric, value, age = 0]) => ({
+        metric,
+        values: [[nowS - age, value]],
+      }));
+      req.flush({ status: 'success', data: { resultType: 'matrix', result } });
+    }
+    fixture.detectChanges();
+  }
 
   function buyButton(): HTMLButtonElement {
     const button = root.querySelector<HTMLButtonElement>('#buy-button');
@@ -158,6 +182,17 @@ describe('M7 dashboard HTTP and user interactions', () => {
     fixture.detectChanges();
 
     expect(root.querySelector('#stock-value')?.textContent?.trim()).toBe('37');
+  });
+
+  it('labels the saga outcome counters as all events since order-service start', () => {
+    stockRead().flush({ eventId: 'concert-1', stock: 37 });
+    activityRead().flush(EMPTY_ACTIVITY);
+
+    fixture.detectChanges();
+
+    expect(root.querySelector('#outcomes-label')?.textContent?.trim()).toBe(
+      'Saga outcomes, all events, since order-service start',
+    );
   });
 
   it.each([
@@ -274,4 +309,177 @@ describe('M7 dashboard HTTP and user interactions', () => {
       expect(root.textContent).not.toMatch(/\bstale\b/i);
     },
   );
+
+  it('metrics failing from the start leaves stock, Buy and the orders table working', () => {
+    for (const req of discardMetrics()) {
+      if (!req.cancelled) req.flush('boom', { status: 503, statusText: 'Unavailable' });
+    }
+    stockRead().flush({ eventId: 'concert-1', stock: 37 });
+    activityRead().flush({
+      ...EMPTY_ACTIVITY,
+      orders: [
+        {
+          orderId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          eventId: 'concert-1',
+          quantity: 1,
+          status: 'RESERVED',
+          failureReason: null,
+          amountCents: 5000,
+          currency: 'EUR',
+          createdAt: '2026-11-09T11:59:58Z',
+          updatedAt: '2026-11-09T11:59:59Z',
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    expect(root.querySelector('#stock-value')?.textContent?.trim()).toBe('37');
+    expect(root.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(buyButton().disabled).toBe(false);
+    const chapters = Array.from(root.querySelectorAll('tr-chapter'));
+    expect(chapters).toHaveLength(4);
+    // F3: chapter 01 now names the missing source beside its outcome counters; it still draws its chart.
+    expect(chapters[0].querySelector('tr-chart')).not.toBeNull();
+    for (const chapter of chapters.slice(1)) {
+      expect(chapter.textContent).toContain('Live metrics need the kind stack.');
+      expect(chapter.querySelector('tr-chart')).toBeNull();
+    }
+  });
+
+  it('partition squares are announced as images', () => {
+    answerBackfill({});
+    const rows = root.querySelectorAll('.squares[aria-label]');
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((r) => expect(r.getAttribute('role')).toBe('img'));
+  });
+
+  describe('metrics provenance', () => {
+    const outcomesNote = () => root.querySelector('#outcomes-note')?.textContent?.trim();
+    const topBar = () => root.querySelector('#metrics-status')?.textContent?.trim();
+
+    function failMetrics() {
+      for (const req of discardMetrics()) {
+        if (!req.cancelled) req.flush('boom', { status: 503, statusText: 'Unavailable' });
+      }
+      fixture.detectChanges();
+    }
+
+    it('says "metrics loading" before the first answer and shows no outcome note', () => {
+      expect(topBar()).toBe('metrics loading');
+      expect(outcomesNote()).toBeUndefined();
+    });
+    it('says "metrics every 5s" when live and shows no outcome note', () => {
+      answerBackfill({});
+      expect(topBar()).toBe('metrics every 5s');
+      expect(outcomesNote()).toBeUndefined();
+    });
+    it('says "metrics unavailable" and explains the outcome counters without Prometheus', () => {
+      failMetrics();
+      expect(topBar()).toBe('metrics unavailable');
+      expect(outcomesNote()).toBe('Live metrics need the kind stack.');
+    });
+    it('says "metrics stale since HH:mm:ss" and marks the outcome counters stale', () => {
+      answerBackfill({});
+      vi.advanceTimersByTime(5000);
+      failMetrics();
+      const hms = new Date().toTimeString().slice(0, 8); // the date pipe formats in local time
+      expect(topBar()).toBe(`metrics stale since ${hms}`);
+      expect(outcomesNote()).toBe(`stale since ${hms}`);
+    });
+  });
+
+  it('NaN redis latency renders a dash, never "NaN"', () => {
+    answerBackfill({ redisLatency: [[{}, 'NaN']] });
+    expect(root.querySelector('#latency-value')?.textContent?.trim()).toBe('-');
+    expect(root.textContent).not.toContain('NaN');
+  });
+
+  it('renders redis latency in milliseconds with one decimal', () => {
+    answerBackfill({ redisLatency: [[{}, '0.0008']] });
+    expect(root.querySelector('#latency-value')?.textContent?.trim()).toBe('0.8 ms');
+  });
+
+  it('stock history resets when the event id changes', () => {
+    const chart = () => root.querySelector('tr-chapter tr-chart')!.textContent;
+    stockRead().flush({ eventId: 'concert-1', stock: 37 });
+    activityRead().flush(EMPTY_ACTIVITY);
+    vi.advanceTimersByTime(2000);
+    stockRead().flush({ eventId: 'concert-1', stock: 36 });
+    activityRead().flush(EMPTY_ACTIVITY);
+    fixture.detectChanges();
+    expect(chart()).not.toContain('No data yet');
+
+    const input = root.querySelector<HTMLInputElement>('#event-id')!;
+    input.value = 'other-event';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    http.expectOne('/api/events/other-event/stock').flush({ eventId: 'other-event', stock: 8 });
+    fixture.detectChanges();
+
+    expect(chart()).toContain('No data yet');
+  });
+
+  it('renders ready pods as "1 of 2" for payment-service and "2 of 2" for inventory-service', () => {
+    answerBackfill({
+      readyPods: [
+        [{ job: 'inventory-service' }, '2'],
+        [{ job: 'payment-service' }, '1'],
+      ],
+    });
+    const text = root.querySelectorAll('tr-chapter')[3].textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('inventory-service 2 of 2');
+    expect(text).toContain('payment-service 1 of 2');
+  });
+
+  it('renders a pod series that stopped reporting as 0 of 2, not its old count', () => {
+    answerBackfill({
+      readyPods: [
+        [{ job: 'inventory-service' }, '2'],
+        [{ job: 'payment-service' }, '2', 60],
+      ],
+    });
+    const text = root.querySelectorAll('tr-chapter')[3].textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('inventory-service 2 of 2');
+    expect(text).toContain('payment-service 0 of 2');
+  });
+
+  it('total lag sums both consumer groups', () => {
+    answerBackfill({
+      lagByGroup: [
+        [{ consumergroup: 'inventory-service', topic: 'orders.requested' }, '7'],
+        [{ consumergroup: 'payment-service', topic: 'tickets.reserved' }, '5'],
+      ],
+    });
+    expect(root.querySelector('#lag-value')?.textContent?.trim()).toBe('12');
+  });
+
+  it('chapters 02-04 say there is no load when the order rate was 0 for the whole window', () => {
+    answerBackfill({ ordersRate: [[{}, '0']] });
+    for (const chapter of Array.from(root.querySelectorAll('tr-chapter')).slice(1)) {
+      expect(chapter.textContent).toContain(
+        'No orders in the last 5 minutes. Start load: scripts/autoscale-acceptance.sh',
+      );
+    }
+  });
+
+  it('an unreadable order rate does not claim there was no load', () => {
+    answerBackfill({ ordersRate: [[{}, 'NaN']] });
+    expect(root.textContent).not.toContain('No orders in the last 5 minutes');
+  });
+
+  it('failed stock and activity reads keep the figures to a dash and name Unavailable beside them', () => {
+    stockRead().flush({}, { status: 503, statusText: 'Service Unavailable' });
+    activityRead().flush({}, { status: 503, statusText: 'Service Unavailable' });
+    fixture.detectChanges();
+    expect(root.querySelector('#stock-value')?.textContent?.trim()).toBe('-');
+    expect(root.querySelector('#rate-value')?.textContent?.trim()).toBe('-');
+    expect(root.querySelector('tr-chapter')?.textContent).toContain('Unavailable');
+  });
+
+  it('the Lua quote ends the rejection branch before the decrement', () => {
+    answerBackfill({});
+    const lines = root.querySelector('pre.lua')!.textContent!.split('\n');
+    expect(lines.indexOf('end')).toBeGreaterThan(-1);
+    expect(lines.indexOf('end')).toBeLessThan(lines.findIndex((l) => l.includes('HINCRBY')));
+    expect(lines).toContain('  return {0}');
+  });
 });

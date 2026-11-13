@@ -1,4 +1,4 @@
-# Local infra for TicketRush M1: Kafka (KRaft, 1 broker), Postgres, Redis.
+# Local infra for TicketRush: Kafka (KRaft, 1 broker), Postgres, Redis.
 # Credentials come from the environment with local dummy defaults (see .env.example).
 name: ticketrush
 services:

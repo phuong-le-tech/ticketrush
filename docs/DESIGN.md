@@ -18,13 +18,14 @@ Checked against Maven Central and Docker Hub on 2026-10-16. Re-check tools for l
 | PostgreSQL | 18.6 | |
 | Redis | 8.10.2 | Fall back to 8.8.3 if 8.10.2 proves unstable. |
 | Testcontainers | 2.0.5 | Managed by the Boot BOM. 2.x module names: `testcontainers-kafka`, `testcontainers-postgresql`. |
-| Strimzi operator | 1.3.0 | M3. Installed by its Helm chart (`oci://quay.io/strimzi-helm/strimzi-kafka-operator`), version pinned in `scripts/m3-up.sh`. Supports Kafka 4.3.1; CR API `kafka.strimzi.io/v1`. |
+| Strimzi operator | 1.3.0 | M3. Installed by its Helm chart (`oci://quay.io/strimzi-helm/strimzi-kafka-operator`), version pinned in `scripts/kind-up.sh`. Supports Kafka 4.3.1; CR API `kafka.strimzi.io/v1`. |
 | Helm | 4.x (local tool) | M3. Chart in `deploy/helm/ticketrush`. Installed with `brew install helm`. |
 | kind | 0.33 (local tool) | M3. Local cluster `ticketrush`. Installed with `brew install kind`. |
 | PostgreSQL / Redis in Kubernetes | 18.6 / 8.10.2 | M3. Same images as Compose, as plain single-replica StatefulSets with a PVC (no Bitnami, no HA). |
 | Angular / test runner (M7) | 22.2.5 / Vitest 5.1.0 | Angular and CLI/build/compiler packages pinned to 22.2.5; default Vitest runner, jsdom 30.1.3, TypeScript 6.0.3. Exact resolutions in dashboard/package-lock.json, verified by container npm ci and npm ls. |
 | Node build/test image (M7) | `node:24.22.2` | Verified with `docker run --rm node:24.22.2 node --version` -> `v24.22.2`, satisfying Angular 22's Node ^24.15 requirement. Every npm command runs in this container; do not upgrade host Node. |
 | nginx runtime image (M7) | `nginxinc/nginx-unprivileged:stable-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03` (nginx 1.30.6) | Stable Alpine image fetched on 2026-11-09; digest pins the multi-platform manifest. Official [unprivileged image](https://github.com/nginx/docker-nginx-unprivileged); verified nginx -v, nginx -t and runtime uid/gid 101. |
+| GitHub Actions (M8) | `actions/checkout@v4`, `actions/setup-java@v4` (Temurin 21), `actions/setup-node@v4` (Node 24.22.2) | CI workflow `.github/workflows/ci.yml`. Official actions pinned to major tags; runners are `ubuntu-latest`. No third-party actions. |
 
 ### M5 version and compatibility check (2026-10-31)
 
@@ -52,10 +53,12 @@ ticketrush/
   notification-service/       consumes orders.confirmed, logs a notification
   e2e-tests/                  Testcontainers test that runs every service in one JVM
   deploy/compose/docker-compose.yml
-  deploy/helm/ticketrush/     M3 chart: Strimzi Kafka + topics, Postgres, Redis, 6 services
-  scripts/m3-up.sh            kind cluster + Strimzi + images + chart, idempotent
-  scripts/m3-chart-check.sh   static chart checks (helm lint + template assertions)
-  scripts/m3-acceptance.sh    m3-up.sh twice, order to CONFIRMED, graceful rollout restart
+  deploy/helm/ticketrush/     M3 chart: Strimzi Kafka + topics, Postgres, Redis, 6 services, dashboard (M8)
+  dashboard/                  Angular live page + nginx image; fonts in public/fonts (M7, rebuilt in M8)
+  scripts/kind-up.sh            kind cluster + Strimzi + images + chart, idempotent
+  scripts/base-chart-check.sh   static chart checks (helm lint + template assertions)
+  scripts/kind-acceptance.sh    kind-up.sh twice, order to CONFIRMED, graceful rollout restart
+  scripts/live-dashboard-acceptance.sh  M8: dashboard on kind, live Prometheus queries under load, invariant audit
   .env.example
 ```
 
@@ -101,6 +104,7 @@ Rationale:
 | Angular 22.2.5, RxJS 7.8.2, tslib 2.9.1 | M7. Approved single-page dashboard, signals, HTTP client and cancellable polling. CLI scaffold includes forms/router packages, but production imports no router and uses native form controls. |
 | Angular CLI/build/compiler, TypeScript 6.0.3, Vitest 5.1.0, jsdom 30.1.3, Prettier 3.9.10 (development only) | M7. Default Angular scaffold toolchain for strict compilation, DOM/HTTP tests, optimized builds and formatting; no additional implementation package. |
 | nginxinc/nginx-unprivileged (container only) | M7. Static dashboard serving and narrowly scoped same-origin proxies, non-root uid 101; Node is only a build/test dependency. |
+| Geist and Geist Mono variable woff2 (official `geist` npm package 1.9.2, SIL OFL 1.1) | M8. Typeface of the live dashboard. Self-hosted in `dashboard/public/fonts` with `OFL.txt`; not an npm dependency, no CDN request. |
 
 Any new dependency must be added to this table with a reason.
 
@@ -159,7 +163,7 @@ Rationale:
   so more inventory pods do not speed up one show. Acceptable because a Redis decrement takes
   microseconds. Payment and order processing do scale. M6's single-show comparison at an offered
   8/s measured 7.999579402694281 terminal outcomes/s with one Ready inventory replica versus
-  8.025785165011973/s with eight ([raw comparison](evidence/m6/bottleneck.json), 2026-11-08).
+  8.025785165011973/s with eight ([raw comparison](evidence/chaos/bottleneck.json), 2026-11-08).
   This is not a saturation benchmark: input rate already caps the measured outcomes and does not
   establish inventory as the active bottleneck.
 - **12 partitions**: divides evenly across 1, 2, 3, 4, 6 pods and covers the 8-pod chaos test.
@@ -208,7 +212,7 @@ The gateway remains write-only and has no database or Redis access. No new backe
 - The Angular app and nginx serving configuration live in `dashboard/`. Compose exposes port 4200,
   with `/healthz` proving nginx is running, not backend readiness. Exact `/api/orders` proxies to
   gateway `/orders`, exact `/api/orders/activity` to order-service, and `/api/events/` to
-  inventory-service `/events/`. No CORS or Actuator proxy; unknown API paths return 404.
+  inventory-service `/events/`. M8 adds two GET-only routes to Prometheus: exact `/api/metrics/query` and `/api/metrics/query_range` (POST is 403). No CORS or Actuator proxy; unknown API paths, including other `/api/metrics/...` paths, return 404.
   Docker DNS resolution follows upstream recreation; nginx never automatically replays a POST.
 - Reads begin on initialization and poll independently every 2 seconds. Each source retains its
   latest good data and its own stale marker. No overlapping reads per source, 8-second read timeout,
@@ -237,7 +241,7 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-10-25 | Kafka on Kubernetes: one KafkaNodePool of 3 nodes with roles broker+controller (KRaft), RF 3, `min.insync.replicas=2`, transaction state log ISR 2, auto-create off, topics as `KafkaTopic` CRs (12 partitions) | 3 brokers with a 3-node quorum without 3 extra controller pods on a laptop; the topic operator replaces the Compose `kafka-init` container. |
 | 2026-10-25 | `spring-boot-starter-actuator` in every service, `management.endpoint.health.probes.enabled=true`; inventory, order and notification get `spring-boot-starter-webmvc` | Kubernetes probes need HTTP endpoints; these three had no web server. |
 | 2026-10-25 | Credentials come from a chart-generated Secret (`ticketrush-credentials`) built from `values.yaml` dummy defaults; Deployments only reference it with `secretKeyRef` | No plaintext credential in a rendered Deployment; real values are supplied with `--set-string` and never committed. |
-| 2026-10-25 | Image tag = first 12 hex of the Docker image id; `.dockerignore` keeps `.git`, `target`, docs and scripts out of the build context | An unchanged build gives the same tag, so a second `m3-up.sh` changes nothing. |
+| 2026-10-25 | Image tag = first 12 hex of the Docker image id; `.dockerignore` keeps `.git`, `target`, docs and scripts out of the build context | An unchanged build gives the same tag, so a second `kind-up.sh` changes nothing. |
 | 2026-10-25 | order-service and inventory-service get init containers that wait for Postgres or Redis (`waitFor` in values.yaml) | Both fail fast at startup when the dependency is not reachable yet; on a cold start that crash-looped them (7-8 restarts). Kafka needs no wait: the clients retry. |
 | 2026-10-30 | M4 outbox in order-service only: Flyway V2 `orders.outbox(id, topic, msg_key, type, payload jsonb, created_at, published_at)`, written in the status-change transaction for OrderConfirmed (`orders.confirmed`, key orderId) and TicketsReleased (`tickets.released`, key eventId). The relay locks the oldest unpublished rows with `FOR UPDATE SKIP LOCKED`, sends with acks=all, sets `published_at` after the ack, all in one DB transaction | Owner decision. A crash can no longer lose an event between the DB write and the send; at-least-once, consumers dedupe. |
 | 2026-10-30 | Saga reaper moved to order-service (deviation from section 2's first plan). `ORDER_SAGA_TIMEOUT_SECONDS` (default 120): PENDING/RESERVED orders created strictly more than that ago become FAILED(TIMEOUT) and emit TicketsReleased(TIMEOUT). PaymentResult FAILED makes the order FAILED and emits TicketsReleased(PAYMENT_FAILED). inventory-service restocks once per orderId (`release.lua`, only if the order holds a reservation) | Owner decision. Conditional updates make the timeout and the payment race safe: one terminal outcome, one release at most. |
@@ -253,7 +257,7 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-10-31 | Strimzi's existing Kafka exporter plus a PodMonitor supplies `kafka_consumergroup_lag_sum{consumergroup,topic}` and raw per-partition `kafka_consumergroup_lag{consumergroup,topic,partition}`; dashboard/acceptance use the group/topic total. Six ServiceMonitors scrape app timers/counters every 5 seconds | Actual group offsets and broker end offsets, not client-local estimates. [Strimzi exporter configuration](https://strimzi.io/docs/operators/latest/configuring.html#type-KafkaExporterSpec-reference). No topic/schema/key/partition changes. |
 | 2026-10-31 | KEDA Kafka triggers use inventory-service/orders.requested and payment-service/tickets.reserved, threshold 10, min 1, max 2 (12 partitions), polling 5 s, cooldown 30 s, HPA scaleDown stabilization 30 s | HPA owns replicas, so Helm omits replicas for these Deployments. With min 1, HPA stabilization governs scale-down to 1; KEDA cooldown controls scale-to-zero, which is disabled. [Kafka scaler](https://keda.sh/docs/2.21/scalers/apache-kafka/). |
 | 2026-10-31 | M5 uses kube-prometheus-stack for the operator/CRDs only; standalone Prometheus CR and provisioned Grafana StatefulSet, short 2 h ephemeral metrics retention, no Alertmanager/node exporter/kube-state-metrics | Laptop footprint, only the requested four application signal areas. Grafana is ephemeral but reprovisions dashboard/datasource on restart. Random admin password stored in a Secret, preserved by lookup on upgrades. |
-| 2026-10-31 | `scripts/m5-up.sh` extends the M3 build/load/bootstrap pattern with operators and a pinned KEDA-compatible kind node. M3 bootstrap explicitly disables M5 CRs | Keep the original bootstrap usable without new operator CRDs; running it over an M5 release removes monitoring/scaling, so use separate runs/clusters. |
+| 2026-10-31 | `scripts/observability-up.sh` extends the M3 build/load/bootstrap pattern with operators and a pinned KEDA-compatible kind node. M3 bootstrap explicitly disables M5 CRs | Keep the original bootstrap usable without new operator CRDs; running it over an M5 release removes monitoring/scaling, so use separate runs/clusters. |
 | 2026-10-31 | Optional inventory/payment `CONSUMER_PROCESSING_DELAY_MS`, default 0, enabled via `M5_CONSUMER_PROCESSING_DELAY_MS` only for demonstrations | Deliberately create measurable backlog without changing Kafka keys or business behavior. A single show still occupies one inventory partition; k6 uses 24 isolated shows. Rebalancing and backlog must stay below the saga timeout. |
 | 2026-10-31 | Acceptance makes one isolated real warm-up purchase and waits for confirmation plus real zero-lag vectors before measuring the baseline; no purchase side effects in bootstrap | Exporter omits group/topic series before any offset commit. Its raw partition lag is -1 for uncommitted partitions; its lag_sum sums known offsets, so never sum raw -1 sentinels. Unknown partitions can temporarily underreport backlog; KEDA independently queries Kafka, and measured high lag is still required for each causal scale-up. |
 | 2026-10-31 | KEDA operator lives in the app namespace; Grafana has a bounded 300 s startup probe and 512Mi/1 CPU limits | Short bootstrap DNS must resolve in the same namespace for app and scaler. At 256Mi/500m Grafana 13 repeatedly exceeded 300 s without opening HTTP; the resized fresh pod became Ready in 10 s. Prometheus operator TLS is off together with admission hooks, avoiding a reference to a Secret the disabled hooks never create. |
@@ -268,11 +272,17 @@ Append new decisions here (date, decision, reason). Keep entries one or two line
 | 2026-11-09 | M7 UI polls every 2 seconds, failed reads mark data stale and polling continues; no SSE | Redis/Postgres are pull-based; SSE would add server polling and long-lived proxy connections without benefit here. Implementation belongs to the UI lane. |
 | 2026-11-09 | M7 dashboard is a non-root multi-stage Angular/nginx-unprivileged Compose deployable on 4200, same-origin API proxies only, `/healthz` 200 and equivalent ng serve proxy | No CORS or Actuator exposure; Helm and ServiceMonitor are out of scope. Serving configuration lands in the UI lane. |
 | 2026-11-09 | M7 targets Angular 22.2.x with default Vitest; all npm commands use pinned `node:24.22.2` (verified v24.22.2), host Node unchanged | Angular requires Node ^24.15; package installation and exact Angular pins remain the frontend scaffold's verification. |
-| 2026-11-09 | Phuong approved the Open Design `frontend-design` / `dashboard` reference, project `ticketrush-m7-dashboard`, before Angular work | HTML, PNG and exact MCP provenance in `docs/design/m7/`; reference only, no build dependency or M5 default change. Render real FAILED/RESERVED states, not illustrative PAYMENT_FAILED; stock API supplies no price. |
+| 2026-11-09 | Phuong approved the Open Design `frontend-design` / `dashboard` reference, project `ticketrush-m7-dashboard`, before Angular work | HTML, PNG and exact MCP provenance in `docs/design/dashboard/`; reference only, no build dependency or M5 default change. Render real FAILED/RESERVED states, not illustrative PAYMENT_FAILED; stock API supplies no price. |
 | 2026-11-09 | M7 UI keeps `web-<uuid>` in localStorage; each Buy intent gets a cryptographic v4 UUID, using getRandomValues when randomUUID is unavailable; network/5xx/429 retries retain the key and entire payload | Prevent an uncertain acceptance becoming a second order; lock event and quantity while pending or retryable. HTTP 202 clears the intent but is not confirmation. |
 | 2026-11-09 | M7 purchase timeout is 15 seconds and retains the retry intent; failed persistent identity/cryptography setup blocks the purchase with a visible error | Avoid a permanently disabled button or silently switching customer identity. Retry state is in memory only and does not survive reload. |
 | 2026-11-09 | M7 serving uses the pinned stable nginx 1.30.6 unprivileged Alpine digest, explicit uid/gid 101, narrow proxy routes and Docker DNS resolution | Reproducible non-root runtime; no Node in the final image, CORS, Actuator proxy, new environment variable or Helm change. |
 | 2026-11-09 | M7 scaffold verification resolves Angular 22.2.5, default Vitest 5.1.0 and TypeScript 6.0.3 using node:24.22.2 | All npm/test/build/format commands stay containerized; host Node unchanged and no extra implementation dependency. |
+| 2026-11-11 | M8 adds a short CI workflow: backend unit tests (`mvn test -pl '!e2e-tests'`), dashboard `npm ci`/test/build, and the two chart checks. The 15 minute Testcontainers suite (`mvn verify`) stays a local gate recorded in PROGRESS.md | Owner approved the short CI. A full Testcontainers run on every pull request would be slow and was not requested. SonarCloud keeps running separately. |
+| 2026-11-11 | README split: setup and results detail moved to `docs/OPERATIONS.md` and `docs/CHAOS-RESULTS.md`; README now carries the stack table, a Mermaid architecture diagram, proof summary, run instructions and an honest limits list | Owner approved the M8 plan and asked for the tech stack to be visible to recruiters. No code, topic, schema or key change. |
+| 2026-11-11 | M8 live dashboard: Prometheus is proxied through the dashboard origin, GET only, exactly two paths (`/api/metrics/query`, `/api/metrics/query_range`), address from `PROMETHEUS_ADDR` | The browser needs live metrics without CORS or exposing the Prometheus admin API. Verified: POST 403, other `/api/metrics/...` 404, `/actuator` 404. No Java change. The two routes forward arbitrary PromQL and are meant for a local demo behind a port-forward, not for exposure. |
+| 2026-11-11 | M8: the dashboard is part of the Helm chart (Deployment, Service `dashboard:8080`, non-root, probes), built and loaded by `kind-up.sh` and `observability-up.sh` | The page must show the real kind cluster, including the second consumer pod under load. Reach it with `kubectl port-forward svc/dashboard 4200:8080`. |
+| 2026-11-11 | M8: ready pod counts come from `count by (job) (up{...} == 1)`, not from Kubernetes pod metrics | kube-state-metrics is disabled (2026-10-31 decision), so `kube_deployment_status_replicas_ready` does not exist. A scrape target that is up is the nearest honest signal and the page says so. |
+| 2026-11-11 | M8: no charting library and no animation library; charts are hand-written SVG, motion is CSS transform and opacity | No new npm dependency (owner constraint); the series count is small and bounded. |
 
 ### M6 tool observation (2026-11-04)
 

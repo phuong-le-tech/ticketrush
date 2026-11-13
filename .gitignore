@@ -3,7 +3,7 @@ target/
 *.class
 *.log
 # Concise verification output is tracked; verbatim runtime logs live in the raw-logs.zip snapshot.
-!docs/evidence/m6/verification/*.log
+!docs/evidence/chaos/verification/*.log
 
 # Python collectors
 __pycache__/
@@ -18,7 +18,7 @@ __pycache__/
 .env.*
 !.env.example
 
-# Node / Angular (M7)
+# Node / Angular (dashboard)
 node_modules/
 dist/
 .angular/

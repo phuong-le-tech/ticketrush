@@ -25,6 +25,7 @@ describe('M7 purchase and polling boundaries', () => {
 
   afterEach(() => {
     fixture.destroy();
+    http.match((req) => req.url.startsWith('/api/metrics'));
     http.verify({ ignoreCancelled: true });
     vi.useRealTimers();
     vi.restoreAllMocks();
