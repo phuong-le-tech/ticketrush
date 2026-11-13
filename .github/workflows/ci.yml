@@ -42,5 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # observability-chart-check.sh runs git diff --check against the M5 baseline commit.
+          fetch-depth: 0
       - run: scripts/base-chart-check.sh
       - run: scripts/observability-chart-check.sh
